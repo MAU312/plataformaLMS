@@ -1,4 +1,5 @@
 import Content from '../models/Content.js';
+import Course from '../models/Course.js';
 import { deleteFile } from '../middlewares/upload.middleware.js';
 import fs from 'fs';
 import path from 'path';
@@ -19,9 +20,23 @@ export const getContentsByCourse = async (req, res) => {
       ? await Content.findByCourseWithProgress(courseId, req.session.user.id)
       : await Content.findByCourse(courseId);
 
+    // Solo un admin o un estudiante inscrito recibe las URLs reales de
+    // video/archivo. Cualquier otro usuario ve el listado (títulos,
+    // descripción, orden) pero sin acceso directo al contenido — así se
+    // fuerza la inscripción antes de poder reproducir o descargar.
+    let canAccessMedia = false;
+    if (req.session?.user) {
+      canAccessMedia = req.session.user.role === 'admin'
+        || await Course.isUserEnrolled(courseId, req.session.user.id);
+    }
+
+    const responseData = canAccessMedia
+      ? contents
+      : contents.map(({ url, ...rest }) => ({ ...rest, url: null }));
+
     res.json({
       success: true,
-      data: contents
+      data: responseData
     });
   } catch (error) {
     console.error('Error al obtener contenidos:', error);
@@ -313,6 +328,20 @@ export const downloadFile = async (req, res) => {
         success: false,
         message: 'Este contenido no es un archivo descargable'
       });
+    }
+
+    // Solo puede descargar: un admin, o un estudiante inscrito en el curso
+    // al que pertenece este contenido. Antes cualquier usuario autenticado
+    // podía descargar cualquier archivo sin importar su inscripción.
+    const isAdminUser = req.session.user.role === 'admin';
+    if (!isAdminUser) {
+      const enrolled = await Course.isUserEnrolled(content.course_id, req.session.user.id);
+      if (!enrolled) {
+        return res.status(403).json({
+          success: false,
+          message: 'Debes estar inscrito en este curso para descargar este archivo'
+        });
+      }
     }
 
     const filePath = path.join(__dirname, '../../', content.url);

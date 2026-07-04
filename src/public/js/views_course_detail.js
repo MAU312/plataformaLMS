@@ -26,6 +26,10 @@ window.renderCourseDetail = async function(params) {
         // Si el usuario está logueado, traemos los contenidos con su estado de "completado"
         const isLoggedIn = isAuthenticated();
         const isEnrolled = course.isEnrolled;
+        // Solo un admin o un estudiante inscrito puede ver/reproducir/descargar
+        // el contenido real. El backend ya no manda las URLs si no corresponde,
+        // esto solo controla cómo se dibuja la UI.
+        const hasAccess = isLoggedIn && (isEnrolled || isAdmin());
         let contents = course.contents || [];
 
         if (isLoggedIn) {
@@ -88,16 +92,23 @@ window.renderCourseDetail = async function(params) {
 
                         ${videos.length > 0 ? `
                             <div class="video-player-container mb-4" id="main-video-container">
+                                ${hasAccess ? `
                                 <video id="main-video" controls>
                                     <source src="${videos[0].url}" type="video/mp4">
                                     Tu navegador no soporta la reproducción de video.
                                 </video>
+                                ` : `
+                                <div class="flex flex-col items-center justify-center bg-gray-100 rounded-lg py-16 text-center">
+                                    <i class="fas fa-lock text-4xl text-gray-400 mb-3"></i>
+                                    <p class="text-gray-600 font-medium">Inscríbete en este curso para ver los videos</p>
+                                </div>
+                                `}
                             </div>
                             <h3 id="current-video-title" class="text-lg font-semibold text-gray-800">${escapeHtml(videos[0].title)}</h3>
                             <p class="text-gray-600 text-sm mb-4">${escapeHtml(videos[0].description || '')}</p>
 
                             <div class="space-y-2">
-                                ${videos.map((video, index) => renderContentRow(video, index === 0, isLoggedIn && isEnrolled, 'video')).join('')}
+                                ${videos.map((video, index) => renderContentRow(video, index === 0, isLoggedIn && isEnrolled, 'video', hasAccess)).join('')}
                             </div>
                         ` : `
                             <div class="empty-state bg-white rounded-xl border border-gray-100">
@@ -115,7 +126,7 @@ window.renderCourseDetail = async function(params) {
                         </h2>
 
                         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-3">
-                            ${files.length > 0 ? files.map(file => renderContentRow(file, false, isLoggedIn && isEnrolled, 'file')).join('') : `
+                            ${files.length > 0 ? files.map(file => renderContentRow(file, false, isLoggedIn && isEnrolled, 'file', hasAccess)).join('') : `
                                 <div class="empty-state">
                                     <i class="fas fa-folder-open"></i>
                                     <p class="text-gray-600 text-sm">No hay archivos disponibles</p>
@@ -194,14 +205,16 @@ window.renderCourseDetail = async function(params) {
     }
 };
 
-function renderContentRow(content, isActiveVideo, canTrackProgress, type) {
-    const icon = type === 'video' ? 'fa-play-circle' : getFileIcon(content.url);
+function renderContentRow(content, isActiveVideo, canTrackProgress, type, hasAccess) {
+    const icon = type === 'video' ? 'fa-play-circle' : getFileIcon(content.url || '');
     const isVideo = type === 'video';
     const completed = content.completed || false;
+    // Solo es clickeable (para reproducir) si es video Y hay acceso real
+    const clickable = isVideo && hasAccess;
 
     return `
-        <div class="flex items-center gap-3 p-3 rounded-lg border ${isActiveVideo ? 'border-cenat-blue bg-blue-50' : 'border-gray-200'} ${isVideo ? 'hover:bg-blue-50 cursor-pointer video-item' : ''} transition"
-             ${isVideo ? `data-url="${content.url}" data-title="${escapeHtml(content.title)}"` : ''}>
+        <div class="flex items-center gap-3 p-3 rounded-lg border ${isActiveVideo && hasAccess ? 'border-cenat-blue bg-blue-50' : 'border-gray-200'} ${clickable ? 'hover:bg-blue-50 cursor-pointer video-item' : ''} transition"
+             ${clickable ? `data-url="${content.url}" data-title="${escapeHtml(content.title)}"` : ''}>
             
             ${canTrackProgress ? `
                 <button class="content-checkbox flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition ${completed ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-cenat-blue'}"
@@ -210,16 +223,20 @@ function renderContentRow(content, isActiveVideo, canTrackProgress, type) {
                 </button>
             ` : ''}
 
-            <i class="fas ${icon} text-xl text-cenat-blue"></i>
+            <i class="fas ${hasAccess ? icon : 'fa-lock'} text-xl ${hasAccess ? 'text-cenat-blue' : 'text-gray-400'}"></i>
             <div class="flex-1 min-w-0">
                 <p class="font-medium text-gray-900 truncate ${completed ? 'line-through text-gray-400' : ''}">${escapeHtml(content.title)}</p>
                 ${content.file_size ? `<p class="text-xs text-gray-500">${formatFileSize(content.file_size)}</p>` : ''}
             </div>
-            ${!isVideo ? `
+            ${!isVideo ? (hasAccess ? `
                 <button onclick="downloadContent(${content.id})" class="text-cenat-blue hover:text-cenat-hover">
                     <i class="fas fa-download"></i>
                 </button>
-            ` : ''}
+            ` : `
+                <span class="text-gray-400 text-xs" title="Inscríbete para descargar">
+                    <i class="fas fa-lock"></i>
+                </span>
+            `) : ''}
         </div>
     `;
 }

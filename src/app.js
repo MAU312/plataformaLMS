@@ -74,9 +74,16 @@ app.use(session({
   }
 }));
 
-// Archivos estáticos (HTML, CSS, JS, uploads)
+// Archivos estáticos (HTML, CSS, JS)
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Videos y thumbnails se sirven directo como estáticos (necesario para
+// streaming eficiente con <video> y para las miniaturas del catálogo).
+// Los ARCHIVOS DESCARGABLES ('uploads/files') NO se sirven aquí a propósito:
+// deben pasar siempre por GET /api/contents/:id/download, que valida
+// autenticación e inscripción al curso antes de entregar el archivo.
+app.use('/uploads/videos', express.static(path.join(__dirname, '../uploads/videos')));
+app.use('/uploads/thumbnails', express.static(path.join(__dirname, '../uploads/thumbnails')));
 
 // =============================================
 // API Routes
