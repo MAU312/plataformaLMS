@@ -1,0 +1,414 @@
+/* =================================
+   Estilos personalizados LMS CeNAT
+   ================================= */
+
+:root {
+    --cenat-blue: #1e3a8a;
+    --cenat-light: #3b82f6;
+    --cenat-hover: #1e40af;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+/* =================================
+   DARK MODE
+   ================================= */
+
+/* Body y fondo general */
+.dark body {
+    background-color: #0f172a;
+    color: #e2e8f0;
+}
+
+/* Navbar */
+.dark #navbar {
+    background-color: #1e293b;
+    border-bottom: 1px solid #334155;
+}
+
+.dark #navbar a,
+.dark #navbar button,
+.dark #navbar span {
+    color: #cbd5e1;
+}
+
+.dark #navbar a:hover {
+    color: #93c5fd;
+}
+
+/* Logo */
+.dark .text-cenat-blue {
+    color: #93c5fd;
+}
+
+/* Footer */
+.dark footer {
+    background-color: #1e293b;
+    border-top-color: #334155;
+}
+
+.dark footer p {
+    color: #94a3b8;
+}
+
+/* Tarjetas blancas */
+.dark .bg-white {
+    background-color: #1e293b !important;
+    color: #e2e8f0;
+}
+
+/* Textos grises */
+.dark .text-gray-900 { color: #f1f5f9 !important; }
+.dark .text-gray-800 { color: #e2e8f0 !important; }
+.dark .text-gray-700 { color: #cbd5e1 !important; }
+.dark .text-gray-600 { color: #94a3b8 !important; }
+.dark .text-gray-500 { color: #64748b !important; }
+.dark .text-gray-400 { color: #475569 !important; }
+
+/* Bordes */
+.dark .border-gray-100 { border-color: #334155 !important; }
+.dark .border-gray-200 { border-color: #334155 !important; }
+.dark .border-gray-300 { border-color: #475569 !important; }
+.dark .border-t { border-top-color: #334155 !important; }
+.dark .border-b { border-bottom-color: #334155 !important; }
+
+/* Fondos secundarios */
+.dark .bg-gray-50  { background-color: #0f172a !important; }
+.dark .bg-gray-100 { background-color: #1e293b !important; }
+.dark .bg-blue-50  { background-color: #1e3a5f !important; }
+
+/* Inputs y textareas */
+.dark input,
+.dark textarea,
+.dark select {
+    background-color: #0f172a !important;
+    border-color: #475569 !important;
+    color: #e2e8f0 !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+    color: #64748b !important;
+}
+
+/* Tablas */
+.dark thead,
+.dark .bg-gray-50 { background-color: #0f172a !important; }
+.dark tr:hover   { background-color: #1e3a5f !important; }
+.dark th         { color: #94a3b8 !important; }
+
+/* Sidebar admin */
+.dark aside {
+    background-color: #1e293b !important;
+    border-right-color: #334155 !important;
+}
+
+/* Dropdown user menu */
+.dark #user-dropdown {
+    background-color: #1e293b !important;
+    border: 1px solid #334155;
+}
+
+.dark #user-dropdown a,
+.dark #user-dropdown button {
+    color: #cbd5e1 !important;
+}
+
+.dark #user-dropdown a:hover,
+.dark #user-dropdown button:hover {
+    background-color: #0f172a !important;
+}
+
+/* Cards de estadísticas */
+.dark .rounded-xl { --tw-shadow: none; }
+
+/* Zona de drop de archivos */
+.dark .file-drop-zone {
+    border-color: #475569;
+    background-color: #0f172a;
+    color: #94a3b8;
+}
+
+.dark .file-drop-zone:hover,
+.dark .file-drop-zone.dragging {
+    border-color: #3b82f6;
+    background-color: #1e3a5f;
+}
+
+/* Toast */
+.dark #toast > div {
+    background-color: #1e293b !important;
+    color: #e2e8f0;
+}
+
+/* Mobile menu */
+.dark #mobile-menu {
+    background-color: #1e293b;
+}
+
+/* Formulario de login/register */
+.dark .shadow-2xl {
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* =================================
+   ANIMACIONES
+   ================================= */
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in { animation: fadeIn 0.3s ease-in-out; }
+
+/* =================================
+   TARJETAS DE CURSOS
+   ================================= */
+
+.course-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.course-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.dark .course-card:hover {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+.course-card img { transition: transform 0.3s ease; }
+.course-card:hover img { transform: scale(1.05); }
+
+/* =================================
+   BOTONES
+   ================================= */
+
+.btn-cenat {
+    background: linear-gradient(135deg, var(--cenat-blue) 0%, var(--cenat-light) 100%);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.btn-cenat:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(30, 58, 138, 0.3);
+}
+
+.btn-cenat:active  { transform: translateY(0); }
+.btn-cenat:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* =================================
+   REPRODUCTOR DE VIDEO
+   ================================= */
+
+.video-player-container {
+    position: relative;
+    padding-top: 56.25%;
+    background: #000;
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.video-player-container video {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+}
+
+/* =================================
+   BADGES
+   ================================= */
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-admin    { background: #dc2626; color: white; }
+.badge-student  { background: #3b82f6; color: white; }
+.badge-active   { background: #10b981; color: white; }
+.badge-inactive { background: #6b7280; color: white; }
+
+/* =================================
+   PROGRESS BAR
+   ================================= */
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+.dark .progress-bar { background: #334155; }
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--cenat-blue), var(--cenat-light));
+    transition: width 0.3s ease;
+}
+
+/* =================================
+   SPINNER
+   ================================= */
+
+.spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid var(--cenat-blue);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+.dark .spinner { border-color: #334155; border-top-color: #3b82f6; }
+
+@keyframes spin {
+    0%   { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* =================================
+   TOAST
+   ================================= */
+
+.toast-success { border-left: 4px solid #10b981; }
+.toast-error   { border-left: 4px solid #ef4444; }
+.toast-warning { border-left: 4px solid #f59e0b; }
+.toast-info    { border-left: 4px solid #3b82f6; }
+
+/* =================================
+   EMPTY STATE
+   ================================= */
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    color: #d1d5db;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.dark .empty-state i { color: #334155; }
+
+/* =================================
+   FILE DROP ZONE
+   ================================= */
+
+.file-drop-zone {
+    border: 2px dashed #d1d5db;
+    border-radius: 0.5rem;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.file-drop-zone:hover,
+.file-drop-zone.dragging {
+    border-color: var(--cenat-blue);
+    background: rgba(30, 58, 138, 0.05);
+}
+
+/* =================================
+   DARK MODE TOGGLE BUTTON
+   ================================= */
+
+#dark-mode-toggle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    transition: background 0.2s;
+}
+
+#dark-mode-toggle:hover {
+    background: #f1f5f9;
+}
+
+.dark #dark-mode-toggle:hover {
+    background: #334155;
+}
+
+/* =================================
+   SCROLLBAR PERSONALIZADA
+   ================================= */
+
+.custom-scroll::-webkit-scrollbar        { width: 6px; }
+.custom-scroll::-webkit-scrollbar-track  { background: #f1f1f1; }
+.custom-scroll::-webkit-scrollbar-thumb  { background: #888; border-radius: 3px; }
+.custom-scroll::-webkit-scrollbar-thumb:hover { background: #555; }
+
+/* =================================
+   RESPONSIVE
+   ================================= */
+
+@media (max-width: 640px) {
+    .course-card  { margin-bottom: 1rem; }
+    .btn-cenat    { width: 100%; }
+}
+
+@media print {
+    nav, footer, .no-print { display: none !important; }
+}
+
+/* =================================
+   CONFETTI ANIMATION
+   ================================= */
+
+@keyframes confettiFall {
+    0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+/* =================================
+   MODAL OVERLAY
+   ================================= */
+
+#completion-modal .backdrop-blur-sm {
+    backdrop-filter: blur(4px);
+}
