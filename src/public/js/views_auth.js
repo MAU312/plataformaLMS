@@ -11,7 +11,7 @@ window.renderLogin = async function(params) {
     const app = document.getElementById('app');
     
     app.innerHTML = `
-        <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div class="min-h-screen flex items-center justify-center auth-bg py-12 px-4 sm:px-6 lg:px-8">
             <div class="max-w-md w-full space-y-8 bg-white p-10 rounded-2xl shadow-2xl fade-in">
                 <!-- Logo y Header -->
                 <div class="text-center">
@@ -129,7 +129,7 @@ window.renderRegister = async function(params) {
     const app = document.getElementById('app');
     
     app.innerHTML = `
-        <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div class="min-h-screen flex items-center justify-center auth-bg py-12 px-4 sm:px-6 lg:px-8">
             <div class="max-w-md w-full space-y-8 bg-white p-10 rounded-2xl shadow-2xl fade-in">
                 <!-- Logo y Header -->
                 <div class="text-center">
@@ -265,7 +265,7 @@ window.renderForgotPassword = async function(params) {
     const app = document.getElementById('app');
 
     app.innerHTML = `
-        <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div class="min-h-screen flex items-center justify-center auth-bg py-12 px-4 sm:px-6 lg:px-8">
             <div class="max-w-md w-full space-y-8 bg-white p-10 rounded-2xl shadow-2xl fade-in">
                 <div class="text-center">
                     <img src="/images/logo-lanba.png" alt="LANBA" class="mx-auto h-16 w-auto object-contain mb-4">
@@ -345,7 +345,7 @@ window.renderResetPassword = async function(params) {
     const token = params.token;
 
     app.innerHTML = `
-        <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div class="min-h-screen flex items-center justify-center auth-bg py-12 px-4 sm:px-6 lg:px-8">
             <div class="max-w-md w-full space-y-8 bg-white p-10 rounded-2xl shadow-2xl fade-in">
                 <div class="text-center">
                     <img src="/images/logo-lanba.png" alt="LANBA" class="mx-auto h-16 w-auto object-contain mb-4">

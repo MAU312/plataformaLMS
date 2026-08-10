@@ -44,6 +44,30 @@ html {
 }
 
 /* =================================
+   FONDO DE PANTALLAS DE AUTENTICACIÓN
+   (login, registro, olvidé/restablecer contraseña)
+   ================================= */
+
+.auth-bg {
+    position: relative;
+    background-image: url('/images/imagenfondo.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* Velo verde oscuro para que la tarjeta blanca resalte y el texto/logo
+   de la imagen no compita con el logo real de la tarjeta. z-index -1
+   lo mantiene por encima de la imagen de fondo pero debajo de la tarjeta. */
+.auth-bg::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(135deg, rgba(0, 41, 18, 0.82), rgba(0, 92, 40, 0.68));
+}
+
+/* =================================
    DARK MODE
    ================================= */
 
@@ -182,6 +206,10 @@ html {
 /* Formulario de login/register */
 .dark .shadow-2xl {
     box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6) !important;
+}
+
+.dark .auth-bg::before {
+    background: linear-gradient(135deg, rgba(2, 12, 6, 0.92), rgba(0, 41, 18, 0.88));
 }
 
 /* =================================
