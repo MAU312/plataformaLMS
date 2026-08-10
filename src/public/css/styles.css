@@ -25,6 +25,25 @@ html {
 }
 
 /* =================================
+   BORDES - MODO CLARO
+   Los grises por defecto de Tailwind (gray-100/200 ≈ #f3f4f6/#e5e7eb)
+   casi no contrastan contra fondos blancos/gray-50, así que el sidebar,
+   el navbar y las tablas del admin se ven "flotando" sin límites
+   definidos. Se oscurecen aquí para que se note la separación real.
+   ================================= */
+
+.border-gray-100 { border-color: #dde2e8 !important; }
+.border-gray-200 { border-color: #c7cdd6 !important; }
+.border-b        { border-bottom-color: #c7cdd6 !important; }
+.border-t        { border-top-color: #c7cdd6 !important; }
+
+/* El navbar no trae ancho de borde propio (solo shadow-md), así que el
+   color de arriba no alcanza a mostrarse: se define el borde completo. */
+#navbar {
+    border-bottom: 1px solid #c7cdd6;
+}
+
+/* =================================
    DARK MODE
    ================================= */
 
