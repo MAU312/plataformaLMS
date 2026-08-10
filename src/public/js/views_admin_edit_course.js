@@ -21,16 +21,16 @@ window.renderAdminEditCourse = async function(params) {
         const files = contents.filter(c => c.type === 'file');
 
         app.innerHTML = renderAdminLayout(`
-            <a href="#/admin/courses" class="text-cenat-blue hover:underline text-sm mb-4 inline-block">
+            <a href="#/admin/courses" class="text-cenat-green hover:underline text-sm mb-4 inline-block">
                 <i class="fas fa-arrow-left mr-1"></i> Volver a cursos
             </a>
 
             <div class="flex items-center justify-between mb-6">
                 <h1 class="text-2xl font-bold text-gray-900">
-                    <i class="fas fa-edit text-cenat-blue mr-2"></i>
+                    <i class="fas fa-edit text-cenat-green mr-2"></i>
                     Editar Curso
                 </h1>
-                <a href="#/course/${course.id}" class="text-gray-500 hover:text-cenat-blue text-sm">
+                <a href="#/course/${course.id}" class="text-gray-500 hover:text-cenat-green text-sm">
                     <i class="fas fa-eye mr-1"></i> Ver curso
                 </a>
             </div>
@@ -42,13 +42,13 @@ window.renderAdminEditCourse = async function(params) {
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Título *</label>
                             <input type="text" id="title" name="title" required value="${escapeHtml(course.title)}"
-                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-blue focus:border-transparent transition">
+                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition">
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
                             <textarea id="description" name="description" rows="4"
-                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-blue focus:border-transparent transition">${escapeHtml(course.description || '')}</textarea>
+                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition">${escapeHtml(course.description || '')}</textarea>
                         </div>
 
                         <div>
@@ -59,7 +59,7 @@ window.renderAdminEditCourse = async function(params) {
                         </div>
 
                         <div class="flex items-center gap-2">
-                            <input type="checkbox" id="is_active" ${course.is_active ? 'checked' : ''} class="w-4 h-4 text-cenat-blue rounded">
+                            <input type="checkbox" id="is_active" ${course.is_active ? 'checked' : ''} class="w-4 h-4 text-cenat-green rounded">
                             <label for="is_active" class="text-sm text-gray-700">Curso activo (visible para estudiantes)</label>
                         </div>
 
@@ -84,9 +84,9 @@ window.renderAdminEditCourse = async function(params) {
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-lg font-bold text-gray-900">
-                                <i class="fas fa-video text-cenat-blue mr-2"></i> Videos
+                                <i class="fas fa-video text-cenat-green mr-2"></i> Videos
                             </h2>
-                            <button onclick="showAddVideoForm(${course.id})" class="text-sm bg-blue-50 text-cenat-blue px-3 py-1.5 rounded-lg hover:bg-blue-100 transition">
+                            <button onclick="showAddVideoForm(${course.id})" class="text-sm bg-green-50 text-cenat-green px-3 py-1.5 rounded-lg hover:bg-green-100 transition">
                                 <i class="fas fa-plus mr-1"></i> Agregar video
                             </button>
                         </div>
@@ -104,9 +104,9 @@ window.renderAdminEditCourse = async function(params) {
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-lg font-bold text-gray-900">
-                                <i class="fas fa-file text-cenat-blue mr-2"></i> Archivos
+                                <i class="fas fa-file text-cenat-green mr-2"></i> Archivos
                             </h2>
-                            <button onclick="showAddFileForm(${course.id})" class="text-sm bg-blue-50 text-cenat-blue px-3 py-1.5 rounded-lg hover:bg-blue-100 transition">
+                            <button onclick="showAddFileForm(${course.id})" class="text-sm bg-green-50 text-cenat-green px-3 py-1.5 rounded-lg hover:bg-green-100 transition">
                                 <i class="fas fa-plus mr-1"></i> Agregar archivo
                             </button>
                         </div>
@@ -139,7 +139,7 @@ function renderContentItem(content, type) {
     const icon = type === 'video' ? 'fa-play-circle' : getFileIcon(content.url);
     return `
         <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition">
-            <i class="fas ${icon} text-xl text-cenat-blue"></i>
+            <i class="fas ${icon} text-xl text-cenat-green"></i>
             <div class="flex-1 min-w-0">
                 <p class="font-medium text-gray-900 truncate">${escapeHtml(content.title)}</p>
                 ${content.file_size ? `<p class="text-xs text-gray-500">${formatFileSize(content.file_size)}</p>` : ''}
@@ -196,14 +196,14 @@ function showAddVideoForm(courseId) {
     const container = document.getElementById('add-video-form-container');
 
     container.innerHTML = `
-        <form id="add-video-form" class="bg-blue-50 rounded-lg p-4 mb-4 space-y-3">
+        <form id="add-video-form" class="bg-green-50 rounded-lg p-4 mb-4 space-y-3">
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Título del video *</label>
-                <input type="text" id="video-title" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-blue" placeholder="Ej: Introducción al curso">
+                <input type="text" id="video-title" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Ej: Introducción al curso">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Descripción (opcional)</label>
-                <input type="text" id="video-description" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-blue">
+                <input type="text" id="video-description" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Archivo de video *</label>
@@ -214,7 +214,7 @@ function showAddVideoForm(courseId) {
                 <div class="progress-bar"><div id="video-progress-fill" class="progress-fill" style="width: 0%"></div></div>
             </div>
             <div class="flex gap-2">
-                <button type="submit" id="submit-video-btn" class="bg-cenat-blue text-white px-4 py-2 rounded-lg text-sm font-semibold">
+                <button type="submit" id="submit-video-btn" class="bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
                     <i class="fas fa-upload mr-1"></i> Subir Video
                 </button>
                 <button type="button" onclick="document.getElementById('add-video-form-container').innerHTML = ''" class="text-gray-600 px-4 py-2 text-sm">
@@ -267,14 +267,14 @@ function showAddFileForm(courseId) {
     const container = document.getElementById('add-file-form-container');
 
     container.innerHTML = `
-        <form id="add-file-form" class="bg-blue-50 rounded-lg p-4 mb-4 space-y-3">
+        <form id="add-file-form" class="bg-green-50 rounded-lg p-4 mb-4 space-y-3">
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Título del archivo *</label>
-                <input type="text" id="file-title" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-blue" placeholder="Ej: Guía del curso">
+                <input type="text" id="file-title" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Ej: Guía del curso">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Descripción (opcional)</label>
-                <input type="text" id="file-description" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-blue">
+                <input type="text" id="file-description" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Archivo *</label>
@@ -282,7 +282,7 @@ function showAddFileForm(courseId) {
                 <p class="text-xs text-gray-500 mt-1">PDF, DOCX, PPT, XLS, TXT, ZIP, RAR (máx. 50MB)</p>
             </div>
             <div class="flex gap-2">
-                <button type="submit" id="submit-file-btn" class="bg-cenat-blue text-white px-4 py-2 rounded-lg text-sm font-semibold">
+                <button type="submit" id="submit-file-btn" class="bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
                     <i class="fas fa-upload mr-1"></i> Subir Archivo
                 </button>
                 <button type="button" onclick="document.getElementById('add-file-form-container').innerHTML = ''" class="text-gray-600 px-4 py-2 text-sm">

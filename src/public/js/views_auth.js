@@ -11,7 +11,7 @@ window.renderLogin = async function(params) {
     const app = document.getElementById('app');
     
     app.innerHTML = `
-        <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 py-12 px-4 sm:px-6 lg:px-8">
             <div class="max-w-md w-full space-y-8 bg-white p-10 rounded-2xl shadow-2xl fade-in">
                 <!-- Logo y Header -->
                 <div class="text-center">
@@ -41,7 +41,7 @@ window.renderLogin = async function(params) {
                                     name="email" 
                                     type="email" 
                                     required 
-                                    class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-blue focus:border-transparent transition"
+                                    class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
                                     placeholder="tu@email.com"
                                 >
                             </div>
@@ -61,7 +61,7 @@ window.renderLogin = async function(params) {
                                     name="password" 
                                     type="password" 
                                     required 
-                                    class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-blue focus:border-transparent transition"
+                                    class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
                                     placeholder="••••••••"
                                 >
                             </div>
@@ -83,7 +83,7 @@ window.renderLogin = async function(params) {
                     <div class="text-center">
                         <p class="text-sm text-gray-600">
                             ¿No tienes una cuenta? 
-                            <a href="#/register" class="font-medium text-cenat-blue hover:text-cenat-hover transition">
+                            <a href="#/register" class="font-medium text-cenat-green hover:text-cenat-green-hover transition">
                                 Regístrate aquí
                             </a>
                         </p>
@@ -121,7 +121,7 @@ window.renderRegister = async function(params) {
     const app = document.getElementById('app');
     
     app.innerHTML = `
-        <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 py-12 px-4 sm:px-6 lg:px-8">
             <div class="max-w-md w-full space-y-8 bg-white p-10 rounded-2xl shadow-2xl fade-in">
                 <!-- Logo y Header -->
                 <div class="text-center">
@@ -151,7 +151,7 @@ window.renderRegister = async function(params) {
                                     name="name" 
                                     type="text" 
                                     required 
-                                    class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-blue focus:border-transparent transition"
+                                    class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
                                     placeholder="Juan Pérez"
                                 >
                             </div>
@@ -171,7 +171,7 @@ window.renderRegister = async function(params) {
                                     name="email" 
                                     type="email" 
                                     required 
-                                    class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-blue focus:border-transparent transition"
+                                    class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
                                     placeholder="tu@email.com"
                                 >
                             </div>
@@ -192,7 +192,7 @@ window.renderRegister = async function(params) {
                                     type="password" 
                                     required 
                                     minlength="6"
-                                    class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-blue focus:border-transparent transition"
+                                    class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
                                     placeholder="••••••••"
                                 >
                             </div>
@@ -217,7 +217,7 @@ window.renderRegister = async function(params) {
                     <div class="text-center">
                         <p class="text-sm text-gray-600">
                             ¿Ya tienes una cuenta? 
-                            <a href="#/login" class="font-medium text-cenat-blue hover:text-cenat-hover transition">
+                            <a href="#/login" class="font-medium text-cenat-green hover:text-cenat-green-hover transition">
                                 Inicia sesión aquí
                             </a>
                         </p>

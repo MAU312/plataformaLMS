@@ -8,11 +8,11 @@ window.renderAdminCreateCourse = async function(params) {
 
     app.innerHTML = renderAdminLayout(`
         <div class="max-w-2xl">
-            <a href="#/admin/courses" class="text-cenat-blue hover:underline text-sm mb-4 inline-block">
+            <a href="#/admin/courses" class="text-cenat-green hover:underline text-sm mb-4 inline-block">
                 <i class="fas fa-arrow-left mr-1"></i> Volver a cursos
             </a>
             <h1 class="text-2xl font-bold text-gray-900 mb-6">
-                <i class="fas fa-plus-circle text-cenat-blue mr-2"></i>
+                <i class="fas fa-plus-circle text-cenat-green mr-2"></i>
                 Crear Nuevo Curso
             </h1>
 
@@ -20,14 +20,14 @@ window.renderAdminCreateCourse = async function(params) {
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Título del curso *</label>
                     <input type="text" id="title" name="title" required 
-                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-blue focus:border-transparent transition"
+                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
                         placeholder="Ej: Introducción a la Biotecnología Ambiental">
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
                     <textarea id="description" name="description" rows="4"
-                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-blue focus:border-transparent transition"
+                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
                         placeholder="Describe brevemente de qué trata el curso..."></textarea>
                 </div>
 

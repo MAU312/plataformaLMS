@@ -45,19 +45,19 @@ window.renderCourseDetail = async function(params) {
         app.innerHTML = `
             <div class="bg-white border-b">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                    <a href="#/" class="text-cenat-blue hover:underline text-sm">
+                    <a href="#/" class="text-cenat-green hover:underline text-sm">
                         <i class="fas fa-arrow-left mr-1"></i> Volver al catálogo
                     </a>
                 </div>
             </div>
 
-            <div class="bg-gradient-to-r from-cenat-blue to-cenat-light py-10 px-4 sm:px-6 lg:px-8">
+            <div class="bg-gradient-to-r from-cenat-green to-cenat-green-light py-10 px-4 sm:px-6 lg:px-8">
                 <div class="max-w-7xl mx-auto">
                     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                         <div>
                             <h1 class="text-3xl font-extrabold text-white mb-2">${escapeHtml(course.title)}</h1>
-                            <p class="text-blue-100">${escapeHtml(course.description || '')}</p>
-                            <p class="text-blue-200 text-sm mt-2">
+                            <p class="text-green-100">${escapeHtml(course.description || '')}</p>
+                            <p class="text-green-200 text-sm mt-2">
                                 <i class="fas fa-user-tie mr-1"></i> 
                                 ${course.instructor_name ? escapeHtml(course.instructor_name) : 'CeNAT'}
                             </p>
@@ -86,7 +86,7 @@ window.renderCourseDetail = async function(params) {
                     <!-- Columna principal: Videos -->
                     <div class="lg:col-span-2 space-y-6">
                         <h2 class="text-xl font-bold text-gray-900 flex items-center">
-                            <i class="fas fa-play-circle text-cenat-blue mr-2"></i>
+                            <i class="fas fa-play-circle text-cenat-green mr-2"></i>
                             Videos del curso
                         </h2>
 
@@ -121,7 +121,7 @@ window.renderCourseDetail = async function(params) {
                     <!-- Columna lateral: Archivos descargables -->
                     <div class="space-y-6">
                         <h2 class="text-xl font-bold text-gray-900 flex items-center">
-                            <i class="fas fa-file-download text-cenat-blue mr-2"></i>
+                            <i class="fas fa-file-download text-cenat-green mr-2"></i>
                             Materiales descargables
                         </h2>
 
@@ -135,9 +135,9 @@ window.renderCourseDetail = async function(params) {
                         </div>
 
                         <!-- Card de información -->
-                        <div class="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                        <div class="bg-green-50 rounded-xl p-4 border border-green-100">
                             <h3 class="font-semibold text-gray-900 mb-2">
-                                <i class="fas fa-info-circle text-cenat-blue mr-1"></i>
+                                <i class="fas fa-info-circle text-cenat-green mr-1"></i>
                                 Información del curso
                             </h3>
                             <ul class="text-sm text-gray-600 space-y-1">
@@ -166,10 +166,10 @@ window.renderCourseDetail = async function(params) {
                 document.getElementById('current-video-title').textContent = title;
 
                 document.querySelectorAll('.video-item').forEach(v => {
-                    v.classList.remove('border-cenat-blue', 'bg-blue-50');
+                    v.classList.remove('border-cenat-green', 'bg-green-50');
                     v.classList.add('border-gray-200');
                 });
-                this.classList.add('border-cenat-blue', 'bg-blue-50');
+                this.classList.add('border-cenat-green', 'bg-green-50');
                 this.classList.remove('border-gray-200');
             });
         });
@@ -213,23 +213,23 @@ function renderContentRow(content, isActiveVideo, canTrackProgress, type, hasAcc
     const clickable = isVideo && hasAccess;
 
     return `
-        <div class="flex items-center gap-3 p-3 rounded-lg border ${isActiveVideo && hasAccess ? 'border-cenat-blue bg-blue-50' : 'border-gray-200'} ${clickable ? 'hover:bg-blue-50 cursor-pointer video-item' : ''} transition"
+        <div class="flex items-center gap-3 p-3 rounded-lg border ${isActiveVideo && hasAccess ? 'border-cenat-green bg-green-50' : 'border-gray-200'} ${clickable ? 'hover:bg-green-50 cursor-pointer video-item' : ''} transition"
              ${clickable ? `data-url="${content.url}" data-title="${escapeHtml(content.title)}"` : ''}>
             
             ${canTrackProgress ? `
-                <button class="content-checkbox flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition ${completed ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-cenat-blue'}"
+                <button class="content-checkbox flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition ${completed ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-cenat-green'}"
                     data-content-id="${content.id}" data-completed="${completed == 1 || completed === true ? 'true' : 'false'}" title="${completed ? 'Marcar como pendiente' : 'Marcar como completado'}">
                     ${completed ? '<i class="fas fa-check text-white text-xs"></i>' : ''}
                 </button>
             ` : ''}
 
-            <i class="fas ${hasAccess ? icon : 'fa-lock'} text-xl ${hasAccess ? 'text-cenat-blue' : 'text-gray-400'}"></i>
+            <i class="fas ${hasAccess ? icon : 'fa-lock'} text-xl ${hasAccess ? 'text-cenat-green' : 'text-gray-400'}"></i>
             <div class="flex-1 min-w-0">
                 <p class="font-medium text-gray-900 truncate ${completed ? 'line-through text-gray-400' : ''}">${escapeHtml(content.title)}</p>
                 ${content.file_size ? `<p class="text-xs text-gray-500">${formatFileSize(content.file_size)}</p>` : ''}
             </div>
             ${!isVideo ? (hasAccess ? `
-                <button onclick="downloadContent(${content.id})" class="text-cenat-blue hover:text-cenat-hover">
+                <button onclick="downloadContent(${content.id})" class="text-cenat-green hover:text-cenat-green-hover">
                     <i class="fas fa-download"></i>
                 </button>
             ` : `
@@ -256,14 +256,14 @@ async function toggleContentCompleted(contentId, markAsCompleted, courseId) {
             checkbox.dataset.completed = String(markAsCompleted);
 
             if (markAsCompleted) {
-                checkbox.classList.remove('border-gray-300', 'hover:border-cenat-blue');
+                checkbox.classList.remove('border-gray-300', 'hover:border-cenat-green');
                 checkbox.classList.add('bg-green-500', 'border-green-500');
                 checkbox.innerHTML = '<i class="fas fa-check text-white text-xs"></i>';
                 checkbox.title = 'Marcar como pendiente';
                 const titleEl = checkbox.closest('div').querySelector('p');
                 if (titleEl) titleEl.classList.add('line-through', 'text-gray-400');
             } else {
-                checkbox.classList.add('border-gray-300', 'hover:border-cenat-blue');
+                checkbox.classList.add('border-gray-300', 'hover:border-cenat-green');
                 checkbox.classList.remove('bg-green-500', 'border-green-500');
                 checkbox.innerHTML = '';
                 checkbox.title = 'Marcar como completado';
@@ -309,14 +309,14 @@ function renderEnrollButton(isLoggedIn, isEnrolled, courseId) {
 
     if (isEnrolled) {
         return `
-            <button id="unenroll-btn" class="bg-white text-cenat-blue px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition">
+            <button id="unenroll-btn" class="bg-white text-cenat-green px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition">
                 <i class="fas fa-check-circle mr-2"></i> Inscrito
             </button>
         `;
     }
 
     return `
-        <button id="enroll-btn" class="bg-white text-cenat-blue px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition">
+        <button id="enroll-btn" class="bg-white text-cenat-green px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition">
             <i class="fas fa-plus-circle mr-2"></i> Inscribirme
         </button>
     `;
@@ -441,7 +441,7 @@ function closeCompletionModal() {
 }
 
 function launchConfetti() {
-    const colors = ['#1e3a8a', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+    const colors = ['#007031', '#22c55e', '#84cc16', '#f59e0b', '#ef4444'];
     const container = document.getElementById('completion-modal');
     if (!container) return;
 

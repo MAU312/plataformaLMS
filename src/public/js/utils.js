@@ -281,7 +281,7 @@ function renderPagination(currentPage, totalPages, totalItems, perPage, callback
                 ${pages.map(p => `
                     <button onclick="${callbackFn}(${p})"
                         class="px-3 py-1 rounded font-medium transition ${p === currentPage
-                            ? 'bg-cenat-blue text-white'
+                            ? 'bg-cenat-green text-white'
                             : 'hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300'}">
                         ${p}
                     </button>

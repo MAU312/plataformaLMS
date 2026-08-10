@@ -30,8 +30,10 @@
             theme: {
                 extend: {
                     colors: {
-                        'cenat-blue': '#1e3a8a',
-                        'cenat-light': '#3b82f6',
+                        // Verde tomado directamente del logo de LANBA (#007031).
+                        'cenat-green': '#007031',
+                        'cenat-green-light': '#22c55e',
+                        'cenat-green-hover': '#005c28',
                     }
                 }
             }
@@ -49,22 +51,22 @@
                 <div class="flex items-center">
                     <a href="#/" class="flex items-center space-x-2">
                         <img src="/images/logo-lanba-icono.png" alt="LANBA" class="h-8 w-8 object-contain">
-                        <span class="font-bold text-xl text-cenat-blue">LMS CeNAT</span>
+                        <span class="font-bold text-xl text-cenat-green">LMS CeNAT</span>
                     </a>
                 </div>
 
                 <!-- Menu Desktop -->
                 <div class="hidden md:flex items-center space-x-6">
                     <a href="#/"
-                        class="text-gray-700 dark:text-slate-300 hover:text-cenat-blue dark:hover:text-blue-400 transition">
+                        class="text-gray-700 dark:text-slate-300 hover:text-cenat-green dark:hover:text-green-400 transition">
                         <i class="fas fa-home mr-1"></i> Inicio
                     </a>
                     <a href="#/my-courses" id="my-courses-link"
-                        class="text-gray-700 dark:text-slate-300 hover:text-cenat-blue dark:hover:text-blue-400 transition">
+                        class="text-gray-700 dark:text-slate-300 hover:text-cenat-green dark:hover:text-green-400 transition">
                         <i class="fas fa-book mr-1"></i> Mis Cursos
                     </a>
                     <a href="#/admin" id="admin-link"
-                        class="text-gray-700 dark:text-slate-300 hover:text-cenat-blue dark:hover:text-blue-400 transition"
+                        class="text-gray-700 dark:text-slate-300 hover:text-cenat-green dark:hover:text-green-400 transition"
                         style="display:none;">
                         <i class="fas fa-cog mr-1"></i> Administración
                     </a>
@@ -77,7 +79,7 @@
                     <!-- User Menu -->
                     <div class="relative">
                         <button id="user-menu-button"
-                            class="flex items-center space-x-2 text-gray-700 dark:text-slate-300 hover:text-cenat-blue transition">
+                            class="flex items-center space-x-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition">
                             <i class="fas fa-user-circle text-2xl"></i>
                             <span id="user-name">Usuario</span>
                             <i class="fas fa-chevron-down text-sm"></i>
@@ -104,7 +106,7 @@
                         class="text-gray-600 dark:text-yellow-400">
                         <i class="fas fa-moon"></i>
                     </button>
-                    <button id="mobile-menu-btn" class="text-gray-700 dark:text-slate-300 hover:text-cenat-blue">
+                    <button id="mobile-menu-btn" class="text-gray-700 dark:text-slate-300 hover:text-cenat-green">
                         <i class="fas fa-bars text-2xl"></i>
                     </button>
                 </div>
@@ -112,24 +114,24 @@
 
             <!-- Mobile Menu -->
             <div id="mobile-menu" class="hidden md:hidden pb-4 dark:bg-slate-800">
-                <a href="#/" class="block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-blue transition">
+                <a href="#/" class="block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition">
                     <i class="fas fa-home mr-1"></i> Inicio
                 </a>
                 <a href="#/my-courses" id="my-courses-link-mobile"
-                    class="block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-blue transition">
+                    class="block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition">
                     <i class="fas fa-book mr-1"></i> Mis Cursos
                 </a>
                 <a href="#/admin" id="admin-link-mobile"
-                    class="block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-blue transition"
+                    class="block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition"
                     style="display:none;">
                     <i class="fas fa-cog mr-1"></i> Administración
                 </a>
                 <a href="#/profile"
-                    class="block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-blue transition">
+                    class="block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition">
                     <i class="fas fa-user mr-1"></i> Mi Perfil
                 </a>
                 <button id="logout-btn-mobile"
-                    class="w-full text-left block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-blue transition">
+                    class="w-full text-left block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition">
                     <i class="fas fa-sign-out-alt mr-1"></i> Cerrar Sesión
                 </button>
             </div>
@@ -140,7 +142,7 @@
     <main id="app" class="min-h-screen">
         <div class="flex items-center justify-center min-h-screen">
             <div class="text-center">
-                <i class="fas fa-spinner fa-spin text-4xl text-cenat-blue"></i>
+                <i class="fas fa-spinner fa-spin text-4xl text-cenat-green"></i>
                 <p class="mt-4 text-gray-600 dark:text-slate-400">Cargando...</p>
             </div>
         </div>

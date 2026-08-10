@@ -29,7 +29,7 @@ window.renderAdminDashboard = async function(params) {
         app.innerHTML = `
             ${renderAdminLayout(`
                 <h1 class="text-2xl font-bold text-gray-900 mb-6">
-                    <i class="fas fa-tachometer-alt text-cenat-blue mr-2"></i>
+                    <i class="fas fa-tachometer-alt text-cenat-green mr-2"></i>
                     Panel de Administración
                 </h1>
 
@@ -83,7 +83,7 @@ window.renderAdminDashboard = async function(params) {
                                         <td class="py-3 pr-4">${course.content_count || 0}</td>
                                         <td class="py-3 pr-4">${course.enrolled_count || 0}</td>
                                         <td class="py-3">
-                                            <a href="#/admin/courses/${course.id}/edit" class="text-cenat-blue hover:underline">
+                                            <a href="#/admin/courses/${course.id}/edit" class="text-cenat-green hover:underline">
                                                 Editar
                                             </a>
                                         </td>
@@ -131,12 +131,12 @@ function renderAdminLayout(content, activeSection) {
             <!-- Sidebar -->
             <aside class="w-64 bg-white border-r border-gray-200 hidden md:block">
                 <div class="p-6">
-                    <h2 class="text-lg font-bold text-cenat-blue mb-6">
+                    <h2 class="text-lg font-bold text-cenat-green mb-6">
                         <i class="fas fa-shield-alt mr-2"></i>Administración
                     </h2>
                     <nav class="space-y-1">
                         ${menuItems.map(item => `
-                            <a href="#${item.path}" class="flex items-center gap-3 px-4 py-3 rounded-lg transition ${activeSection === item.id ? 'bg-blue-50 text-cenat-blue font-semibold' : 'text-gray-600 hover:bg-gray-50'}">
+                            <a href="#${item.path}" class="flex items-center gap-3 px-4 py-3 rounded-lg transition ${activeSection === item.id ? 'bg-green-50 text-cenat-green font-semibold' : 'text-gray-600 hover:bg-gray-50'}">
                                 <i class="fas ${item.icon} w-5"></i>
                                 <span>${item.label}</span>
                             </a>
@@ -147,7 +147,7 @@ function renderAdminLayout(content, activeSection) {
 
             <!-- Mobile sidebar selector -->
             <div class="md:hidden fixed bottom-4 right-4 z-40">
-                <select onchange="navigateTo(this.value)" class="bg-cenat-blue text-white rounded-lg px-4 py-2 shadow-lg">
+                <select onchange="navigateTo(this.value)" class="bg-cenat-green text-white rounded-lg px-4 py-2 shadow-lg">
                     ${menuItems.map(item => `
                         <option value="${item.path}" ${activeSection === item.id ? 'selected' : ''}>${item.label}</option>
                     `).join('')}

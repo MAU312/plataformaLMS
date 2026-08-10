@@ -17,12 +17,12 @@ window.renderHome = async function(params) {
     homeSearchTerm = '';
 
     app.innerHTML = `
-        <div class="bg-gradient-to-br from-cenat-blue to-cenat-light py-16 px-4 sm:px-6 lg:px-8">
+        <div class="bg-gradient-to-br from-cenat-green to-cenat-green-light py-16 px-4 sm:px-6 lg:px-8">
             <div class="max-w-7xl mx-auto text-center">
                 <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-4">
                     Cursos del LANBA - CeNAT
                 </h1>
-                <p class="text-lg md:text-xl text-blue-100 max-w-2xl mx-auto">
+                <p class="text-lg md:text-xl text-green-100 max-w-2xl mx-auto">
                     Explora nuestros cursos educativos y fortalece tus conocimientos en biotecnología ambiental y ciencia abierta.
                 </p>
             </div>
@@ -31,7 +31,7 @@ window.renderHome = async function(params) {
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <div class="flex items-center justify-between mb-8">
                 <h2 class="text-2xl font-bold text-gray-900">
-                    <i class="fas fa-th-large mr-2 text-cenat-blue"></i>
+                    <i class="fas fa-th-large mr-2 text-cenat-green"></i>
                     Cursos disponibles
                 </h2>
                 <div class="relative">
@@ -39,7 +39,7 @@ window.renderHome = async function(params) {
                         type="text"
                         id="search-courses"
                         placeholder="Buscar curso..."
-                        class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-blue focus:border-transparent transition w-64"
+                        class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition w-64"
                     >
                     <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                 </div>
@@ -106,7 +106,7 @@ function renderCourseCard(course) {
 
     return `
         <div class="course-card bg-white rounded-xl shadow-md overflow-hidden border border-gray-100" onclick="navigateTo('/course/${course.id}')">
-            <div class="h-44 bg-gradient-to-br from-cenat-blue to-cenat-light flex items-center justify-center relative overflow-hidden">
+            <div class="h-44 bg-gradient-to-br from-cenat-green to-cenat-green-light flex items-center justify-center relative overflow-hidden">
                 ${thumbnailUrl 
                     ? `<img src="${thumbnailUrl}" alt="${escapeHtml(course.title)}" class="w-full h-full object-cover">` 
                     : `<i class="fas fa-flask text-5xl text-white opacity-80"></i>`
@@ -121,8 +121,8 @@ function renderCourseCard(course) {
                     ${escapeHtml(course.description || 'Sin descripción disponible')}
                 </p>
                 <div class="flex items-center justify-between text-sm text-gray-500 border-t pt-3">
-                    <span><i class="fas fa-play-circle mr-1 text-cenat-blue"></i> ${contentCount} contenidos</span>
-                    <span><i class="fas fa-users mr-1 text-cenat-blue"></i> ${enrolledCount} inscritos</span>
+                    <span><i class="fas fa-play-circle mr-1 text-cenat-green"></i> ${contentCount} contenidos</span>
+                    <span><i class="fas fa-users mr-1 text-cenat-green"></i> ${enrolledCount} inscritos</span>
                 </div>
             </div>
         </div>

@@ -14,7 +14,7 @@ window.renderMyCourses = async function(params) {
             <div class="bg-white border-b py-8 px-4 sm:px-6 lg:px-8">
                 <div class="max-w-7xl mx-auto">
                     <h1 class="text-3xl font-extrabold text-gray-900">
-                        <i class="fas fa-book text-cenat-blue mr-2"></i>
+                        <i class="fas fa-book text-cenat-green mr-2"></i>
                         Mis Cursos
                     </h1>
                     <p class="text-gray-600 mt-1">Aquí están todos los cursos en los que estás inscrito</p>
@@ -58,7 +58,7 @@ function renderEnrolledCourseCard(course) {
 
     return `
         <div class="course-card bg-white rounded-xl shadow-md overflow-hidden border border-gray-100" onclick="navigateTo('/course/${course.id}')">
-            <div class="h-40 bg-gradient-to-br from-cenat-blue to-cenat-light flex items-center justify-center relative overflow-hidden">
+            <div class="h-40 bg-gradient-to-br from-cenat-green to-cenat-green-light flex items-center justify-center relative overflow-hidden">
                 ${thumbnailUrl 
                     ? `<img src="${thumbnailUrl}" alt="${escapeHtml(course.title)}" class="w-full h-full object-cover">` 
                     : `<i class="fas fa-flask text-5xl text-white opacity-80"></i>`

@@ -3,9 +3,10 @@
    ================================= */
 
 :root {
-    --cenat-blue: #1e3a8a;
-    --cenat-light: #3b82f6;
-    --cenat-hover: #1e40af;
+    /* Verde tomado directamente del logo de LANBA (#007031). */
+    --cenat-green: #007031;
+    --cenat-green-light: #22c55e;
+    --cenat-green-hover: #005c28;
 }
 
 * {
@@ -46,12 +47,12 @@ html {
 }
 
 .dark #navbar a:hover {
-    color: #93c5fd;
+    color: #86efac;
 }
 
 /* Logo */
-.dark .text-cenat-blue {
-    color: #93c5fd;
+.dark .text-cenat-green {
+    color: #86efac;
 }
 
 /* Footer */
@@ -88,7 +89,7 @@ html {
 /* Fondos secundarios */
 .dark .bg-gray-50  { background-color: #0f172a !important; }
 .dark .bg-gray-100 { background-color: #1e293b !important; }
-.dark .bg-blue-50  { background-color: #1e3a5f !important; }
+.dark .bg-green-50 { background-color: #14432a !important; }
 
 /* Inputs y textareas */
 .dark input,
@@ -107,7 +108,7 @@ html {
 /* Tablas */
 .dark thead,
 .dark .bg-gray-50 { background-color: #0f172a !important; }
-.dark tr:hover   { background-color: #1e3a5f !important; }
+.dark tr:hover   { background-color: #14432a !important; }
 .dark th         { color: #94a3b8 !important; }
 
 /* Sidebar admin */
@@ -144,8 +145,8 @@ html {
 
 .dark .file-drop-zone:hover,
 .dark .file-drop-zone.dragging {
-    border-color: #3b82f6;
-    background-color: #1e3a5f;
+    border-color: #22c55e;
+    background-color: #14432a;
 }
 
 /* Toast */
@@ -201,7 +202,7 @@ html {
    ================================= */
 
 .btn-cenat {
-    background: linear-gradient(135deg, var(--cenat-blue) 0%, var(--cenat-light) 100%);
+    background: linear-gradient(135deg, var(--cenat-green) 0%, var(--cenat-green-light) 100%);
     color: white;
     padding: 0.75rem 1.5rem;
     border-radius: 0.5rem;
@@ -217,7 +218,7 @@ html {
 
 .btn-cenat:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(30, 58, 138, 0.3);
+    box-shadow: 0 5px 15px rgba(0, 112, 49, 0.3);
 }
 
 .btn-cenat:active  { transform: translateY(0); }
@@ -279,7 +280,7 @@ html {
 
 .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--cenat-blue), var(--cenat-light));
+    background: linear-gradient(90deg, var(--cenat-green), var(--cenat-green-light));
     transition: width 0.3s ease;
 }
 
@@ -289,14 +290,14 @@ html {
 
 .spinner {
     border: 3px solid #f3f3f3;
-    border-top: 3px solid var(--cenat-blue);
+    border-top: 3px solid var(--cenat-green);
     border-radius: 50%;
     width: 40px;
     height: 40px;
     animation: spin 1s linear infinite;
 }
 
-.dark .spinner { border-color: #334155; border-top-color: #3b82f6; }
+.dark .spinner { border-color: #334155; border-top-color: #22c55e; }
 
 @keyframes spin {
     0%   { transform: rotate(0deg); }
@@ -345,8 +346,8 @@ html {
 
 .file-drop-zone:hover,
 .file-drop-zone.dragging {
-    border-color: var(--cenat-blue);
-    background: rgba(30, 58, 138, 0.05);
+    border-color: var(--cenat-green);
+    background: rgba(0, 112, 49, 0.05);
 }
 
 /* =================================

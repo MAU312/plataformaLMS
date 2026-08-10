@@ -144,7 +144,7 @@ function render404() {
                 <div class="relative mb-6">
                     <h1 class="text-9xl font-extrabold text-gray-200 dark:text-slate-700 select-none">404</h1>
                     <div class="absolute inset-0 flex items-center justify-center">
-                        <i class="fas fa-graduation-cap text-5xl text-cenat-blue"></i>
+                        <i class="fas fa-graduation-cap text-5xl text-cenat-green"></i>
                     </div>
                 </div>
 

@@ -20,7 +20,7 @@ window.renderAdminCourses = async function(params) {
     app.innerHTML = renderAdminLayout(`
         <div class="flex items-center justify-between mb-6">
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-                <i class="fas fa-book text-cenat-blue mr-2"></i>
+                <i class="fas fa-book text-cenat-green mr-2"></i>
                 Gestión de Cursos
             </h1>
             <a href="#/admin/courses/create" class="btn-cenat">
@@ -30,7 +30,7 @@ window.renderAdminCourses = async function(params) {
 
         <div class="relative mb-4">
             <input type="text" id="search-admin-courses" placeholder="Buscar curso..."
-                class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-blue">
+                class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
             <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
         </div>
 
@@ -116,10 +116,10 @@ function renderCoursesTable(courses, page, pagination) {
                             <td class="py-3 px-4 text-gray-600 dark:text-slate-300">${course.enrolled_count || 0}</td>
                             <td class="py-3 px-4 text-gray-500 dark:text-slate-400">${formatDate(course.created_at)}</td>
                             <td class="py-3 px-4 text-right space-x-3 whitespace-nowrap">
-                                <a href="#/course/${course.id}" class="text-gray-500 hover:text-cenat-blue" title="Ver curso">
+                                <a href="#/course/${course.id}" class="text-gray-500 hover:text-cenat-green" title="Ver curso">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <a href="#/admin/courses/${course.id}/edit" class="text-cenat-blue hover:text-cenat-hover" title="Editar">
+                                <a href="#/admin/courses/${course.id}/edit" class="text-cenat-green hover:text-cenat-green-hover" title="Editar">
                                     <i class="fas fa-edit"></i>
                                 </a>
                                 <button onclick="toggleCourseActive(${course.id})"

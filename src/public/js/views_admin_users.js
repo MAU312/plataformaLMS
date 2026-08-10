@@ -19,13 +19,13 @@ window.renderAdminUsers = async function(params) {
 
     app.innerHTML = renderAdminLayout(`
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-            <i class="fas fa-users text-cenat-blue mr-2"></i>
+            <i class="fas fa-users text-cenat-green mr-2"></i>
             Gestión de Usuarios
         </h1>
 
         <div class="relative mb-4">
             <input type="text" id="search-admin-users" placeholder="Buscar usuario por nombre o email..."
-                class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-blue">
+                class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
             <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
         </div>
 
