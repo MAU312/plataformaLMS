@@ -90,4 +90,18 @@ router.delete('/:id/enroll', isAuthenticated, enrollLimiter, courseController.un
  */
 router.get('/:id/stats', isAuthenticated, isAdmin, courseController.getCourseStats);
 
+/**
+ * GET /api/courses/:id/certificate
+ * Descargar certificado de finalización (PDF)
+ * Requiere autenticación y haber completado el curso al 100%
+ */
+router.get('/:id/certificate', isAuthenticated, courseController.getCertificate);
+
+/**
+ * GET /api/courses/:id/students
+ * Estudiantes inscritos en el curso con su progreso
+ * Solo administradores
+ */
+router.get('/:id/students', isAuthenticated, isAdmin, courseController.getCourseStudents);
+
 export default router;

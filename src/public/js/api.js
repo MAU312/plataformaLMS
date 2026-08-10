@@ -64,7 +64,9 @@ const authAPI = {
     register: async (name, email, password, role = 'student') => apiRequest('/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password, role }) }),
     logout: async () => apiRequest('/auth/logout', { method: 'POST' }),
     getCurrentUser: async () => apiRequest('/auth/me'),
-    checkAuth: async () => apiRequest('/auth/check')
+    checkAuth: async () => apiRequest('/auth/check'),
+    forgotPassword: async (email) => apiRequest('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+    resetPassword: async (token, password) => apiRequest('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) })
 };
 
 // =================================
@@ -91,7 +93,9 @@ const coursesAPI = {
     enroll: async (id) => apiRequest(`/courses/${id}/enroll`, { method: 'POST' }),
     unenroll: async (id) => apiRequest(`/courses/${id}/enroll`, { method: 'DELETE' }),
     getStats: async (id) => apiRequest(`/courses/${id}/stats`),
-    getGlobalStats: async () => apiRequest('/courses/stats/summary')
+    getGlobalStats: async () => apiRequest('/courses/stats/summary'),
+    downloadCertificate: async (id) => { window.open(`${API_URL}/courses/${id}/certificate`, '_blank'); },
+    getStudents: async (id) => apiRequest(`/courses/${id}/students`)
 };
 
 // =================================

@@ -56,6 +56,23 @@ export const enrollLimiter = rateLimit({
 });
 
 /**
+ * Limita solicitudes de recuperación de contraseña: 5 cada 15 minutos por
+ * IP. Evita que alguien use este endpoint para bombardear de correos a un
+ * email ajeno, o para "sondear" en bucle qué emails existen (aunque la
+ * respuesta ya es idéntica exista o no la cuenta).
+ */
+export const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Demasiadas solicitudes de recuperación. Intenta de nuevo en unos minutos.'
+  }
+});
+
+/**
  * Limita la creación de cursos: 20 por hora por usuario admin.
  * Un admin legítimo no necesita crear más que eso en una hora; evita
  * creación masiva accidental (doble clic, script, etc.).

@@ -1,5 +1,7 @@
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import User from '../models/User.js';
+import mailer from '../config/mailer.js';
 
 // Regex simple pero suficiente para validar formato de email en el backend
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -122,5 +124,75 @@ export const checkAuth = (req, res) => {
     res.json({ success: true, authenticated: true, user: req.session.user });
   } else {
     res.json({ success: true, authenticated: false });
+  }
+};
+
+/**
+ * Solicita un enlace de recuperación de contraseña.
+ * Responde con el mismo mensaje exista o no la cuenta con ese email, para
+ * no revelar qué correos están registrados (evita enumeración de usuarios).
+ */
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'El email es requerido' });
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const user = await User.findByEmail(normalizedEmail);
+
+    if (user) {
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
+
+      await User.setResetToken(user.id, tokenHash, expiresAt);
+      await mailer.sendPasswordResetEmail(user.email, rawToken);
+    }
+
+    res.json({
+      success: true,
+      message: 'Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.'
+    });
+  } catch (error) {
+    console.error('Error en forgotPassword:', error);
+    res.status(500).json({ success: false, message: 'Error al procesar la solicitud' });
+  }
+};
+
+/**
+ * Restablece la contraseña usando el token recibido por correo.
+ */
+export const resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ success: false, message: 'Token y nueva contraseña son requeridos' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'La contraseña debe tener al menos 6 caracteres' });
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await User.findByValidResetTokenHash(tokenHash);
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'El enlace es inválido o ya expiró. Solicita uno nuevo.'
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await User.resetPassword(user.id, hashedPassword);
+
+    res.json({ success: true, message: 'Contraseña actualizada exitosamente. Ya puedes iniciar sesión.' });
+  } catch (error) {
+    console.error('Error en resetPassword:', error);
+    res.status(500).json({ success: false, message: 'Error al restablecer la contraseña' });
   }
 };

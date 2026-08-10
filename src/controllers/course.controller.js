@@ -1,6 +1,7 @@
 import Course from '../models/Course.js';
 import User from '../models/User.js';
 import { deleteFile } from '../middlewares/upload.middleware.js';
+import certificateGenerator from '../utils/certificate.js';
 
 /**
  * Obtener cursos paginados (?page, ?limit, ?search)
@@ -329,6 +330,68 @@ export const getEnrolledCourses = async (req, res) => {
       success: false,
       message: 'Error al obtener cursos inscritos'
     });
+  }
+};
+
+/**
+ * Descargar el certificado de finalización de un curso.
+ * Solo si el usuario tiene una inscripción con completed_at (llegó al
+ * 100% de progreso en algún momento).
+ */
+export const getCertificate = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.session.user.id;
+
+    const course = await Course.findById(id);
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Curso no encontrado' });
+    }
+
+    const enrollment = await Course.getEnrollment(id, userId);
+    if (!enrollment || !enrollment.completed_at) {
+      return res.status(403).json({
+        success: false,
+        message: 'Debes completar el curso al 100% para descargar el certificado'
+      });
+    }
+
+    const safeTitle = course.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="certificado-${safeTitle}.pdf"`);
+
+    certificateGenerator.generateCertificate({
+      studentName: req.session.user.name,
+      courseTitle: course.title,
+      completedAt: enrollment.completed_at
+    }, res);
+  } catch (error) {
+    console.error('Error al generar certificado:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: 'Error al generar el certificado' });
+    }
+  }
+};
+
+/**
+ * Obtener los estudiantes inscritos en un curso con su progreso
+ * (vista de instructor/admin, solo admin).
+ */
+export const getCourseStudents = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const course = await Course.findById(id);
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Curso no encontrado' });
+    }
+
+    const students = await Course.getEnrolledStudents(id);
+
+    res.json({ success: true, data: { course, students } });
+  } catch (error) {
+    console.error('Error al obtener estudiantes del curso:', error);
+    res.status(500).json({ success: false, message: 'Error al obtener estudiantes del curso' });
   }
 };
 

@@ -151,6 +151,34 @@ class Course {
   }
 
   /**
+   * Obtener el registro de inscripción de un usuario en un curso
+   * (progreso, fecha de inscripción, fecha de finalización si aplica).
+   */
+  static async getEnrollment(courseId, userId) {
+    const [rows] = await pool.query(
+      'SELECT id, progress, enrolled_at, completed_at FROM enrollments WHERE course_id = ? AND user_id = ?',
+      [courseId, userId]
+    );
+    return rows[0];
+  }
+
+  /**
+   * Obtener los estudiantes inscritos en un curso junto con su progreso
+   * (vista de instructor/admin).
+   */
+  static async getEnrolledStudents(courseId) {
+    const [rows] = await pool.query(
+      `SELECT u.id, u.name, u.email, e.progress, e.enrolled_at, e.completed_at
+       FROM enrollments e
+       INNER JOIN users u ON u.id = e.user_id
+       WHERE e.course_id = ?
+       ORDER BY e.progress DESC, u.name ASC`,
+      [courseId]
+    );
+    return rows;
+  }
+
+  /**
    * Inscribir un usuario en un curso
    */
   static async enrollUser(courseId, userId) {

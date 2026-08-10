@@ -22,6 +22,16 @@ const routes = {
         render: (params) => window.renderRegister(params),
         requireAuth: false
     },
+    '/forgot-password': {
+        title: 'Recuperar Contraseña',
+        render: (params) => window.renderForgotPassword(params),
+        requireAuth: false
+    },
+    '/reset-password/:token': {
+        title: 'Restablecer Contraseña',
+        render: (params) => window.renderResetPassword(params),
+        requireAuth: false
+    },
     '/my-courses': {
         title: 'Mis Cursos',
         render: (params) => window.renderMyCourses(params),
@@ -53,6 +63,12 @@ const routes = {
     '/admin/courses/:id/edit': {
         title: 'Editar Curso',
         render: (params) => window.renderAdminEditCourse(params),
+        requireAuth: true,
+        requireAdmin: true
+    },
+    '/admin/courses/:id/students': {
+        title: 'Estudiantes del Curso',
+        render: (params) => window.renderAdminCourseStudents(params),
         requireAuth: true,
         requireAdmin: true
     },

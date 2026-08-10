@@ -122,6 +122,9 @@ function renderCoursesTable(courses, page, pagination) {
                                 <a href="#/admin/courses/${course.id}/edit" class="text-cenat-green hover:text-cenat-green-hover" title="Editar">
                                     <i class="fas fa-edit"></i>
                                 </a>
+                                <a href="#/admin/courses/${course.id}/students" class="text-gray-500 hover:text-cenat-green" title="Ver estudiantes inscritos">
+                                    <i class="fas fa-user-graduate"></i>
+                                </a>
                                 <button onclick="toggleCourseActive(${course.id})"
                                     title="${isActive ? 'Desactivar curso' : 'Activar curso'}"
                                     class="hover:opacity-80 transition">

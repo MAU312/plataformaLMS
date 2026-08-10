@@ -27,9 +27,9 @@ async function initApp() {
         } else {
             // Si no está autenticado y no está en login/register, redirigir a login
             const currentRoute = window.location.hash.slice(1);
-            const publicRoutes = ['/login', '/register', '/'];
-            
-            if (!publicRoutes.includes(currentRoute) && !currentRoute.startsWith('/course/')) {
+            const publicRoutes = ['/login', '/register', '/forgot-password', '/'];
+
+            if (!publicRoutes.includes(currentRoute) && !currentRoute.startsWith('/course/') && !currentRoute.startsWith('/reset-password/')) {
                 window.location.hash = '#/login';
             }
         }

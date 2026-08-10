@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import bcrypt from 'bcryptjs';
 import * as authController from '../../src/controllers/auth.controller.js';
 import User from '../../src/models/User.js';
+import mailer from '../../src/config/mailer.js';
 import { mockReq, mockRes } from '../helpers/http.js';
 
 test('register: falla si faltan campos requeridos', async () => {
@@ -129,4 +130,83 @@ test('checkAuth reporta authenticated=true con sesión activa', () => {
   const res = mockRes();
   authController.checkAuth(req, res);
   assert.equal(res.body.authenticated, true);
+});
+
+test('forgotPassword: falla si falta el email', async () => {
+  const req = mockReq({ body: {} });
+  const res = mockRes();
+  await authController.forgotPassword(req, res);
+  assert.equal(res.statusCode, 400);
+});
+
+test('forgotPassword: responde éxito genérico aunque el email no exista (no revela si la cuenta existe)', async (t) => {
+  t.mock.method(User, 'findByEmail', async () => undefined);
+  const sendMailCall = t.mock.method(mailer, 'sendPasswordResetEmail', async () => {});
+
+  const req = mockReq({ body: { email: 'nadie@test.com' } });
+  const res = mockRes();
+  await authController.forgotPassword(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.success, true);
+  assert.equal(sendMailCall.mock.calls.length, 0, 'no debe intentar enviar correo si el usuario no existe');
+});
+
+test('forgotPassword: genera token, lo guarda hasheado y envía el correo si el email existe', async (t) => {
+  t.mock.method(User, 'findByEmail', async () => ({ id: 5, email: 'ana@test.com' }));
+  const setTokenCall = t.mock.method(User, 'setResetToken', async () => {});
+  const sendMailCall = t.mock.method(mailer, 'sendPasswordResetEmail', async () => {});
+
+  const req = mockReq({ body: { email: 'ana@test.com' } });
+  const res = mockRes();
+  await authController.forgotPassword(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(setTokenCall.mock.calls.length, 1);
+  assert.equal(setTokenCall.mock.calls[0].arguments[0], 5);
+  const tokenHash = setTokenCall.mock.calls[0].arguments[1];
+  assert.equal(typeof tokenHash, 'string');
+  assert.equal(tokenHash.length, 64, 'debe ser un hash sha256 en hex (64 caracteres)');
+
+  assert.equal(sendMailCall.mock.calls.length, 1);
+  assert.equal(sendMailCall.mock.calls[0].arguments[0], 'ana@test.com');
+  const rawToken = sendMailCall.mock.calls[0].arguments[1];
+  assert.notEqual(rawToken, tokenHash, 'el correo debe llevar el token crudo, no el hash guardado en BD');
+});
+
+test('resetPassword: falla si faltan token o contraseña', async () => {
+  const req = mockReq({ body: { token: 'abc' } });
+  const res = mockRes();
+  await authController.resetPassword(req, res);
+  assert.equal(res.statusCode, 400);
+});
+
+test('resetPassword: falla con contraseña menor a 6 caracteres', async () => {
+  const req = mockReq({ body: { token: 'abc', password: '123' } });
+  const res = mockRes();
+  await authController.resetPassword(req, res);
+  assert.equal(res.statusCode, 400);
+});
+
+test('resetPassword: 400 si el token es inválido o expiró', async (t) => {
+  t.mock.method(User, 'findByValidResetTokenHash', async () => undefined);
+  const req = mockReq({ body: { token: 'token-invalido', password: 'nueva123' } });
+  const res = mockRes();
+  await authController.resetPassword(req, res);
+  assert.equal(res.statusCode, 400);
+});
+
+test('resetPassword: éxito actualiza la contraseña y consume el token', async (t) => {
+  t.mock.method(User, 'findByValidResetTokenHash', async () => ({ id: 7 }));
+  const resetCall = t.mock.method(User, 'resetPassword', async () => true);
+
+  const req = mockReq({ body: { token: 'token-valido', password: 'nueva123' } });
+  const res = mockRes();
+  await authController.resetPassword(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(resetCall.mock.calls.length, 1);
+  assert.equal(resetCall.mock.calls[0].arguments[0], 7);
+  const storedHash = resetCall.mock.calls[0].arguments[1];
+  assert.notEqual(storedHash, 'nueva123', 'la contraseña nunca debe guardarse en texto plano');
 });

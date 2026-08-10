@@ -245,10 +245,17 @@ class Content {
 
     const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-    // Actualizar el progreso en la tabla enrollments
+    // Actualizar el progreso en la tabla enrollments. completed_at se marca
+    // solo la primera vez que se llega a 100 (CASE con "completed_at IS
+    // NULL") y no se vuelve a tocar después, aunque el progreso baje más
+    // adelante por desmarcar contenido: sirve como fecha de finalización
+    // para el certificado, no como "está completo ahora mismo".
     await pool.query(
-      'UPDATE enrollments SET progress = ? WHERE course_id = ? AND user_id = ?',
-      [progress, courseId, userId]
+      `UPDATE enrollments
+       SET progress = ?,
+           completed_at = CASE WHEN ? = 100 AND completed_at IS NULL THEN NOW() ELSE completed_at END
+       WHERE course_id = ? AND user_id = ?`,
+      [progress, progress, courseId, userId]
     );
 
     return { progress, total, completed };

@@ -6,11 +6,14 @@ export function mockRes() {
   const res = {
     statusCode: 200,
     body: undefined,
-    downloadCall: undefined
+    downloadCall: undefined,
+    headers: {},
+    headersSent: false
   };
   res.status = (code) => { res.statusCode = code; return res; };
   res.json = (payload) => { res.body = payload; return res; };
   res.download = (filePath, fileName) => { res.downloadCall = { filePath, fileName }; return res; };
+  res.setHeader = (name, value) => { res.headers[name] = value; res.headersSent = true; return res; };
   return res;
 }
 

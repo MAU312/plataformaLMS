@@ -146,6 +146,12 @@ window.renderCourseDetail = async function(params) {
                                 <li><i class="fas fa-users mr-2 text-gray-400"></i>${course.enrolled_count || 0} inscritos</li>
                             </ul>
                         </div>
+
+                        ${isLoggedIn && isEnrolled && progressPercent === 100 ? `
+                            <button onclick="downloadCertificate(${course.id})" class="btn-cenat w-full">
+                                <i class="fas fa-certificate mr-2"></i> Descargar certificado
+                            </button>
+                        ` : ''}
                     </div>
                 </div>
             </div>
@@ -284,7 +290,7 @@ async function toggleContentCompleted(contentId, markAsCompleted, courseId) {
 
         // Toast + celebración si llegó al 100%
         if (markAsCompleted && newProgress === 100) {
-            showCourseCompletionModal();
+            showCourseCompletionModal(courseId);
         } else {
             showToast(markAsCompleted ? 'Contenido marcado como completado' : 'Contenido marcado como pendiente', 'success');
         }
@@ -379,14 +385,23 @@ async function downloadContent(id) {
     await contentsAPI.download(id);
 }
 
+async function downloadCertificate(courseId) {
+    try {
+        await coursesAPI.downloadCertificate(courseId);
+    } catch (error) {
+        showToast(error.message || 'Error al descargar el certificado', 'error');
+    }
+}
+
 window.downloadContent = downloadContent;
+window.downloadCertificate = downloadCertificate;
 window.getFileIcon = getFileIcon;
 
 // =================================
 // Celebración al completar el 100%
 // =================================
 
-function showCourseCompletionModal() {
+function showCourseCompletionModal(courseId) {
     // Eliminar modal previo si existe
     const existing = document.getElementById('completion-modal');
     if (existing) existing.remove();
@@ -418,13 +433,18 @@ function showCourseCompletionModal() {
                 100% Completado
             </div>
 
-            <div class="flex gap-3 justify-center">
-                <button onclick="closeCompletionModal()" class="btn-cenat">
-                    <i class="fas fa-check mr-2"></i> ¡Entendido!
+            <div class="flex flex-col gap-3">
+                <button onclick="downloadCertificate(${courseId})" class="btn-cenat">
+                    <i class="fas fa-certificate mr-2"></i> Descargar certificado
                 </button>
-                <a href="#/" onclick="closeCompletionModal()" class="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 transition">
-                    Ver más cursos
-                </a>
+                <div class="flex gap-3 justify-center">
+                    <button onclick="closeCompletionModal()" class="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 transition">
+                        <i class="fas fa-check mr-2"></i> ¡Entendido!
+                    </button>
+                    <a href="#/" onclick="closeCompletionModal()" class="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 transition">
+                        Ver más cursos
+                    </a>
+                </div>
             </div>
         </div>
     `;
