@@ -140,7 +140,7 @@ async function handleRoute() {
     }
     
     // Update page title
-    document.title = `${route.title} - LMS CeNAT`;
+    document.title = `${route.title} - LMS LANBA - CeNAT`;
     
     // Render the route
     try {

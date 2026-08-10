@@ -17,7 +17,7 @@ window.renderLogin = async function(params) {
                 <div class="text-center">
                     <img src="/images/logo-lanba.png" alt="LANBA" class="mx-auto h-16 w-auto object-contain mb-4">
                     <h2 class="text-3xl font-extrabold text-gray-900 mb-2">
-                        Bienvenido a LMS CeNAT
+                        Bienvenido a LMS LANBA - CeNAT
                     </h2>
                     <p class="text-gray-600">
                         Inicia sesión para acceder a tus cursos
@@ -135,7 +135,7 @@ window.renderRegister = async function(params) {
                         Crear Cuenta
                     </h2>
                     <p class="text-gray-600">
-                        Únete a la comunidad educativa de CeNAT
+                        Únete a la comunidad educativa de LANBA - CeNAT
                     </p>
                 </div>
 

@@ -59,7 +59,7 @@ function generateCertificate({ studentName, courseTitle, completedAt }, res) {
     .text('LANBA · Laboratorio Nacional de Bioeconomía y Ambiente', 0, height - 80, { align: 'center' });
 
   doc.font('Helvetica').fontSize(9).fillColor('#9ca3af')
-    .text('LMS CeNAT - Centro Nacional de Alta Tecnología', 0, height - 65, { align: 'center' });
+    .text('LMS LANBA - CeNAT (Centro Nacional de Alta Tecnología)', 0, height - 65, { align: 'center' });
 
   doc.end();
 }

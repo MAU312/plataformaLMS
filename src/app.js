@@ -188,7 +188,7 @@ const startServer = async () => {
   
   app.listen(PORT, () => {
     console.log('\n🚀 ================================');
-    console.log(`🚀 Servidor LMS-CeNAT corriendo`);
+    console.log(`🚀 Servidor LMS LANBA - CeNAT corriendo`);
     console.log(`🚀 URL: http://localhost:${PORT}`);
     console.log('🚀 ================================\n');
   });

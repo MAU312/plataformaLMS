@@ -37,12 +37,12 @@ async function sendPasswordResetEmail(toEmail, resetToken) {
   }
 
   await transporter.sendMail({
-    from: `"LMS CeNAT" <${EMAIL_USER}>`,
+    from: `"LMS LANBA - CeNAT" <${EMAIL_USER}>`,
     to: toEmail,
-    subject: 'Recupera tu contraseña - LMS CeNAT',
+    subject: 'Recupera tu contraseña - LMS LANBA - CeNAT',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
-        <h2 style="color: #007031;">LMS CeNAT</h2>
+        <h2 style="color: #007031;">LMS LANBA - CeNAT</h2>
         <p>Recibimos una solicitud para restablecer tu contraseña.</p>
         <p>
           <a href="${resetUrl}"

@@ -59,7 +59,7 @@ window.renderCourseDetail = async function(params) {
                             <p class="text-green-100">${escapeHtml(course.description || '')}</p>
                             <p class="text-green-200 text-sm mt-2">
                                 <i class="fas fa-user-tie mr-1"></i> 
-                                ${course.instructor_name ? escapeHtml(course.instructor_name) : 'CeNAT'}
+                                ${course.instructor_name ? escapeHtml(course.instructor_name) : 'LANBA - CeNAT'}
                             </p>
                         </div>
                         <div id="enroll-button-container">
