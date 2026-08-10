@@ -130,28 +130,27 @@ class Content {
   }
 
   /**
-   * Reordenar contenidos de un curso
+   * Reordenar contenidos de un curso.
+   * Antes hacía un UPDATE por elemento dentro de una transacción (N
+   * queries para N contenidos); ahora es un único UPDATE con CASE WHEN,
+   * que además es atómico de por sí (no requiere transacción manual).
+   * El WHERE con course_id sigue evitando que se cuele el id de un
+   * contenido de otro curso.
    */
   static async reorder(courseId, contentIds) {
-    const connection = await pool.getConnection();
-    try {
-      await connection.beginTransaction();
+    if (contentIds.length === 0) return true;
 
-      for (let i = 0; i < contentIds.length; i++) {
-        await connection.query(
-          'UPDATE contents SET order_index = ? WHERE id = ? AND course_id = ?',
-          [i + 1, contentIds[i], courseId]
-        );
-      }
+    const caseClauses = contentIds.map(() => 'WHEN ? THEN ?').join(' ');
+    const caseParams = contentIds.flatMap((id, i) => [id, i + 1]);
+    const placeholders = contentIds.map(() => '?').join(', ');
 
-      await connection.commit();
-      return true;
-    } catch (error) {
-      await connection.rollback();
-      throw error;
-    } finally {
-      connection.release();
-    }
+    const [result] = await pool.query(
+      `UPDATE contents SET order_index = CASE id ${caseClauses} ELSE order_index END
+       WHERE course_id = ? AND id IN (${placeholders})`,
+      [...caseParams, courseId, ...contentIds]
+    );
+
+    return result.affectedRows > 0;
   }
 
   /**
