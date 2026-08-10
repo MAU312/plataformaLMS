@@ -4,7 +4,8 @@
   "description": "Learning Management System for CeNAT",
   "scripts": {
     "start": "node src/app.js",
-    "dev": "nodemon src/app.js"
+    "dev": "nodemon src/app.js",
+    "test": "node --test"
   },
   "type": "module",
   "dependencies": {
