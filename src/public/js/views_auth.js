@@ -15,9 +15,7 @@ window.renderLogin = async function(params) {
             <div class="max-w-md w-full space-y-8 bg-white p-10 rounded-2xl shadow-2xl fade-in">
                 <!-- Logo y Header -->
                 <div class="text-center">
-                    <div class="mx-auto h-16 w-16 bg-gradient-to-br from-cenat-blue to-cenat-light rounded-full flex items-center justify-center mb-4">
-                        <i class="fas fa-graduation-cap text-3xl text-white"></i>
-                    </div>
+                    <img src="/images/logo-lanba.png" alt="LANBA" class="mx-auto h-16 w-auto object-contain mb-4">
                     <h2 class="text-3xl font-extrabold text-gray-900 mb-2">
                         Bienvenido a LMS CeNAT
                     </h2>
@@ -127,9 +125,7 @@ window.renderRegister = async function(params) {
             <div class="max-w-md w-full space-y-8 bg-white p-10 rounded-2xl shadow-2xl fade-in">
                 <!-- Logo y Header -->
                 <div class="text-center">
-                    <div class="mx-auto h-16 w-16 bg-gradient-to-br from-cenat-blue to-cenat-light rounded-full flex items-center justify-center mb-4">
-                        <i class="fas fa-user-plus text-3xl text-white"></i>
-                    </div>
+                    <img src="/images/logo-lanba.png" alt="LANBA" class="mx-auto h-16 w-auto object-contain mb-4">
                     <h2 class="text-3xl font-extrabold text-gray-900 mb-2">
                         Crear Cuenta
                     </h2>
