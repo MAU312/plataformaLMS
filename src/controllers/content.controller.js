@@ -62,9 +62,20 @@ export const getContentById = async (req, res) => {
       });
     }
 
+    // Mismo criterio que en los demás endpoints de contenido: solo admin
+    // o inscrito ve la URL real. Antes este endpoint público devolvía la
+    // URL sin ningún filtro.
+    let canAccessMedia = false;
+    if (req.session?.user) {
+      canAccessMedia = req.session.user.role === 'admin'
+        || await Course.isUserEnrolled(content.course_id, req.session.user.id);
+    }
+
+    const responseData = canAccessMedia ? content : { ...content, url: null };
+
     res.json({
       success: true,
-      data: content
+      data: responseData
     });
   } catch (error) {
     console.error('Error al obtener contenido:', error);
@@ -387,6 +398,20 @@ export const markContentCompleted = async (req, res) => {
       });
     }
 
+    // Solo se puede marcar progreso en contenido de un curso en el que
+    // se está inscrito (o si es admin). Antes cualquier usuario autenticado
+    // podía marcar como completado contenido de cursos ajenos.
+    const isAdminUser = req.session.user.role === 'admin';
+    if (!isAdminUser) {
+      const enrolled = await Course.isUserEnrolled(content.course_id, userId);
+      if (!enrolled) {
+        return res.status(403).json({
+          success: false,
+          message: 'Debes estar inscrito en este curso para marcar contenido como completado'
+        });
+      }
+    }
+
     await Content.markCompleted(id, userId);
     const { progress: newProgress, total: totalContents, completed: completedContents } = await Content.recalculateCourseProgress(content.course_id, userId);
 
@@ -419,6 +444,18 @@ export const markContentIncomplete = async (req, res) => {
         success: false,
         message: 'Contenido no encontrado'
       });
+    }
+
+    // Misma regla que al marcar como completado.
+    const isAdminUser = req.session.user.role === 'admin';
+    if (!isAdminUser) {
+      const enrolled = await Course.isUserEnrolled(content.course_id, userId);
+      if (!enrolled) {
+        return res.status(403).json({
+          success: false,
+          message: 'Debes estar inscrito en este curso para modificar su progreso'
+        });
+      }
     }
 
     await Content.markIncomplete(id, userId);

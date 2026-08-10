@@ -86,7 +86,6 @@ const coursesAPI = {
     delete: async (id) => apiRequest(`/courses/${id}`, { method: 'DELETE' }),
     enroll: async (id) => apiRequest(`/courses/${id}/enroll`, { method: 'POST' }),
     unenroll: async (id) => apiRequest(`/courses/${id}/enroll`, { method: 'DELETE' }),
-    updateProgress: async (id, progress) => apiRequest(`/courses/${id}/progress`, { method: 'PUT', body: JSON.stringify({ progress }) }),
     getStats: async (id) => apiRequest(`/courses/${id}/stats`)
 };
 

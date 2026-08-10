@@ -2,6 +2,7 @@ import express from 'express';
 import * as contentController from '../controllers/content.controller.js';
 import { isAuthenticated, isAdmin } from '../middlewares/auth.middleware.js';
 import { uploadVideo, uploadFile } from '../middlewares/upload.middleware.js';
+import { verifyFileSignature } from '../middlewares/fileSignature.middleware.js';
 
 const router = express.Router();
 
@@ -32,6 +33,7 @@ router.post(
   isAuthenticated,
   isAdmin,
   uploadVideo.single('video'),
+  verifyFileSignature('video'),
   contentController.createVideoContent
 );
 
@@ -43,6 +45,7 @@ router.post(
   isAuthenticated,
   isAdmin,
   uploadFile.single('file'),
+  verifyFileSignature('file'),
   contentController.createFileContent
 );
 
@@ -87,6 +90,8 @@ router.put(
 
         if (!content) return next();
 
+        req.contentType = content.type;
+
         if (content.type === 'video') {
           return uploadVideo.single('video')(req, res, next);
         } else {
@@ -98,6 +103,7 @@ router.put(
     };
     handleUpload(req, res, next);
   },
+  (req, res, next) => verifyFileSignature(req.contentType === 'video' ? 'video' : 'file')(req, res, next),
   contentController.updateContent
 );
 

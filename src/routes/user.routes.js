@@ -36,12 +36,46 @@ router.get('/:id', isAuthenticated, isAdmin, async (req, res) => {
 router.put('/:id', isAuthenticated, isAdmin, async (req, res) => {
   try {
     const { name, email, role } = req.body;
+
+    if (!name || !email || !role) {
+      return res.status(400).json({ success: false, message: 'Nombre, email y rol son requeridos' });
+    }
+
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const normalizedEmail = String(email).trim().toLowerCase();
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
+      return res.status(400).json({ success: false, message: 'El email no tiene un formato válido' });
+    }
+
+    if (!['admin', 'student'].includes(role)) {
+      return res.status(400).json({ success: false, message: 'Rol inválido' });
+    }
+
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
 
-    await User.update(req.params.id, { name, email, role });
+    // Evita que un admin se quite su propio rol por accidente (por ejemplo
+    // desde el selector de rol en la tabla de usuarios) y quede bloqueado
+    // del panel sin que nadie más pueda revertirlo desde la interfaz.
+    if (req.session.user.id === parseInt(req.params.id) && role !== 'admin') {
+      return res.status(400).json({
+        success: false,
+        message: 'No puedes cambiar tu propio rol de administrador'
+      });
+    }
+
+    try {
+      await User.update(req.params.id, { name: String(name).trim(), email: normalizedEmail, role });
+    } catch (dbError) {
+      if (dbError.code === 'ER_DUP_ENTRY') {
+        return res.status(400).json({ success: false, message: 'El email ya está en uso por otro usuario' });
+      }
+      throw dbError;
+    }
+
     res.json({ success: true, message: 'Usuario actualizado exitosamente' });
   } catch (error) {
+    console.error('Error al actualizar usuario:', error);
     res.status(500).json({ success: false, message: 'Error al actualizar usuario' });
   }
 });

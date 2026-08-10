@@ -2,6 +2,8 @@ import express from 'express';
 import * as courseController from '../controllers/course.controller.js';
 import { isAuthenticated, isAdmin } from '../middlewares/auth.middleware.js';
 import { uploadThumbnail } from '../middlewares/upload.middleware.js';
+import { verifyFileSignature } from '../middlewares/fileSignature.middleware.js';
+import { enrollLimiter, courseCreateLimiter } from '../middlewares/rateLimit.middleware.js';
 
 const router = express.Router();
 
@@ -33,7 +35,9 @@ router.post(
   '/',
   isAuthenticated,
   isAdmin,
+  courseCreateLimiter,
   uploadThumbnail.single('thumbnail'),
+  verifyFileSignature('image'),
   courseController.createCourse
 );
 
@@ -47,6 +51,7 @@ router.put(
   isAuthenticated,
   isAdmin,
   uploadThumbnail.single('thumbnail'),
+  verifyFileSignature('image'),
   courseController.updateCourse
 );
 
@@ -62,21 +67,14 @@ router.delete('/:id', isAuthenticated, isAdmin, courseController.deleteCourse);
  * Inscribirse en un curso
  * Requiere autenticación
  */
-router.post('/:id/enroll', isAuthenticated, courseController.enrollCourse);
+router.post('/:id/enroll', isAuthenticated, enrollLimiter, courseController.enrollCourse);
 
 /**
  * DELETE /api/courses/:id/enroll
  * Desinscribirse de un curso
  * Requiere autenticación
  */
-router.delete('/:id/enroll', isAuthenticated, courseController.unenrollCourse);
-
-/**
- * PUT /api/courses/:id/progress
- * Actualizar progreso en un curso
- * Requiere autenticación
- */
-router.put('/:id/progress', isAuthenticated, courseController.updateProgress);
+router.delete('/:id/enroll', isAuthenticated, enrollLimiter, courseController.unenrollCourse);
 
 /**
  * GET /api/courses/:id/stats

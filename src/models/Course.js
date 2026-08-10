@@ -153,17 +153,6 @@ class Course {
   }
 
   /**
-   * Actualizar progreso de un usuario en un curso
-   */
-  static async updateProgress(courseId, userId, progress) {
-    const [result] = await pool.query(
-      'UPDATE enrollments SET progress = ? WHERE course_id = ? AND user_id = ?',
-      [progress, courseId, userId]
-    );
-    return result.affectedRows > 0;
-  }
-
-  /**
    * Obtener estadísticas de un curso
    */
   static async getStats(courseId) {

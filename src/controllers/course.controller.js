@@ -42,13 +42,24 @@ export const getCourseById = async (req, res) => {
     }
 
     // Obtener contenidos del curso
-    const contents = await Course.getContents(id);
-    
+    const rawContents = await Course.getContents(id);
+
     // Verificar si el usuario está inscrito (si hay sesión activa)
     let isEnrolled = false;
+    let canAccessMedia = false;
     if (req.session?.user) {
       isEnrolled = await Course.isUserEnrolled(id, req.session.user.id);
+      canAccessMedia = req.session.user.role === 'admin' || isEnrolled;
     }
+
+    // Igual que en GET /api/contents/course/:courseId: solo admin o
+    // inscrito recibe las URLs reales de video/archivo. Este endpoint es
+    // público (sin isAuthenticated) a propósito para poder navegar el
+    // catálogo sin cuenta, así que sin este filtro cualquier visitante
+    // anónimo podía obtener las URLs reales de los videos de cualquier curso.
+    const contents = canAccessMedia
+      ? rawContents
+      : rawContents.map(({ url, ...rest }) => ({ ...rest, url: null }));
 
     res.json({
       success: true,
@@ -231,6 +242,16 @@ export const enrollCourse = async (req, res) => {
       });
     }
 
+    // No se puede iniciar una inscripción nueva en un curso desactivado.
+    // (Si un estudiante ya estaba inscrito antes de que se desactivara,
+    // conserva su acceso; esto solo bloquea inscripciones NUEVAS.)
+    if (!course.is_active) {
+      return res.status(403).json({
+        success: false,
+        message: 'Este curso no está disponible actualmente'
+      });
+    }
+
     const enrollmentId = await Course.enrollUser(id, userId);
 
     if (enrollmentId === null) {
@@ -300,44 +321,6 @@ export const getEnrolledCourses = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error al obtener cursos inscritos'
-    });
-  }
-};
-
-/**
- * Actualizar progreso en un curso
- */
-export const updateProgress = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { progress } = req.body;
-    const userId = req.session.user.id;
-
-    if (progress < 0 || progress > 100) {
-      return res.status(400).json({
-        success: false,
-        message: 'El progreso debe estar entre 0 y 100'
-      });
-    }
-
-    const updated = await Course.updateProgress(id, userId, progress);
-
-    if (updated) {
-      res.json({
-        success: true,
-        message: 'Progreso actualizado'
-      });
-    } else {
-      res.status(400).json({
-        success: false,
-        message: 'No se pudo actualizar el progreso'
-      });
-    }
-  } catch (error) {
-    console.error('Error al actualizar progreso:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al actualizar progreso'
     });
   }
 };

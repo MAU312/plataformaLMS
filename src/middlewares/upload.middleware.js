@@ -44,7 +44,9 @@ const videoFilter = (req, file, cb) => {
   if (mimetype && extname) {
     return cb(null, true);
   } else {
-    cb(new Error('Solo se permiten archivos de video (mp4, avi, mov, wmv, flv, mkv, webm)'));
+    const error = new Error('Solo se permiten archivos de video (mp4, avi, mov, wmv, flv, mkv, webm)');
+    error.status = 400;
+    cb(error);
   }
 };
 
@@ -80,7 +82,9 @@ const fileFilter = (req, file, cb) => {
   if (extname) {
     return cb(null, true);
   } else {
-    cb(new Error('Tipo de archivo no permitido. Se aceptan: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, TXT, ZIP, RAR'));
+    const error = new Error('Tipo de archivo no permitido. Se aceptan: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, TXT, ZIP, RAR');
+    error.status = 400;
+    cb(error);
   }
 };
 
@@ -117,7 +121,9 @@ const imageFilter = (req, file, cb) => {
   if (mimetype && extname) {
     return cb(null, true);
   } else {
-    cb(new Error('Solo se permiten imágenes (jpeg, jpg, png, gif, webp)'));
+    const error = new Error('Solo se permiten imágenes (jpeg, jpg, png, gif, webp)');
+    error.status = 400;
+    cb(error);
   }
 };
 

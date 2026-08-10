@@ -5,6 +5,8 @@ import { fileURLToPath } from 'url';
 import cookieParser from 'cookie-parser';
 import session from 'express-session';
 import expressMySQLSession from 'express-mysql-session';
+import helmet from 'helmet';
+import morgan from 'morgan';
 import pool from './config/db.js';
 
 const MySQLStore = expressMySQLSession(session);
@@ -26,6 +28,20 @@ const PORT = process.env.PORT || 3000;
 // =============================================
 // Middlewares
 // =============================================
+
+// Cabeceras HTTP de seguridad (anti-clickjacking, anti-sniffing de MIME,
+// desactiva X-Powered-By, etc.). La CSP por defecto de Helmet se desactiva
+// porque el frontend carga Tailwind y Font Awesome desde CDN y usa
+// atributos onclick inline en el HTML; con la CSP activa por defecto
+// (script-src/style-src 'self') la interfaz dejaría de funcionar.
+app.use(helmet({
+  contentSecurityPolicy: false
+}));
+
+// Log de peticiones HTTP: formato compacto y coloreado en desarrollo,
+// formato "combined" (estilo Apache, con IP y user-agent) en producción,
+// más útil para revisar logs de un servidor real.
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // Body parser
 app.use(express.json());
@@ -106,11 +122,46 @@ app.get('/*splat', (req, res) => {
 // Error handling middleware
 // =============================================
 
+// Manejo específico de errores de Multer (archivo muy grande, campo de
+// archivo inesperado, etc.). Sin esto, estos errores caían en el handler
+// genérico de abajo y respondían 500 (error de servidor) cuando en
+// realidad son errores del cliente (400): el archivo no cumple los límites.
+app.use((err, req, res, next) => {
+  if (err && err.name === 'MulterError') {
+    const messages = {
+      LIMIT_FILE_SIZE: 'El archivo excede el tamaño máximo permitido',
+      LIMIT_UNEXPECTED_FILE: 'Campo de archivo inesperado'
+    };
+    return res.status(400).json({
+      success: false,
+      message: messages[err.code] || err.message
+    });
+  }
+  next(err);
+});
+
+// Handler genérico: siempre se registra el detalle completo en el log del
+// servidor, pero al cliente solo se le manda el mensaje interno si estamos
+// en desarrollo. En producción, un mensaje genérico evita filtrar detalles
+// internos (rutas, mensajes de MySQL, stack traces, etc.) a quien sea que
+// esté viendo la respuesta.
 app.use((err, req, res, next) => {
   console.error('❌ Error:', err);
-  res.status(err.status || 500).json({
+
+  const status = err.status || 500;
+  const isDev = process.env.NODE_ENV !== 'production';
+  // Los errores 4xx (validaciones, tipo de archivo no permitido, etc.) son
+  // intencionales y su mensaje es información útil para el usuario, no un
+  // detalle interno — se muestran siempre. Solo los 500 reales (errores
+  // inesperados: MySQL, bugs, etc.) se ocultan en producción para no
+  // filtrar detalles internos del servidor.
+  const message = (status < 500 || isDev)
+    ? (err.message || 'Error interno del servidor')
+    : 'Error interno del servidor. Intenta de nuevo más tarde.';
+
+  res.status(status).json({
     success: false,
-    message: err.message || 'Error interno del servidor'
+    message
   });
 });
 
@@ -142,6 +193,29 @@ const startServer = async () => {
     console.log('🚀 ================================\n');
   });
 };
+
+// =============================================
+// Errores no capturados a nivel de proceso
+// =============================================
+// Sin esto, un error fuera de un try/catch (por ejemplo en un callback o
+// una promesa sin manejar) podía tumbar el servidor completo en silencio,
+// afectando a TODOS los usuarios conectados a la vez, sin ningún log claro
+// de qué pasó.
+
+process.on('unhandledRejection', (reason) => {
+  console.error('❌ Promesa rechazada sin manejar:', reason);
+  // No se cierra el proceso: se registra para diagnóstico y el servidor
+  // sigue atendiendo al resto de usuarios.
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Excepción no capturada:', error);
+  // Aquí sí es más seguro cerrar el proceso (el estado interno de Node ya
+  // no es confiable tras una excepción no capturada). Con nodemon en
+  // desarrollo, o un gestor de procesos como PM2 en producción, el
+  // servidor se reinicia automáticamente.
+  process.exit(1);
+});
 
 startServer();
 
