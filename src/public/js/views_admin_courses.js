@@ -4,69 +4,78 @@
 
 const COURSES_PER_PAGE = 8;
 let currentCoursePage = 1;
-let allCourses = [];
+let currentCourseSearch = '';
+let currentPageCourses = [];
+let currentCoursesPagination = { total: 0, totalPages: 1 };
+// Igual que en el catálogo público: descarta respuestas que ya no son
+// la última petición (por búsqueda rápida con varias teclas seguidas).
+let adminCoursesRequestToken = 0;
 
 window.renderAdminCourses = async function(params) {
     const app = document.getElementById('app');
     showLoading();
+    currentCoursePage = 1;
+    currentCourseSearch = '';
 
-    try {
-        const response = await coursesAPI.getAll();
-        allCourses = response.data || [];
-        currentCoursePage = 1;
+    app.innerHTML = renderAdminLayout(`
+        <div class="flex items-center justify-between mb-6">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+                <i class="fas fa-book text-cenat-blue mr-2"></i>
+                Gestión de Cursos
+            </h1>
+            <a href="#/admin/courses/create" class="btn-cenat">
+                <i class="fas fa-plus mr-2"></i> Nuevo Curso
+            </a>
+        </div>
 
-        app.innerHTML = renderAdminLayout(`
-            <div class="flex items-center justify-between mb-6">
-                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-                    <i class="fas fa-book text-cenat-blue mr-2"></i>
-                    Gestión de Cursos
-                </h1>
-                <a href="#/admin/courses/create" class="btn-cenat">
-                    <i class="fas fa-plus mr-2"></i> Nuevo Curso
-                </a>
-            </div>
+        <div class="relative mb-4">
+            <input type="text" id="search-admin-courses" placeholder="Buscar curso..."
+                class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-blue">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+        </div>
 
-            <div class="relative mb-4">
-                <input type="text" id="search-admin-courses" placeholder="Buscar curso..."
-                    class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-blue">
-                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-            </div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
+            <div id="courses-table-container"></div>
+            <div id="courses-pagination" class="px-4 py-3 border-t border-gray-100 dark:border-slate-700"></div>
+        </div>
+    `, 'courses');
 
-            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
-                <div id="courses-table-container"></div>
-                <div id="courses-pagination" class="px-4 py-3 border-t border-gray-100 dark:border-slate-700"></div>
-            </div>
-        `, 'courses');
+    document.getElementById('search-admin-courses').addEventListener('input', debounce((e) => {
+        currentCourseSearch = e.target.value.trim();
+        loadAdminCourses(1);
+    }, 300));
 
-        renderCoursesTable(allCourses, currentCoursePage);
-
-        document.getElementById('search-admin-courses').addEventListener('input', debounce((e) => {
-            const term = e.target.value.toLowerCase();
-            const filtered = allCourses.filter(c =>
-                c.title.toLowerCase().includes(term) ||
-                (c.description && c.description.toLowerCase().includes(term))
-            );
-            currentCoursePage = 1;
-            renderCoursesTable(filtered, 1);
-        }, 300));
-
-    } catch (error) {
-        console.error('Error loading courses:', error);
-        showToast('Error al cargar los cursos', 'error');
-    }
+    await loadAdminCourses(1);
 };
 
-function renderCoursesTable(courses, page) {
-    const total = courses.length;
-    const totalPages = Math.max(1, Math.ceil(total / COURSES_PER_PAGE));
-    const start = (page - 1) * COURSES_PER_PAGE;
-    const paginated = courses.slice(start, start + COURSES_PER_PAGE);
-
+async function loadAdminCourses(page) {
     const container = document.getElementById('courses-table-container');
     const pagination = document.getElementById('courses-pagination');
     if (!container) return;
 
-    if (paginated.length === 0) {
+    const token = ++adminCoursesRequestToken;
+
+    try {
+        const response = await coursesAPI.getAll({ page, limit: COURSES_PER_PAGE, search: currentCourseSearch });
+        if (token !== adminCoursesRequestToken) return;
+
+        currentCoursePage = page;
+        currentPageCourses = response.data || [];
+        currentCoursesPagination = response.pagination || { total: currentPageCourses.length, totalPages: 1 };
+        renderCoursesTable(currentPageCourses, page, currentCoursesPagination);
+    } catch (error) {
+        if (token !== adminCoursesRequestToken) return;
+        console.error('Error loading courses:', error);
+        showToast('Error al cargar los cursos', 'error');
+    }
+}
+
+function renderCoursesTable(courses, page, pagination) {
+    const container = document.getElementById('courses-table-container');
+    const paginationContainer = document.getElementById('courses-pagination');
+    if (!container) return;
+
+    if (courses.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-book-open"></i>
@@ -75,7 +84,7 @@ function renderCoursesTable(courses, page) {
                     <i class="fas fa-plus mr-2"></i> Crear el primer curso
                 </a>
             </div>`;
-        pagination.innerHTML = '';
+        paginationContainer.innerHTML = '';
         return;
     }
 
@@ -93,7 +102,7 @@ function renderCoursesTable(courses, page) {
                     </tr>
                 </thead>
                 <tbody>
-                    ${paginated.map(course => {
+                    ${courses.map(course => {
                         const isActive = course.is_active == 1 || course.is_active === true;
                         return `
                         <tr class="border-t border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 ${!isActive ? 'opacity-60' : ''}">
@@ -125,21 +134,17 @@ function renderCoursesTable(courses, page) {
             </table>
         </div>`;
 
-    pagination.innerHTML = renderPagination(page, totalPages, total, COURSES_PER_PAGE, 'goToCoursePage');
+    const { totalPages = 1, total = courses.length } = pagination || {};
+    paginationContainer.innerHTML = renderPagination(page, totalPages, total, COURSES_PER_PAGE, 'goToCoursePage');
 }
 
 window.goToCoursePage = function(page) {
-    currentCoursePage = page;
-    const term = document.getElementById('search-admin-courses')?.value?.toLowerCase() || '';
-    const filtered = term
-        ? allCourses.filter(c => c.title.toLowerCase().includes(term))
-        : allCourses;
-    renderCoursesTable(filtered, page);
+    loadAdminCourses(page);
 };
 
 async function toggleCourseActive(id) {
     try {
-        const course = allCourses.find(c => c.id === id);
+        const course = currentPageCourses.find(c => c.id === id);
         if (!course) return;
 
         const newState = !(course.is_active == 1 || course.is_active === true);
@@ -152,11 +157,11 @@ async function toggleCourseActive(id) {
 
         await coursesAPI.update(id, formData);
 
-        // Actualizar en el array local
+        // Actualizar en la página actual sin volver a pedirla al servidor
         course.is_active = newState;
 
         showToast(newState ? 'Curso activado' : 'Curso desactivado', newState ? 'success' : 'warning');
-        renderCoursesTable(allCourses, currentCoursePage);
+        renderCoursesTable(currentPageCourses, currentCoursePage, currentCoursesPagination);
     } catch (error) {
         showToast(error.message || 'Error al cambiar estado del curso', 'error');
     }

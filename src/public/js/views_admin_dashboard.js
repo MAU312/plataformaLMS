@@ -7,18 +7,23 @@ window.renderAdminDashboard = async function(params) {
     showLoading();
 
     try {
-        const [coursesRes, usersStatsRes] = await Promise.all([
-            coursesAPI.getAll(),
+        // Los totales agregados vienen de un endpoint de estadísticas
+        // (cuenta todos los cursos/contenidos/inscripciones en el servidor);
+        // la tabla de "recientes" solo necesita los últimos 5, así que se
+        // pide esa página nada más en vez de traer el catálogo completo.
+        const [statsRes, recentCoursesRes, usersStatsRes] = await Promise.all([
+            coursesAPI.getGlobalStats(),
+            coursesAPI.getAll({ limit: 5 }),
             usersAPI.getStats()
         ]);
 
-        const courses = coursesRes.data || [];
+        const stats = statsRes.data || {};
+        const recentCourses = recentCoursesRes.data || [];
         const userStats = usersStatsRes.data || [];
 
-        const totalCourses = courses.length;
-        const activeCourses = courses.filter(c => c.is_active).length;
-        const totalContents = courses.reduce((sum, c) => sum + (c.content_count || 0), 0);
-        const totalEnrollments = courses.reduce((sum, c) => sum + (c.enrolled_count || 0), 0);
+        const totalCourses = stats.total_courses || 0;
+        const activeCourses = stats.active_courses || 0;
+        const totalContents = stats.total_contents || 0;
         const totalStudents = userStats.find(s => s.role === 'student')?.count || 0;
 
         app.innerHTML = `
@@ -67,7 +72,7 @@ window.renderAdminDashboard = async function(params) {
                                 </tr>
                             </thead>
                             <tbody>
-                                ${courses.slice(0, 5).map(course => `
+                                ${recentCourses.map(course => `
                                     <tr class="border-b hover:bg-gray-50">
                                         <td class="py-3 pr-4 font-medium text-gray-900">${escapeHtml(course.title)}</td>
                                         <td class="py-3 pr-4">

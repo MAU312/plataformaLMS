@@ -21,6 +21,13 @@ router.get('/', courseController.getAllCourses);
 router.get('/enrolled', isAuthenticated, courseController.getEnrolledCourses);
 
 /**
+ * GET /api/courses/stats/summary
+ * Estadísticas globales para el dashboard
+ * Solo administradores
+ */
+router.get('/stats/summary', isAuthenticated, isAdmin, courseController.getGlobalStats);
+
+/**
  * GET /api/courses/:id
  * Obtener curso por ID
  */

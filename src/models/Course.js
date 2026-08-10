@@ -2,34 +2,62 @@ import pool from '../config/db.js';
 
 class Course {
   /**
-   * Obtener todos los cursos activos
+   * Obtener cursos activos, paginados y con búsqueda opcional por
+   * título/descripción. Devuelve también el total de cursos que
+   * cumplen el filtro (sin paginar), para que el cliente pueda
+   * calcular el número de páginas.
    */
-  static async findAll() {
-    const [rows] = await pool.query(
-      `SELECT c.*, u.name as instructor_name, 
-       (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id) as enrolled_count,
-       (SELECT COUNT(*) FROM contents WHERE course_id = c.id) as content_count
-       FROM courses c 
-       LEFT JOIN users u ON c.instructor_id = u.id 
-       WHERE c.is_active = TRUE 
-       ORDER BY c.created_at DESC`
-    );
-    return rows;
-  }
+  static async findAll({ page = 1, limit = 12, search = '' } = {}) {
+    const offset = (page - 1) * limit;
+    const where = search ? 'WHERE c.is_active = TRUE AND (c.title LIKE ? OR c.description LIKE ?)' : 'WHERE c.is_active = TRUE';
+    const searchParams = search ? [`%${search}%`, `%${search}%`] : [];
 
-  /**
-   * Obtener todos los cursos (incluyendo inactivos) - solo para admin
-   */
-  static async findAllForAdmin() {
     const [rows] = await pool.query(
       `SELECT c.*, u.name as instructor_name,
        (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id) as enrolled_count,
        (SELECT COUNT(*) FROM contents WHERE course_id = c.id) as content_count
-       FROM courses c 
-       LEFT JOIN users u ON c.instructor_id = u.id 
-       ORDER BY c.created_at DESC`
+       FROM courses c
+       LEFT JOIN users u ON c.instructor_id = u.id
+       ${where}
+       ORDER BY c.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...searchParams, limit, offset]
     );
-    return rows;
+
+    const [countRows] = await pool.query(
+      `SELECT COUNT(*) as total FROM courses c ${where}`,
+      searchParams
+    );
+
+    return { rows, total: countRows[0].total };
+  }
+
+  /**
+   * Igual que findAll, pero incluyendo cursos inactivos - solo para admin.
+   */
+  static async findAllForAdmin({ page = 1, limit = 12, search = '' } = {}) {
+    const offset = (page - 1) * limit;
+    const where = search ? 'WHERE (c.title LIKE ? OR c.description LIKE ?)' : '';
+    const searchParams = search ? [`%${search}%`, `%${search}%`] : [];
+
+    const [rows] = await pool.query(
+      `SELECT c.*, u.name as instructor_name,
+       (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id) as enrolled_count,
+       (SELECT COUNT(*) FROM contents WHERE course_id = c.id) as content_count
+       FROM courses c
+       LEFT JOIN users u ON c.instructor_id = u.id
+       ${where}
+       ORDER BY c.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...searchParams, limit, offset]
+    );
+
+    const [countRows] = await pool.query(
+      `SELECT COUNT(*) as total FROM courses c ${where}`,
+      searchParams
+    );
+
+    return { rows, total: countRows[0].total };
   }
 
   /**
@@ -150,6 +178,23 @@ class Course {
       [courseId, userId]
     );
     return result.affectedRows > 0;
+  }
+
+  /**
+   * Estadísticas globales para el dashboard de admin: totales agregados
+   * en una sola consulta, en vez de traer todos los cursos al cliente
+   * para sumarlos ahí (que además ya no es viable con la lista paginada).
+   */
+  static async getGlobalStats() {
+    const [rows] = await pool.query(
+      `SELECT
+        COUNT(*) as total_courses,
+        SUM(CASE WHEN is_active = TRUE THEN 1 ELSE 0 END) as active_courses,
+        (SELECT COUNT(*) FROM contents) as total_contents,
+        (SELECT COUNT(*) FROM enrollments) as total_enrollments
+       FROM courses`
+    );
+    return rows[0];
   }
 
   /**

@@ -4,6 +4,41 @@ import * as courseController from '../../src/controllers/course.controller.js';
 import Course from '../../src/models/Course.js';
 import { mockReq, mockRes } from '../helpers/http.js';
 
+test('getAllCourses: usuario no-admin recibe solo cursos activos, con valores de paginación por defecto', async (t) => {
+  const findAllCall = t.mock.method(Course, 'findAll', async () => ({ rows: [{ id: 1 }], total: 1 }));
+  const req = mockReq({ query: {}, session: { user: { id: 2, role: 'student' } } });
+  const res = mockRes();
+
+  await courseController.getAllCourses(req, res);
+
+  assert.equal(findAllCall.mock.calls.length, 1);
+  assert.deepEqual(findAllCall.mock.calls[0].arguments[0], { page: 1, limit: 12, search: '' });
+  assert.deepEqual(res.body.pagination, { page: 1, limit: 12, total: 1, totalPages: 1 });
+});
+
+test('getAllCourses: admin recibe también los inactivos (findAllForAdmin)', async (t) => {
+  const findAllForAdminCall = t.mock.method(Course, 'findAllForAdmin', async () => ({ rows: [], total: 0 }));
+  const req = mockReq({ query: {}, session: { user: { id: 1, role: 'admin' } } });
+  const res = mockRes();
+
+  await courseController.getAllCourses(req, res);
+
+  assert.equal(findAllForAdminCall.mock.calls.length, 1);
+});
+
+test('getAllCourses: limita el "limit" recibido por query string a un máximo de 50', async (t) => {
+  const findAllCall = t.mock.method(Course, 'findAll', async () => ({ rows: [], total: 0 }));
+  const req = mockReq({ query: { limit: '999', page: '2', search: '  ia  ' }, session: null });
+  const res = mockRes();
+
+  await courseController.getAllCourses(req, res);
+
+  const args = findAllCall.mock.calls[0].arguments[0];
+  assert.equal(args.limit, 50);
+  assert.equal(args.page, 2);
+  assert.equal(args.search, 'ia', 'debe recortar espacios del término de búsqueda');
+});
+
 test('createCourse: falla si falta el título', async () => {
   const req = mockReq({ body: {}, session: { user: { id: 1 } } });
   const res = mockRes();

@@ -72,7 +72,11 @@ const authAPI = {
 // =================================
 
 const coursesAPI = {
-    getAll: async () => apiRequest('/courses'),
+    getAll: async ({ page = 1, limit = 12, search = '' } = {}) => {
+        const params = new URLSearchParams({ page, limit });
+        if (search) params.set('search', search);
+        return apiRequest(`/courses?${params}`);
+    },
     getById: async (id) => apiRequest(`/courses/${id}`),
     getEnrolled: async () => apiRequest('/courses/enrolled'),
     create: async (formData) => apiRequestFormData('/courses', formData),
@@ -86,7 +90,8 @@ const coursesAPI = {
     delete: async (id) => apiRequest(`/courses/${id}`, { method: 'DELETE' }),
     enroll: async (id) => apiRequest(`/courses/${id}/enroll`, { method: 'POST' }),
     unenroll: async (id) => apiRequest(`/courses/${id}/enroll`, { method: 'DELETE' }),
-    getStats: async (id) => apiRequest(`/courses/${id}/stats`)
+    getStats: async (id) => apiRequest(`/courses/${id}/stats`),
+    getGlobalStats: async () => apiRequest('/courses/stats/summary')
 };
 
 // =================================
@@ -116,7 +121,11 @@ const contentsAPI = {
 // =================================
 
 const usersAPI = {
-    getAll: async () => apiRequest('/users'),
+    getAll: async ({ page = 1, limit = 10, search = '' } = {}) => {
+        const params = new URLSearchParams({ page, limit });
+        if (search) params.set('search', search);
+        return apiRequest(`/users?${params}`);
+    },
     getById: async (id) => apiRequest(`/users/${id}`),
     update: async (id, data) => apiRequest(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     toggleActive: async (id) => apiRequest(`/users/${id}/toggle-active`, { method: 'PUT' }),

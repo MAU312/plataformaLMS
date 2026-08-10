@@ -1,11 +1,26 @@
 import pool from '../config/db.js';
 
 class User {
-  static async findAll() {
+  /**
+   * Lista paginada de usuarios, con búsqueda opcional por nombre/email.
+   * Devuelve también el total que cumple el filtro (sin paginar).
+   */
+  static async findAll({ page = 1, limit = 10, search = '' } = {}) {
+    const offset = (page - 1) * limit;
+    const where = search ? 'WHERE name LIKE ? OR email LIKE ?' : '';
+    const searchParams = search ? [`%${search}%`, `%${search}%`] : [];
+
     const [rows] = await pool.query(
-      'SELECT id, name, email, role, is_active, created_at FROM users ORDER BY created_at DESC'
+      `SELECT id, name, email, role, is_active, created_at FROM users ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      [...searchParams, limit, offset]
     );
-    return rows;
+
+    const [countRows] = await pool.query(
+      `SELECT COUNT(*) as total FROM users ${where}`,
+      searchParams
+    );
+
+    return { rows, total: countRows[0].total };
   }
 
   static async findById(id) {

@@ -4,62 +4,71 @@
 
 const USERS_PER_PAGE = 10;
 let currentUserPage = 1;
-let allUsers = [];
+let currentUserSearch = '';
+let currentPageUsers = [];
+let currentUsersPagination = { total: 0, totalPages: 1 };
+// Descarta respuestas obsoletas si el usuario escribe más rápido de lo
+// que tardan en volver las peticiones de búsqueda.
+let adminUsersRequestToken = 0;
 
 window.renderAdminUsers = async function(params) {
     const app = document.getElementById('app');
     showLoading();
+    currentUserPage = 1;
+    currentUserSearch = '';
+
+    app.innerHTML = renderAdminLayout(`
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+            <i class="fas fa-users text-cenat-blue mr-2"></i>
+            Gestión de Usuarios
+        </h1>
+
+        <div class="relative mb-4">
+            <input type="text" id="search-admin-users" placeholder="Buscar usuario por nombre o email..."
+                class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-blue">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+        </div>
+
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
+            <div id="users-table-container"></div>
+            <div id="users-pagination" class="px-4 py-3 border-t border-gray-100 dark:border-slate-700"></div>
+        </div>
+    `, 'users');
+
+    document.getElementById('search-admin-users').addEventListener('input', debounce((e) => {
+        currentUserSearch = e.target.value.trim();
+        loadAdminUsers(1);
+    }, 300));
+
+    await loadAdminUsers(1);
+};
+
+async function loadAdminUsers(page) {
+    const container = document.getElementById('users-table-container');
+    const pagination = document.getElementById('users-pagination');
+    if (!container) return;
+
+    const token = ++adminUsersRequestToken;
+    const currentUserId = getCurrentUser().id;
 
     try {
-        const response = await usersAPI.getAll();
-        allUsers = response.data || [];
-        currentUserPage = 1;
-        const currentUserId = getCurrentUser().id;
+        const response = await usersAPI.getAll({ page, limit: USERS_PER_PAGE, search: currentUserSearch });
+        if (token !== adminUsersRequestToken) return;
 
-        app.innerHTML = renderAdminLayout(`
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-                <i class="fas fa-users text-cenat-blue mr-2"></i>
-                Gestión de Usuarios
-            </h1>
-
-            <div class="relative mb-4">
-                <input type="text" id="search-admin-users" placeholder="Buscar usuario por nombre o email..."
-                    class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-blue">
-                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-            </div>
-
-            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
-                <div id="users-table-container"></div>
-                <div id="users-pagination" class="px-4 py-3 border-t border-gray-100 dark:border-slate-700"></div>
-            </div>
-        `, 'users');
-
-        renderUsersTable(allUsers, currentUserPage, currentUserId);
-
-        document.getElementById('search-admin-users').addEventListener('input', debounce((e) => {
-            const term = e.target.value.toLowerCase();
-            const filtered = allUsers.filter(u =>
-                u.name.toLowerCase().includes(term) ||
-                u.email.toLowerCase().includes(term)
-            );
-            currentUserPage = 1;
-            renderUsersTable(filtered, 1, currentUserId);
-        }, 300));
-
+        currentUserPage = page;
+        currentPageUsers = response.data || [];
+        currentUsersPagination = response.pagination || { total: currentPageUsers.length, totalPages: 1 };
+        renderUsersTable(currentPageUsers, page, currentUserId, currentUsersPagination);
     } catch (error) {
+        if (token !== adminUsersRequestToken) return;
         console.error('Error loading users:', error);
         showToast('Error al cargar los usuarios', 'error');
     }
-};
+}
 
-function renderUsersTable(users, page, currentUserId) {
-    const total = users.length;
-    const totalPages = Math.max(1, Math.ceil(total / USERS_PER_PAGE));
-    const start = (page - 1) * USERS_PER_PAGE;
-    const paginated = users.slice(start, start + USERS_PER_PAGE);
-
+function renderUsersTable(users, page, currentUserId, pagination) {
     const container = document.getElementById('users-table-container');
-    const pagination = document.getElementById('users-pagination');
+    const paginationContainer = document.getElementById('users-pagination');
     if (!container) return;
 
     container.innerHTML = `
@@ -76,7 +85,7 @@ function renderUsersTable(users, page, currentUserId) {
                     </tr>
                 </thead>
                 <tbody>
-                    ${paginated.map(user => {
+                    ${users.map(user => {
                         const isMe = user.id === currentUserId;
                         const isActive = user.is_active == 1 || user.is_active === true;
                         return `
@@ -115,17 +124,12 @@ function renderUsersTable(users, page, currentUserId) {
             </table>
         </div>`;
 
-    pagination.innerHTML = renderPagination(page, totalPages, total, USERS_PER_PAGE, 'goToUserPage');
+    const { totalPages = 1, total = users.length } = pagination || {};
+    paginationContainer.innerHTML = renderPagination(page, totalPages, total, USERS_PER_PAGE, 'goToUserPage');
 }
 
 window.goToUserPage = function(page) {
-    currentUserPage = page;
-    const term = document.getElementById('search-admin-users')?.value?.toLowerCase() || '';
-    const currentUserId = getCurrentUser().id;
-    const filtered = term
-        ? allUsers.filter(u => u.name.toLowerCase().includes(term) || u.email.toLowerCase().includes(term))
-        : allUsers;
-    renderUsersTable(filtered, page, currentUserId);
+    loadAdminUsers(page);
 };
 
 async function toggleUserActive(userId) {
@@ -133,12 +137,12 @@ async function toggleUserActive(userId) {
         const response = await usersAPI.toggleActive(userId);
         const newState = response.data.is_active;
 
-        // Actualizar en el array local
-        const user = allUsers.find(u => u.id === userId);
+        // Actualizar en la página actual sin volver a pedirla al servidor
+        const user = currentPageUsers.find(u => u.id === userId);
         if (user) user.is_active = newState;
 
         showToast(response.message, newState ? 'success' : 'warning');
-        renderUsersTable(allUsers, currentUserPage, getCurrentUser().id);
+        renderUsersTable(currentPageUsers, currentUserPage, getCurrentUser().id, currentUsersPagination);
     } catch (error) {
         showToast(error.message || 'Error al cambiar estado del usuario', 'error');
     }
@@ -149,11 +153,11 @@ async function changeUserRole(userId, newRole) {
         const user = await usersAPI.getById(userId);
         await usersAPI.update(userId, { name: user.data.name, email: user.data.email, role: newRole });
         showToast('Rol actualizado exitosamente', 'success');
-        const u = allUsers.find(u => u.id === userId);
+        const u = currentPageUsers.find(u => u.id === userId);
         if (u) u.role = newRole;
     } catch (error) {
         showToast(error.message || 'Error al actualizar el rol', 'error');
-        renderAdminUsers({});
+        loadAdminUsers(currentUserPage);
     }
 }
 

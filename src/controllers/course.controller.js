@@ -3,19 +3,26 @@ import User from '../models/User.js';
 import { deleteFile } from '../middlewares/upload.middleware.js';
 
 /**
- * Obtener todos los cursos
+ * Obtener cursos paginados (?page, ?limit, ?search)
  */
 export const getAllCourses = async (req, res) => {
   try {
     // Si es admin, mostrar todos los cursos, sino solo activos
     const isAdmin = req.session?.user?.role === 'admin';
-    const courses = isAdmin 
-      ? await Course.findAllForAdmin() 
-      : await Course.findAll();
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    // Tope de 50: un límite arbitrariamente alto en la query string no
+    // debería poder forzar al servidor a traer/enviar de más.
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 12));
+    const search = String(req.query.search || '').trim();
+
+    const { rows, total } = isAdmin
+      ? await Course.findAllForAdmin({ page, limit, search })
+      : await Course.findAll({ page, limit, search });
 
     res.json({
       success: true,
-      data: courses
+      data: rows,
+      pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) }
     });
   } catch (error) {
     console.error('Error al obtener cursos:', error);
@@ -321,6 +328,22 @@ export const getEnrolledCourses = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error al obtener cursos inscritos'
+    });
+  }
+};
+
+/**
+ * Estadísticas globales para el dashboard de admin (solo admin)
+ */
+export const getGlobalStats = async (req, res) => {
+  try {
+    const stats = await Course.getGlobalStats();
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    console.error('Error al obtener estadísticas globales:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener estadísticas globales'
     });
   }
 };

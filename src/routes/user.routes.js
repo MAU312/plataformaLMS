@@ -9,8 +9,17 @@ const router = express.Router();
  */
 router.get('/', isAuthenticated, isAdmin, async (req, res) => {
   try {
-    const users = await User.findAll();
-    res.json({ success: true, data: users });
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 10));
+    const search = String(req.query.search || '').trim();
+
+    const { rows, total } = await User.findAll({ page, limit, search });
+
+    res.json({
+      success: true,
+      data: rows,
+      pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) }
+    });
   } catch (error) {
     console.error('Error al obtener usuarios:', error);
     res.status(500).json({ success: false, message: 'Error al obtener usuarios' });
