@@ -169,6 +169,26 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // =================================
+// Password Visibility Toggle
+// =================================
+
+document.addEventListener('click', function(event) {
+    const btn = event.target.closest('.toggle-password-btn');
+    if (!btn) return;
+
+    const input = document.getElementById(btn.dataset.target);
+    if (!input) return;
+
+    const icon = btn.querySelector('i');
+    const show = input.type === 'password';
+
+    input.type = show ? 'text' : 'password';
+    icon.classList.toggle('fa-eye', !show);
+    icon.classList.toggle('fa-eye-slash', show);
+    btn.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
+});
+
+// =================================
 // Progress Bar
 // =================================
 
