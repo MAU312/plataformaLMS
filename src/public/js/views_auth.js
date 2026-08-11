@@ -96,15 +96,6 @@ window.renderLogin = async function(params) {
                             </a>
                         </p>
                     </div>
-
-                    <!-- Test Credentials -->
-                    <div class="bg-gray-50 rounded-lg p-4 mt-4">
-                        <p class="text-xs text-gray-600 mb-2 font-semibold">📋 Credenciales de prueba:</p>
-                        <div class="text-xs text-gray-500 space-y-1">
-                            <p><strong>Admin:</strong> admin@cenat.ac.cr / admin123</p>
-                            <p><strong>Estudiante:</strong> maria@cenat.ac.cr / admin123</p>
-                        </div>
-                    </div>
                 </form>
             </div>
         </div>
