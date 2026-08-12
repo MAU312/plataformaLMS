@@ -63,6 +63,13 @@ window.renderAdminEditCourse = async function(params) {
                             <label for="is_active" class="text-sm text-gray-700">Curso activo (visible para estudiantes)</label>
                         </div>
 
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Profesores asignados</label>
+                            <div id="teacher-checkboxes" class="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto">
+                                <p class="text-sm text-gray-400">Cargando profesores...</p>
+                            </div>
+                        </div>
+
                         <button type="submit" id="submit-edit-btn" class="btn-cenat w-full">
                             <i class="fas fa-save mr-2"></i> Guardar Cambios
                         </button>
@@ -129,6 +136,10 @@ window.renderAdminEditCourse = async function(params) {
             await handleUpdateCourse(course.id);
         });
 
+        const teachersResponse = await coursesAPI.getTeachers(course.id);
+        const assignedTeacherIds = (teachersResponse.data?.teachers || []).map(t => t.id);
+        loadTeacherCheckboxes('teacher-checkboxes', assignedTeacherIds);
+
     } catch (error) {
         console.error('Error loading course:', error);
         showToast('Error al cargar el curso', 'error');
@@ -167,6 +178,7 @@ async function handleUpdateCourse(courseId) {
     formData.append('title', title);
     formData.append('description', description);
     formData.append('is_active', is_active);
+    formData.append('teacher_ids', JSON.stringify(getSelectedTeacherIds('teacher-checkboxes')));
     if (thumbnailFile) {
         formData.append('thumbnail', thumbnailFile);
     }

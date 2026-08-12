@@ -95,7 +95,9 @@ const coursesAPI = {
     getStats: async (id) => apiRequest(`/courses/${id}/stats`),
     getGlobalStats: async () => apiRequest('/courses/stats/summary'),
     downloadCertificate: async (id) => { window.open(`${API_URL}/courses/${id}/certificate`, '_blank'); },
-    getStudents: async (id) => apiRequest(`/courses/${id}/students`)
+    getStudents: async (id) => apiRequest(`/courses/${id}/students`),
+    getTeachers: async (id) => apiRequest(`/courses/${id}/teachers`),
+    getTeaching: async () => apiRequest('/courses/teaching')
 };
 
 // =================================
@@ -134,7 +136,8 @@ const usersAPI = {
     update: async (id, data) => apiRequest(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     toggleActive: async (id) => apiRequest(`/users/${id}/toggle-active`, { method: 'PUT' }),
     delete: async (id) => apiRequest(`/users/${id}`, { method: 'DELETE' }),
-    getStats: async () => apiRequest('/users/stats/count')
+    getStats: async () => apiRequest('/users/stats/count'),
+    getByRole: async (role) => apiRequest(`/users/by-role/${role}`)
 };
 
 window.authAPI = authAPI;

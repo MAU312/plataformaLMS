@@ -13,11 +13,11 @@ class Course {
     const searchParams = search ? [`%${search}%`, `%${search}%`] : [];
 
     const [rows] = await pool.query(
-      `SELECT c.*, u.name as instructor_name,
+      `SELECT c.*,
+       (SELECT GROUP_CONCAT(u.name SEPARATOR ', ') FROM course_teachers ct INNER JOIN users u ON u.id = ct.user_id WHERE ct.course_id = c.id) as teacher_names,
        (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id) as enrolled_count,
        (SELECT COUNT(*) FROM contents WHERE course_id = c.id) as content_count
        FROM courses c
-       LEFT JOIN users u ON c.instructor_id = u.id
        ${where}
        ORDER BY c.created_at DESC
        LIMIT ? OFFSET ?`,
@@ -41,11 +41,11 @@ class Course {
     const searchParams = search ? [`%${search}%`, `%${search}%`] : [];
 
     const [rows] = await pool.query(
-      `SELECT c.*, u.name as instructor_name,
+      `SELECT c.*,
+       (SELECT GROUP_CONCAT(u.name SEPARATOR ', ') FROM course_teachers ct INNER JOIN users u ON u.id = ct.user_id WHERE ct.course_id = c.id) as teacher_names,
        (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id) as enrolled_count,
        (SELECT COUNT(*) FROM contents WHERE course_id = c.id) as content_count
        FROM courses c
-       LEFT JOIN users u ON c.instructor_id = u.id
        ${where}
        ORDER BY c.created_at DESC
        LIMIT ? OFFSET ?`,
@@ -65,10 +65,10 @@ class Course {
    */
   static async findById(id) {
     const [rows] = await pool.query(
-      `SELECT c.*, u.name as instructor_name,
+      `SELECT c.*,
+       (SELECT GROUP_CONCAT(u.name SEPARATOR ', ') FROM course_teachers ct INNER JOIN users u ON u.id = ct.user_id WHERE ct.course_id = c.id) as teacher_names,
        (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id) as enrolled_count
-       FROM courses c 
-       LEFT JOIN users u ON c.instructor_id = u.id 
+       FROM courses c
        WHERE c.id = ?`,
       [id]
     );
@@ -141,12 +141,64 @@ class Course {
 
   /**
    * Verifica si un usuario es profesor asignado a un curso.
-   * Placeholder hasta que exista la tabla course_teachers (ver Fase 2 de
-   * asignación profesor↔curso): por ahora siempre false, así un 'teacher'
-   * todavía no tiene acceso de edición a ningún curso.
    */
   static async isUserTeacher(courseId, userId) {
-    return false;
+    const [rows] = await pool.query(
+      'SELECT id FROM course_teachers WHERE course_id = ? AND user_id = ?',
+      [courseId, userId]
+    );
+    return rows.length > 0;
+  }
+
+  /**
+   * Reemplaza por completo la lista de profesores asignados a un curso
+   * (borra los anteriores e inserta los nuevos) — mismo espíritu simple
+   * que Content.reorder: el admin manda la lista final, no altas/bajas
+   * individuales.
+   */
+  static async assignTeachers(courseId, teacherIds) {
+    await pool.query('DELETE FROM course_teachers WHERE course_id = ?', [courseId]);
+
+    if (teacherIds.length === 0) return true;
+
+    const values = teacherIds.map((teacherId) => [courseId, teacherId]);
+    await pool.query(
+      'INSERT INTO course_teachers (course_id, user_id) VALUES ?',
+      [values]
+    );
+    return true;
+  }
+
+  /**
+   * Obtener los profesores asignados a un curso.
+   */
+  static async getCourseTeachers(courseId) {
+    const [rows] = await pool.query(
+      `SELECT u.id, u.name, u.email
+       FROM course_teachers ct
+       INNER JOIN users u ON u.id = ct.user_id
+       WHERE ct.course_id = ?
+       ORDER BY u.name ASC`,
+      [courseId]
+    );
+    return rows;
+  }
+
+  /**
+   * Obtener los cursos donde un usuario está asignado como profesor.
+   */
+  static async getCoursesForTeacher(userId) {
+    const [rows] = await pool.query(
+      `SELECT c.*,
+       (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id) as enrolled_count,
+       (SELECT COUNT(*) FROM contents WHERE course_id = c.id) as content_count
+       FROM course_teachers ct
+       INNER JOIN courses c ON c.id = ct.course_id
+       WHERE ct.user_id = ?
+       ORDER BY c.created_at DESC`,
+      [userId]
+    );
+    return rows;
   }
 
   /**

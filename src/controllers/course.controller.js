@@ -87,12 +87,39 @@ export const getCourseById = async (req, res) => {
 };
 
 /**
+ * A quién se le asigna un curso ya no se decide con un solo "instructor_id"
+ * (columna vieja, se deja sin usar): el admin manda una lista de ids en
+ * `teacher_ids` (JSON stringificado, viene por FormData) y aquí se filtra
+ * contra los usuarios que realmente tienen rol 'teacher' y siguen activos
+ * — así un id viejo/inválido/de otro rol simplemente se ignora en vez de
+ * fallar toda la operación.
+ */
+async function resolveValidTeacherIds(raw) {
+  if (!raw) return [];
+
+  let ids;
+  try {
+    ids = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+
+  if (!Array.isArray(ids)) return [];
+
+  const numericIds = ids.map((id) => parseInt(id, 10)).filter((id) => Number.isInteger(id));
+  if (numericIds.length === 0) return [];
+
+  const teachers = await User.findByRole('teacher');
+  const validIds = new Set(teachers.map((t) => t.id));
+  return numericIds.filter((id) => validIds.has(id));
+}
+
+/**
  * Crear nuevo curso (solo admin)
  */
 export const createCourse = async (req, res) => {
   try {
     const { title, description } = req.body;
-    const instructor_id = req.session.user.id;
 
     if (!title) {
       return res.status(400).json({
@@ -111,8 +138,11 @@ export const createCourse = async (req, res) => {
       title,
       description,
       thumbnail,
-      instructor_id
+      instructor_id: null
     });
+
+    const teacherIds = await resolveValidTeacherIds(req.body.teacher_ids);
+    await Course.assignTeachers(courseId, teacherIds);
 
     res.status(201).json({
       success: true,
@@ -144,7 +174,7 @@ function toBoolean(value) {
 export const updateCourse = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, is_active } = req.body;
+    const { title, description, is_active, teacher_ids } = req.body;
 
     const course = await Course.findById(id);
     if (!course) {
@@ -170,19 +200,22 @@ export const updateCourse = async (req, res) => {
       updateData.thumbnail = `/uploads/thumbnails/${req.file.filename}`;
     }
 
-    const updated = await Course.update(id, updateData);
-
-    if (updated) {
-      res.json({
-        success: true,
-        message: 'Curso actualizado exitosamente'
-      });
-    } else {
-      res.status(400).json({
-        success: false,
-        message: 'No se pudo actualizar el curso'
-      });
+    if (Object.keys(updateData).length > 0) {
+      await Course.update(id, updateData);
     }
+
+    // Reemplazo total de profesores asignados, igual que al crear el curso.
+    // Solo se toca si el body trae `teacher_ids` (evita borrar la
+    // asignación existente en un PUT que no la incluya por accidente).
+    if (teacher_ids !== undefined) {
+      const teacherIds = await resolveValidTeacherIds(teacher_ids);
+      await Course.assignTeachers(id, teacherIds);
+    }
+
+    res.json({
+      success: true,
+      message: 'Curso actualizado exitosamente'
+    });
   } catch (error) {
     console.error('Error al actualizar curso:', error);
     res.status(500).json({
@@ -392,6 +425,42 @@ export const getCourseStudents = async (req, res) => {
   } catch (error) {
     console.error('Error al obtener estudiantes del curso:', error);
     res.status(500).json({ success: false, message: 'Error al obtener estudiantes del curso' });
+  }
+};
+
+/**
+ * Obtener los profesores asignados a un curso (admin, o el propio
+ * profesor asignado a ese curso — autorización resuelta en la ruta con
+ * requireCourseManager).
+ */
+export const getCourseTeachers = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const course = await Course.findById(id);
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Curso no encontrado' });
+    }
+
+    const teachers = await Course.getCourseTeachers(id);
+
+    res.json({ success: true, data: { course, teachers } });
+  } catch (error) {
+    console.error('Error al obtener profesores del curso:', error);
+    res.status(500).json({ success: false, message: 'Error al obtener profesores del curso' });
+  }
+};
+
+/**
+ * Cursos donde el usuario autenticado está asignado como profesor.
+ */
+export const getTeachingCourses = async (req, res) => {
+  try {
+    const courses = await Course.getCoursesForTeacher(req.session.user.id);
+    res.json({ success: true, data: courses });
+  } catch (error) {
+    console.error('Error al obtener cursos como profesor:', error);
+    res.status(500).json({ success: false, message: 'Error al obtener cursos' });
   }
 };
 

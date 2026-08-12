@@ -1,6 +1,6 @@
 import express from 'express';
 import * as courseController from '../controllers/course.controller.js';
-import { isAuthenticated, isAdmin } from '../middlewares/auth.middleware.js';
+import { isAuthenticated, isAdmin, requireCourseManager } from '../middlewares/auth.middleware.js';
 import { uploadThumbnail } from '../middlewares/upload.middleware.js';
 import { verifyFileSignature } from '../middlewares/fileSignature.middleware.js';
 import { enrollLimiter, courseCreateLimiter } from '../middlewares/rateLimit.middleware.js';
@@ -19,6 +19,13 @@ router.get('/', courseController.getAllCourses);
  * Requiere autenticación
  */
 router.get('/enrolled', isAuthenticated, courseController.getEnrolledCourses);
+
+/**
+ * GET /api/courses/teaching
+ * Cursos donde el usuario actual está asignado como profesor
+ * Requiere autenticación
+ */
+router.get('/teaching', isAuthenticated, courseController.getTeachingCourses);
 
 /**
  * GET /api/courses/stats/summary
@@ -100,8 +107,15 @@ router.get('/:id/certificate', isAuthenticated, courseController.getCertificate)
 /**
  * GET /api/courses/:id/students
  * Estudiantes inscritos en el curso con su progreso
- * Solo administradores
+ * Admin, o el profesor asignado a ese curso
  */
-router.get('/:id/students', isAuthenticated, isAdmin, courseController.getCourseStudents);
+router.get('/:id/students', isAuthenticated, requireCourseManager((req) => req.params.id), courseController.getCourseStudents);
+
+/**
+ * GET /api/courses/:id/teachers
+ * Profesores asignados al curso
+ * Admin, o el propio profesor asignado a ese curso
+ */
+router.get('/:id/teachers', isAuthenticated, requireCourseManager((req) => req.params.id), courseController.getCourseTeachers);
 
 export default router;

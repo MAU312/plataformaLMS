@@ -6,6 +6,7 @@ const router = express.Router();
 
 router.get('/', isAuthenticated, isAdmin, userController.getAllUsers);
 router.get('/stats/count', isAuthenticated, isAdmin, userController.getUserStats);
+router.get('/by-role/:role', isAuthenticated, isAdmin, userController.getUsersByRole);
 router.get('/:id', isAuthenticated, isAdmin, userController.getUserById);
 router.put('/:id', isAuthenticated, isAdmin, userController.updateUser);
 router.put('/:id/toggle-active', isAuthenticated, isAdmin, userController.toggleUserActive);

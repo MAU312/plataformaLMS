@@ -83,6 +83,37 @@ INSERT INTO `contents` VALUES (1,1,'video','ejemplo 1','descip','/uploads/videos
 UNLOCK TABLES;
 
 --
+-- Table structure for table `course_teachers`
+--
+
+DROP TABLE IF EXISTS `course_teachers`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `course_teachers` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `course_id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `assigned_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_course_teacher` (`course_id`,`user_id`),
+  KEY `idx_course` (`course_id`),
+  KEY `idx_user` (`user_id`),
+  CONSTRAINT `course_teachers_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `course_teachers_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `course_teachers`
+--
+
+LOCK TABLES `course_teachers` WRITE;
+/*!40000 ALTER TABLE `course_teachers` DISABLE KEYS */;
+INSERT INTO `course_teachers` VALUES (1,1,1,'2026-08-12 19:43:37');
+/*!40000 ALTER TABLE `course_teachers` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `courses`
 --
 
@@ -102,7 +133,7 @@ CREATE TABLE `courses` (
   KEY `idx_active` (`is_active`),
   KEY `idx_instructor` (`instructor_id`),
   CONSTRAINT `courses_ibfk_1` FOREIGN KEY (`instructor_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -195,7 +226,7 @@ CREATE TABLE `users` (
   UNIQUE KEY `email` (`email`),
   KEY `idx_email` (`email`),
   KEY `idx_role` (`role`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -221,4 +252,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-08-12 13:41:28
+-- Dump completed on 2026-08-12 13:51:08

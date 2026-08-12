@@ -23,6 +23,18 @@ class User {
     return { rows, total: countRows[0].total };
   }
 
+  /**
+   * Lista simple (sin paginar) de usuarios activos con un rol dado —
+   * usado para poblar el selector de profesores al crear/editar un curso.
+   */
+  static async findByRole(role) {
+    const [rows] = await pool.query(
+      'SELECT id, name, email FROM users WHERE role = ? AND is_active = TRUE ORDER BY name ASC',
+      [role]
+    );
+    return rows;
+  }
+
   static async findById(id) {
     const [rows] = await pool.query(
       'SELECT id, name, email, role, is_active, created_at FROM users WHERE id = ?',

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as courseController from '../../src/controllers/course.controller.js';
 import Course from '../../src/models/Course.js';
+import User from '../../src/models/User.js';
 import certificateGenerator from '../../src/utils/certificate.js';
 import { mockReq, mockRes } from '../helpers/http.js';
 
@@ -47,8 +48,9 @@ test('createCourse: falla si falta el título', async () => {
   assert.equal(res.statusCode, 400);
 });
 
-test('createCourse: usa el usuario de la sesión como instructor, no algo enviado por el cliente', async (t) => {
+test('createCourse: ya no usa instructor_id (queda deprecado en null) — la asignación es vía teacher_ids', async (t) => {
   const createCall = t.mock.method(Course, 'create', async () => 99);
+  t.mock.method(Course, 'assignTeachers', async () => true);
   const req = mockReq({
     body: { title: 'Curso nuevo', instructor_id: 999 },
     session: { user: { id: 1 } }
@@ -59,7 +61,91 @@ test('createCourse: usa el usuario de la sesión como instructor, no algo enviad
 
   assert.equal(res.statusCode, 201);
   const created = createCall.mock.calls[0].arguments[0];
-  assert.equal(created.instructor_id, 1, 'debe ignorar instructor_id del body y usar el de la sesión');
+  assert.equal(created.instructor_id, null, 'instructor_id del body se ignora, y ya no se autoasigna al admin de la sesión');
+});
+
+test('createCourse: asigna solo los teacher_ids que corresponden a usuarios con rol teacher activos', async (t) => {
+  t.mock.method(Course, 'create', async () => 99);
+  t.mock.method(User, 'findByRole', async () => ([{ id: 5 }, { id: 6 }]));
+  const assignCall = t.mock.method(Course, 'assignTeachers', async () => true);
+  const req = mockReq({
+    body: { title: 'Curso nuevo', teacher_ids: JSON.stringify([5, 6, 999]) },
+    session: { user: { id: 1 } }
+  });
+  const res = mockRes();
+
+  await courseController.createCourse(req, res);
+
+  assert.equal(res.statusCode, 201);
+  assert.deepEqual(assignCall.mock.calls[0].arguments[1], [5, 6], 'el id 999 no corresponde a un profesor válido y se descarta');
+});
+
+test('createCourse: sin teacher_ids en el body, asigna una lista vacía (curso sin profesores)', async (t) => {
+  t.mock.method(Course, 'create', async () => 99);
+  const assignCall = t.mock.method(Course, 'assignTeachers', async () => true);
+  const req = mockReq({ body: { title: 'Curso nuevo' }, session: { user: { id: 1 } } });
+  const res = mockRes();
+
+  await courseController.createCourse(req, res);
+
+  assert.deepEqual(assignCall.mock.calls[0].arguments[1], []);
+});
+
+test('updateCourse: con teacher_ids en el body, reemplaza los profesores asignados', async (t) => {
+  t.mock.method(Course, 'findById', async () => ({ id: 1, title: 'Curso', thumbnail: null }));
+  t.mock.method(Course, 'update', async () => true);
+  t.mock.method(User, 'findByRole', async () => ([{ id: 7 }]));
+  const assignCall = t.mock.method(Course, 'assignTeachers', async () => true);
+  const req = mockReq({
+    params: { id: 1 },
+    body: { title: 'Curso', teacher_ids: JSON.stringify([7]) }
+  });
+  const res = mockRes();
+
+  await courseController.updateCourse(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(assignCall.mock.calls[0].arguments, [1, [7]]);
+});
+
+test('updateCourse: sin teacher_ids en el body, NO toca la asignación de profesores existente', async (t) => {
+  t.mock.method(Course, 'findById', async () => ({ id: 1, title: 'Curso', thumbnail: null }));
+  t.mock.method(Course, 'update', async () => true);
+  const assignCall = t.mock.method(Course, 'assignTeachers', async () => true);
+  const req = mockReq({ params: { id: 1 }, body: { title: 'Curso actualizado' } });
+  const res = mockRes();
+
+  await courseController.updateCourse(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(assignCall.mock.calls.length, 0);
+});
+
+test('getCourseTeachers: 404 si el curso no existe', async (t) => {
+  t.mock.method(Course, 'findById', async () => undefined);
+  const req = mockReq({ params: { id: 1 } });
+  const res = mockRes();
+  await courseController.getCourseTeachers(req, res);
+  assert.equal(res.statusCode, 404);
+});
+
+test('getCourseTeachers: devuelve el curso y la lista de profesores asignados', async (t) => {
+  t.mock.method(Course, 'findById', async () => ({ id: 1, title: 'Curso' }));
+  t.mock.method(Course, 'getCourseTeachers', async () => ([{ id: 5, name: 'Prof', email: 'p@test.com' }]));
+  const req = mockReq({ params: { id: 1 } });
+  const res = mockRes();
+  await courseController.getCourseTeachers(req, res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.data.teachers.length, 1);
+});
+
+test('getTeachingCourses: pasa el id del usuario en sesión a Course.getCoursesForTeacher', async (t) => {
+  const call = t.mock.method(Course, 'getCoursesForTeacher', async () => ([{ id: 1 }]));
+  const req = mockReq({ session: { user: { id: 9 } } });
+  const res = mockRes();
+  await courseController.getTeachingCourses(req, res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(call.mock.calls[0].arguments[0], 9);
 });
 
 test('enrollCourse: 404 si el curso no existe', async (t) => {

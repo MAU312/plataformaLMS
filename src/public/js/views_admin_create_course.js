@@ -44,6 +44,14 @@ window.renderAdminCreateCourse = async function(params) {
                     </div>
                 </div>
 
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Profesores asignados</label>
+                    <div id="teacher-checkboxes" class="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto">
+                        <p class="text-sm text-gray-400">Cargando profesores...</p>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">Opcional. Los profesores asignados podrán editar el contenido de este curso.</p>
+                </div>
+
                 <div class="flex gap-3 pt-2">
                     <button type="submit" id="submit-btn" class="btn-cenat">
                         <i class="fas fa-save mr-2"></i> Crear Curso
@@ -57,6 +65,7 @@ window.renderAdminCreateCourse = async function(params) {
     `, 'courses');
 
     setupThumbnailDropZone();
+    loadTeacherCheckboxes('teacher-checkboxes');
 
     document.getElementById('create-course-form').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -74,6 +83,7 @@ window.renderAdminCreateCourse = async function(params) {
         const formData = new FormData();
         formData.append('title', title);
         formData.append('description', description);
+        formData.append('teacher_ids', JSON.stringify(getSelectedTeacherIds('teacher-checkboxes')));
         if (thumbnailFile) {
             formData.append('thumbnail', thumbnailFile);
         }

@@ -317,6 +317,40 @@ function renderPagination(currentPage, totalPages, totalItems, perPage, callback
 }
 
 // =================================
+// Selector de profesores (crear/editar curso)
+// =================================
+
+function renderTeacherCheckboxesHTML(teachers, selectedIds = []) {
+    if (teachers.length === 0) {
+        return `<p class="text-sm text-gray-400 dark:text-slate-500">No hay usuarios con rol "Profesor" todavía. Puedes crearlos desde Usuarios y asignarlos después.</p>`;
+    }
+    return teachers.map(t => `
+        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300 py-1">
+            <input type="checkbox" name="teacher_ids" value="${t.id}" ${selectedIds.includes(t.id) ? 'checked' : ''}
+                class="rounded border-gray-300 text-cenat-green focus:ring-cenat-green">
+            ${escapeHtml(t.name)} <span class="text-gray-400 dark:text-slate-500">(${escapeHtml(t.email)})</span>
+        </label>
+    `).join('');
+}
+
+async function loadTeacherCheckboxes(containerId, selectedIds = []) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    try {
+        const response = await usersAPI.getByRole('teacher');
+        container.innerHTML = renderTeacherCheckboxesHTML(response.data || [], selectedIds);
+    } catch (error) {
+        container.innerHTML = `<p class="text-sm text-red-500">Error al cargar la lista de profesores</p>`;
+    }
+}
+
+function getSelectedTeacherIds(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return [];
+    return Array.from(container.querySelectorAll('input[name="teacher_ids"]:checked')).map(el => parseInt(el.value, 10));
+}
+
+// =================================
 // Export al objeto window
 // =================================
 
@@ -340,3 +374,6 @@ window.getFromLocalStorage = getFromLocalStorage;
 window.removeFromLocalStorage = removeFromLocalStorage;
 window.copyToClipboard = copyToClipboard;
 window.renderPagination = renderPagination;
+window.renderTeacherCheckboxesHTML = renderTeacherCheckboxesHTML;
+window.loadTeacherCheckboxes = loadTeacherCheckboxes;
+window.getSelectedTeacherIds = getSelectedTeacherIds;

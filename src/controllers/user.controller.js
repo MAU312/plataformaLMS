@@ -135,6 +135,26 @@ export const deleteUser = async (req, res) => {
 };
 
 /**
+ * GET /api/users/by-role/:role
+ * Lista simple de usuarios activos con un rol dado (ej. para poblar el
+ * selector de profesores al crear/editar un curso).
+ */
+export const getUsersByRole = async (req, res) => {
+  try {
+    const { role } = req.params;
+
+    if (!VALID_ROLES.includes(role)) {
+      return res.status(400).json({ success: false, message: 'Rol inválido' });
+    }
+
+    const users = await User.findByRole(role);
+    res.json({ success: true, data: users });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error al obtener usuarios' });
+  }
+};
+
+/**
  * GET /api/users/stats/count
  */
 export const getUserStats = async (req, res) => {
