@@ -196,6 +196,7 @@ test('getCourseById: oculta las URLs de contenido a un visitante no inscrito', a
     { id: 1, title: 'Video 1', url: '/uploads/videos/secreto.mp4' }
   ]));
   t.mock.method(Course, 'isUserEnrolled', async () => false);
+  t.mock.method(Course, 'isUserTeacher', async () => false);
 
   const req = mockReq({ params: { id: 5 }, session: { user: { id: 2, role: 'student' } } });
   const res = mockRes();
@@ -212,6 +213,7 @@ test('getCourseById: expone las URLs reales a un estudiante inscrito', async (t)
     { id: 1, title: 'Video 1', url: '/uploads/videos/real.mp4' }
   ]));
   t.mock.method(Course, 'isUserEnrolled', async () => true);
+  t.mock.method(Course, 'isUserTeacher', async () => false);
 
   const req = mockReq({ params: { id: 5 }, session: { user: { id: 2, role: 'student' } } });
   const res = mockRes();
@@ -228,6 +230,21 @@ test('getCourseById: expone las URLs reales a un admin sin importar inscripción
   t.mock.method(Course, 'isUserEnrolled', async () => false);
 
   const req = mockReq({ params: { id: 5 }, session: { user: { id: 2, role: 'admin' } } });
+  const res = mockRes();
+  await courseController.getCourseById(req, res);
+
+  assert.equal(res.body.data.contents[0].url, '/uploads/videos/real.mp4');
+});
+
+test('getCourseById: expone las URLs reales a un profesor asignado al curso, sin estar inscrito', async (t) => {
+  t.mock.method(Course, 'findById', async () => ({ id: 5, title: 'Curso' }));
+  t.mock.method(Course, 'getContents', async () => ([
+    { id: 1, title: 'Video 1', url: '/uploads/videos/real.mp4' }
+  ]));
+  t.mock.method(Course, 'isUserEnrolled', async () => false);
+  t.mock.method(Course, 'isUserTeacher', async () => true);
+
+  const req = mockReq({ params: { id: 5 }, session: { user: { id: 2, role: 'teacher' } } });
   const res = mockRes();
   await courseController.getCourseById(req, res);
 

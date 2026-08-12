@@ -54,17 +54,17 @@ export const getCourseById = async (req, res) => {
 
     // Verificar si el usuario está inscrito (si hay sesión activa)
     let isEnrolled = false;
-    let canAccessMedia = false;
     if (req.session?.user) {
       isEnrolled = await Course.isUserEnrolled(id, req.session.user.id);
-      canAccessMedia = req.session.user.role === 'admin' || isEnrolled;
     }
+    const canAccessMedia = await Course.canAccessMedia(id, req.session?.user);
 
-    // Igual que en GET /api/contents/course/:courseId: solo admin o
-    // inscrito recibe las URLs reales de video/archivo. Este endpoint es
-    // público (sin isAuthenticated) a propósito para poder navegar el
-    // catálogo sin cuenta, así que sin este filtro cualquier visitante
-    // anónimo podía obtener las URLs reales de los videos de cualquier curso.
+    // Igual que en GET /api/contents/course/:courseId: solo admin,
+    // inscrito, o profesor asignado recibe las URLs reales de
+    // video/archivo. Este endpoint es público (sin isAuthenticated) a
+    // propósito para poder navegar el catálogo sin cuenta, así que sin
+    // este filtro cualquier visitante anónimo podía obtener las URLs
+    // reales de los videos de cualquier curso.
     const contents = canAccessMedia
       ? rawContents
       : rawContents.map(({ url, ...rest }) => ({ ...rest, url: null }));

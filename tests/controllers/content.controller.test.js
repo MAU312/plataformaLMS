@@ -22,9 +22,10 @@ test('downloadFile: 400 si el contenido no es de tipo "file" (ej. es un video)',
   assert.equal(res.statusCode, 400);
 });
 
-test('downloadFile: 403 si un estudiante no inscrito intenta descargar', async (t) => {
+test('downloadFile: 403 si un estudiante no inscrito (ni profesor del curso) intenta descargar', async (t) => {
   t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'file', course_id: 1, url: '/uploads/files/x.pdf' }));
   t.mock.method(Course, 'isUserEnrolled', async () => false);
+  t.mock.method(Course, 'isUserTeacher', async () => false);
   const req = mockReq({ params: { id: 1 }, session: { user: { id: 1, role: 'student' } } });
   const res = mockRes();
   await contentController.downloadFile(req, res);
@@ -34,6 +35,7 @@ test('downloadFile: 403 si un estudiante no inscrito intenta descargar', async (
 test('downloadFile: 404 si el archivo ya no existe en disco', async (t) => {
   t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'file', course_id: 1, url: '/uploads/files/x.pdf' }));
   t.mock.method(Course, 'isUserEnrolled', async () => true);
+  t.mock.method(Course, 'isUserTeacher', async () => false);
   t.mock.method(fs, 'existsSync', () => false);
   const req = mockReq({ params: { id: 1 }, session: { user: { id: 1, role: 'student' } } });
   const res = mockRes();
@@ -44,8 +46,20 @@ test('downloadFile: 404 si el archivo ya no existe en disco', async (t) => {
 test('downloadFile: un estudiante inscrito puede descargar', async (t) => {
   t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'file', course_id: 1, url: '/uploads/files/x.pdf' }));
   t.mock.method(Course, 'isUserEnrolled', async () => true);
+  t.mock.method(Course, 'isUserTeacher', async () => false);
   t.mock.method(fs, 'existsSync', () => true);
   const req = mockReq({ params: { id: 1 }, session: { user: { id: 1, role: 'student' } } });
+  const res = mockRes();
+  await contentController.downloadFile(req, res);
+  assert.equal(res.downloadCall.fileName, 'x.pdf');
+});
+
+test('downloadFile: un profesor del curso puede descargar sin estar inscrito', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'file', course_id: 1, url: '/uploads/files/x.pdf' }));
+  t.mock.method(Course, 'isUserEnrolled', async () => false);
+  t.mock.method(Course, 'isUserTeacher', async () => true);
+  t.mock.method(fs, 'existsSync', () => true);
+  const req = mockReq({ params: { id: 1 }, session: { user: { id: 1, role: 'teacher' } } });
   const res = mockRes();
   await contentController.downloadFile(req, res);
   assert.equal(res.downloadCall.fileName, 'x.pdf');
@@ -88,6 +102,7 @@ test('markContentCompleted: éxito recalcula y devuelve el progreso', async (t) 
 test('getContentsByCourse: oculta URLs a un usuario con sesión pero no inscrito', async (t) => {
   t.mock.method(Content, 'findByCourseWithProgress', async () => ([{ id: 1, url: '/uploads/videos/x.mp4' }]));
   t.mock.method(Course, 'isUserEnrolled', async () => false);
+  t.mock.method(Course, 'isUserTeacher', async () => false);
 
   const req = mockReq({ params: { courseId: 1 }, session: { user: { id: 1, role: 'student' } } });
   const res = mockRes();

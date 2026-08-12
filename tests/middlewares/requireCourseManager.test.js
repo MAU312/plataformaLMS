@@ -1,8 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import { requireCourseManager } from '../../src/middlewares/auth.middleware.js';
 import Course from '../../src/models/Course.js';
 import { mockReq, mockRes } from '../helpers/http.js';
+
+function tempFile() {
+  const filePath = path.join(os.tmpdir(), `rcm-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  fs.writeFileSync(filePath, 'contenido de prueba');
+  return filePath;
+}
 
 async function run(session, courseId = 7) {
   const req = mockReq({ params: { id: String(courseId) }, session });
@@ -53,4 +62,38 @@ test('requireCourseManager: si resolveCourseId no encuentra el curso, responde 4
   await requireCourseManager(() => null)(req, res, (err) => { nextArg = err; });
   assert.equal(res.statusCode, 404);
   assert.equal(nextArg, 'not-called');
+});
+
+test('requireCourseManager: si rechaza y ya había un archivo subido (multer corrió antes), lo borra del disco', async (t) => {
+  t.mock.method(Course, 'isUserTeacher', async () => false);
+  const filePath = tempFile();
+  const req = mockReq({
+    params: { id: '7' },
+    session: { user: { id: 3, role: 'teacher' } },
+    file: { path: filePath }
+  });
+  const res = mockRes();
+
+  await requireCourseManager((r) => r.params.id)(req, res, () => {});
+
+  assert.equal(res.statusCode, 403);
+  assert.equal(fs.existsSync(filePath), false, 'el archivo subido antes del rechazo debe eliminarse, no quedar huérfano');
+});
+
+test('requireCourseManager: si aprueba, no toca el archivo subido', async (t) => {
+  t.mock.method(Course, 'isUserTeacher', async () => true);
+  const filePath = tempFile();
+  const req = mockReq({
+    params: { id: '7' },
+    session: { user: { id: 3, role: 'teacher' } },
+    file: { path: filePath }
+  });
+  const res = mockRes();
+  let nextCalled = false;
+
+  await requireCourseManager((r) => r.params.id)(req, res, () => { nextCalled = true; });
+
+  assert.equal(nextCalled, true);
+  assert.equal(fs.existsSync(filePath), true);
+  fs.unlinkSync(filePath);
 });

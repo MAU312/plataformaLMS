@@ -20,15 +20,12 @@ export const getContentsByCourse = async (req, res) => {
       ? await Content.findByCourseWithProgress(courseId, req.session.user.id)
       : await Content.findByCourse(courseId);
 
-    // Solo un admin o un estudiante inscrito recibe las URLs reales de
-    // video/archivo. Cualquier otro usuario ve el listado (títulos,
-    // descripción, orden) pero sin acceso directo al contenido — así se
-    // fuerza la inscripción antes de poder reproducir o descargar.
-    let canAccessMedia = false;
-    if (req.session?.user) {
-      canAccessMedia = req.session.user.role === 'admin'
-        || await Course.isUserEnrolled(courseId, req.session.user.id);
-    }
+    // Solo un admin, un estudiante inscrito, o el profesor asignado al
+    // curso recibe las URLs reales de video/archivo. Cualquier otro
+    // usuario ve el listado (títulos, descripción, orden) pero sin
+    // acceso directo al contenido — así se fuerza la inscripción antes
+    // de poder reproducir o descargar.
+    const canAccessMedia = await Course.canAccessMedia(courseId, req.session?.user);
 
     const responseData = canAccessMedia
       ? contents
@@ -62,14 +59,10 @@ export const getContentById = async (req, res) => {
       });
     }
 
-    // Mismo criterio que en los demás endpoints de contenido: solo admin
-    // o inscrito ve la URL real. Antes este endpoint público devolvía la
-    // URL sin ningún filtro.
-    let canAccessMedia = false;
-    if (req.session?.user) {
-      canAccessMedia = req.session.user.role === 'admin'
-        || await Course.isUserEnrolled(content.course_id, req.session.user.id);
-    }
+    // Mismo criterio que en los demás endpoints de contenido: solo admin,
+    // inscrito, o profesor asignado ve la URL real. Antes este endpoint
+    // público devolvía la URL sin ningún filtro.
+    const canAccessMedia = await Course.canAccessMedia(content.course_id, req.session?.user);
 
     const responseData = canAccessMedia ? content : { ...content, url: null };
 
@@ -341,18 +334,16 @@ export const downloadFile = async (req, res) => {
       });
     }
 
-    // Solo puede descargar: un admin, o un estudiante inscrito en el curso
-    // al que pertenece este contenido. Antes cualquier usuario autenticado
-    // podía descargar cualquier archivo sin importar su inscripción.
-    const isAdminUser = req.session.user.role === 'admin';
-    if (!isAdminUser) {
-      const enrolled = await Course.isUserEnrolled(content.course_id, req.session.user.id);
-      if (!enrolled) {
-        return res.status(403).json({
-          success: false,
-          message: 'Debes estar inscrito en este curso para descargar este archivo'
-        });
-      }
+    // Solo puede descargar: un admin, un estudiante inscrito, o el
+    // profesor asignado al curso al que pertenece este contenido. Antes
+    // cualquier usuario autenticado podía descargar cualquier archivo sin
+    // importar su inscripción.
+    const canAccess = await Course.canAccessMedia(content.course_id, req.session.user);
+    if (!canAccess) {
+      return res.status(403).json({
+        success: false,
+        message: 'Debes estar inscrito en este curso para descargar este archivo'
+      });
     }
 
     const filePath = path.join(__dirname, '../../', content.url);

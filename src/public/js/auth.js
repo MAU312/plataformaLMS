@@ -142,17 +142,19 @@ function updateUIForAuthenticatedUser() {
     const userName = document.getElementById('user-name');
     const adminLink = document.getElementById('admin-link');
     const adminLinkMobile = document.getElementById('admin-link-mobile');
-    
+    const teacherLink = document.getElementById('teacher-link');
+    const teacherLinkMobile = document.getElementById('teacher-link-mobile');
+
     // Mostrar navbar
     if (navbar) {
         navbar.classList.remove('hidden');
     }
-    
+
     // Actualizar nombre de usuario
     if (userName && currentUser) {
         userName.textContent = currentUser.name;
     }
-    
+
     // Mostrar link de admin si es administrador
     if (currentUser && currentUser.role === 'admin') {
         if (adminLink) adminLink.style.display = 'block';
@@ -161,7 +163,16 @@ function updateUIForAuthenticatedUser() {
         if (adminLink) adminLink.style.display = 'none';
         if (adminLinkMobile) adminLinkMobile.style.display = 'none';
     }
-    
+
+    // Mostrar link de "Mis Cursos (Profesor)" si es profesor
+    if (currentUser && currentUser.role === 'teacher') {
+        if (teacherLink) teacherLink.style.display = 'block';
+        if (teacherLinkMobile) teacherLinkMobile.style.display = 'block';
+    } else {
+        if (teacherLink) teacherLink.style.display = 'none';
+        if (teacherLinkMobile) teacherLinkMobile.style.display = 'none';
+    }
+
     // Agregar event listeners para logout
     setupLogoutListeners();
 }

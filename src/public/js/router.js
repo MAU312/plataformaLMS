@@ -82,6 +82,21 @@ const routes = {
         title: 'Mi Perfil',
         render: (params) => window.renderProfile(params),
         requireAuth: true
+    },
+    '/teacher/courses': {
+        title: 'Mis Cursos (Profesor)',
+        render: (params) => window.renderTeacherCourses(params),
+        requireAuth: true
+    },
+    '/teacher/courses/:id/edit': {
+        title: 'Editar Curso Asignado',
+        render: (params) => window.renderTeacherCourse(params),
+        requireAuth: true
+    },
+    '/teacher/courses/:id/students': {
+        title: 'Estudiantes del Curso',
+        render: (params) => window.renderTeacherCourseStudents(params),
+        requireAuth: true
     }
 };
 

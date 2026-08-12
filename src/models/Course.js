@@ -151,6 +151,26 @@ class Course {
   }
 
   /**
+   * Determina si un usuario puede acceder al contenido real (URLs de
+   * video/archivo) de un curso: admin, inscrito, o profesor asignado a
+   * ese curso. Centraliza el criterio de acceso usado en varios
+   * endpoints de curso/contenido para no repetirlo (y no
+   * desincronizarlo) en cada uno — `user` es el objeto de sesión
+   * (`req.session.user`) o null/undefined si no hay sesión.
+   */
+  static async canAccessMedia(courseId, user) {
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+
+    const [enrolled, isTeacher] = await Promise.all([
+      Course.isUserEnrolled(courseId, user.id),
+      Course.isUserTeacher(courseId, user.id)
+    ]);
+
+    return enrolled || isTeacher;
+  }
+
+  /**
    * Reemplaza por completo la lista de profesores asignados a un curso
    * (borra los anteriores e inserta los nuevos) — mismo espíritu simple
    * que Content.reorder: el admin manda la lista final, no altas/bajas

@@ -26,10 +26,12 @@ window.renderCourseDetail = async function(params) {
         // Si el usuario está logueado, traemos los contenidos con su estado de "completado"
         const isLoggedIn = isAuthenticated();
         const isEnrolled = course.isEnrolled;
-        // Solo un admin o un estudiante inscrito puede ver/reproducir/descargar
-        // el contenido real. El backend ya no manda las URLs si no corresponde,
-        // esto solo controla cómo se dibuja la UI.
-        const hasAccess = isLoggedIn && (isEnrolled || isAdmin());
+        // Solo un admin, un estudiante inscrito, o un profesor puede
+        // ver/reproducir/descargar el contenido real. El backend ya no
+        // manda las URLs si no corresponde (incluye la verificación fina
+        // de que el profesor esté asignado a ESTE curso); esto solo
+        // controla cómo se dibuja la UI.
+        const hasAccess = isLoggedIn && (isEnrolled || isAdmin() || isTeacher());
         let contents = course.contents || [];
 
         if (isLoggedIn) {

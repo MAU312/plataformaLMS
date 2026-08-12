@@ -22,48 +22,7 @@ window.renderAdminCourseStudents = async function(params) {
             <p class="text-gray-500 dark:text-slate-400 mb-6">${escapeHtml(course.title)}</p>
 
             <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
-                ${students.length > 0 ? `
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead class="bg-gray-50 dark:bg-slate-700">
-                                <tr class="text-left text-gray-500 dark:text-slate-400">
-                                    <th class="py-3 px-4">Nombre</th>
-                                    <th class="py-3 px-4">Email</th>
-                                    <th class="py-3 px-4">Progreso</th>
-                                    <th class="py-3 px-4">Inscrito</th>
-                                    <th class="py-3 px-4">Completado</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${students.map(student => `
-                                    <tr class="border-t border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700">
-                                        <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">${escapeHtml(student.name)}</td>
-                                        <td class="py-3 px-4 text-gray-600 dark:text-slate-300">${escapeHtml(student.email)}</td>
-                                        <td class="py-3 px-4">
-                                            <div class="flex items-center gap-2 w-40">
-                                                <div class="progress-bar flex-1">
-                                                    <div class="progress-fill" style="width: ${student.progress}%"></div>
-                                                </div>
-                                                <span class="text-xs text-gray-500 dark:text-slate-400 w-9 text-right">${student.progress}%</span>
-                                            </div>
-                                        </td>
-                                        <td class="py-3 px-4 text-gray-500 dark:text-slate-400">${formatDate(student.enrolled_at)}</td>
-                                        <td class="py-3 px-4">
-                                            ${student.completed_at
-                                                ? `<span class="badge badge-active"><i class="fas fa-certificate mr-1"></i> ${formatDate(student.completed_at)}</span>`
-                                                : `<span class="badge badge-inactive">En curso</span>`}
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                ` : `
-                    <div class="empty-state">
-                        <i class="fas fa-user-graduate"></i>
-                        <p class="text-xl text-gray-600 dark:text-slate-400 font-medium">Nadie se ha inscrito todavía</p>
-                    </div>
-                `}
+                ${renderStudentsTableHTML(students)}
             </div>
         `, 'courses');
 
@@ -72,3 +31,60 @@ window.renderAdminCourseStudents = async function(params) {
         showToast('Error al cargar los estudiantes del curso', 'error');
     }
 };
+
+/**
+ * Tabla de estudiantes inscritos con su progreso — compartida entre la
+ * vista de admin (arriba, con el sidebar de administración) y la vista
+ * del profesor sobre su curso asignado (views_teacher_course.js, sin
+ * ese sidebar, que no le corresponde a un profesor).
+ */
+function renderStudentsTableHTML(students) {
+    if (students.length === 0) {
+        return `
+            <div class="empty-state">
+                <i class="fas fa-user-graduate"></i>
+                <p class="text-xl text-gray-600 dark:text-slate-400 font-medium">Nadie se ha inscrito todavía</p>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-slate-700">
+                    <tr class="text-left text-gray-500 dark:text-slate-400">
+                        <th class="py-3 px-4">Nombre</th>
+                        <th class="py-3 px-4">Email</th>
+                        <th class="py-3 px-4">Progreso</th>
+                        <th class="py-3 px-4">Inscrito</th>
+                        <th class="py-3 px-4">Completado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${students.map(student => `
+                        <tr class="border-t border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700">
+                            <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">${escapeHtml(student.name)}</td>
+                            <td class="py-3 px-4 text-gray-600 dark:text-slate-300">${escapeHtml(student.email)}</td>
+                            <td class="py-3 px-4">
+                                <div class="flex items-center gap-2 w-40">
+                                    <div class="progress-bar flex-1">
+                                        <div class="progress-fill" style="width: ${student.progress}%"></div>
+                                    </div>
+                                    <span class="text-xs text-gray-500 dark:text-slate-400 w-9 text-right">${student.progress}%</span>
+                                </div>
+                            </td>
+                            <td class="py-3 px-4 text-gray-500 dark:text-slate-400">${formatDate(student.enrolled_at)}</td>
+                            <td class="py-3 px-4">
+                                ${student.completed_at
+                                    ? `<span class="badge badge-active"><i class="fas fa-certificate mr-1"></i> ${formatDate(student.completed_at)}</span>`
+                                    : `<span class="badge badge-inactive">En curso</span>`}
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+window.renderStudentsTableHTML = renderStudentsTableHTML;
