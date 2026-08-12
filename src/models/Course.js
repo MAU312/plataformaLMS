@@ -140,6 +140,16 @@ class Course {
   }
 
   /**
+   * Verifica si un usuario es profesor asignado a un curso.
+   * Placeholder hasta que exista la tabla course_teachers (ver Fase 2 de
+   * asignación profesor↔curso): por ahora siempre false, así un 'teacher'
+   * todavía no tiene acceso de edición a ningún curso.
+   */
+  static async isUserTeacher(courseId, userId) {
+    return false;
+  }
+
+  /**
    * Verificar si un usuario está inscrito en un curso
    */
   static async isUserEnrolled(courseId, userId) {

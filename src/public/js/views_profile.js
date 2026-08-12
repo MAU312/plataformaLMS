@@ -25,8 +25,8 @@ window.renderProfile = async function(params) {
                         <div>
                             <h1 class="text-2xl font-bold text-gray-900">${escapeHtml(user.name)}</h1>
                             <p class="text-gray-600">${escapeHtml(user.email)}</p>
-                            <span class="badge ${user.role === 'admin' ? 'badge-admin' : 'badge-student'} mt-2 inline-block">
-                                ${user.role === 'admin' ? 'Administrador' : 'Estudiante'}
+                            <span class="badge ${user.role === 'admin' ? 'badge-admin' : user.role === 'teacher' ? 'badge-teacher' : 'badge-student'} mt-2 inline-block">
+                                ${user.role === 'admin' ? 'Administrador' : user.role === 'teacher' ? 'Profesor' : 'Estudiante'}
                             </span>
                         </div>
                     </div>

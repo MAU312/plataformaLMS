@@ -97,9 +97,10 @@ function renderUsersTable(users, page, currentUserId, pagination) {
                             <td class="py-3 px-4 text-gray-600 dark:text-slate-300">${escapeHtml(user.email)}</td>
                             <td class="py-3 px-4">
                                 <select onchange="changeUserRole(${user.id}, this.value)"
-                                    class="badge ${user.role === 'admin' ? 'badge-admin' : 'badge-student'} border-0 cursor-pointer"
+                                    class="badge ${user.role === 'admin' ? 'badge-admin' : user.role === 'teacher' ? 'badge-teacher' : 'badge-student'} border-0 cursor-pointer"
                                     ${isMe ? 'disabled' : ''}>
                                     <option value="student" ${user.role === 'student' ? 'selected' : ''}>Estudiante</option>
+                                    <option value="teacher" ${user.role === 'teacher' ? 'selected' : ''}>Profesor</option>
                                     <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
                                 </select>
                             </td>

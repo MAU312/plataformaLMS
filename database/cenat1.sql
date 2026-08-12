@@ -33,7 +33,7 @@ CREATE TABLE `content_progress` (
   KEY `idx_content` (`content_id`),
   CONSTRAINT `content_progress_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `content_progress_ibfk_2` FOREIGN KEY (`content_id`) REFERENCES `contents` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=67 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=70 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -42,6 +42,7 @@ CREATE TABLE `content_progress` (
 
 LOCK TABLES `content_progress` WRITE;
 /*!40000 ALTER TABLE `content_progress` DISABLE KEYS */;
+INSERT INTO `content_progress` VALUES (67,3,1,'2026-08-12 16:13:40'),(68,3,2,'2026-08-12 16:13:44'),(69,3,3,'2026-08-12 16:14:02');
 /*!40000 ALTER TABLE `content_progress` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -68,7 +69,7 @@ CREATE TABLE `contents` (
   KEY `idx_type` (`type`),
   KEY `idx_order` (`order_index`),
   CONSTRAINT `contents_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -77,6 +78,7 @@ CREATE TABLE `contents` (
 
 LOCK TABLES `contents` WRITE;
 /*!40000 ALTER TABLE `contents` DISABLE KEYS */;
+INSERT INTO `contents` VALUES (1,1,'video','ejemplo 1','descip','/uploads/videos/YTDown.com_YouTube_Samsung-Galaxy-Z-Fold-8-I-Unboxing-_-Cam_Media_0mWy2Vr8YHo_001_1080p-1786550895628-487089031.mp4',344744669,1,'2026-08-12 16:08:17','2026-08-12 16:08:17'),(2,1,'file','ejemplo 2','ejemplo 2','/uploads/files/EstadodeCuenta-1786551022084-375358342.pdf',127781,2,'2026-08-12 16:10:22','2026-08-12 16:10:22'),(3,1,'file','ejemplo 3','ejemplo 3','/uploads/files/CV_Mauricio_Hidalgo_B1-1786551034692-475220608.pdf',22149,3,'2026-08-12 16:10:34','2026-08-12 16:10:34');
 /*!40000 ALTER TABLE `contents` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -100,7 +102,7 @@ CREATE TABLE `courses` (
   KEY `idx_active` (`is_active`),
   KEY `idx_instructor` (`instructor_id`),
   CONSTRAINT `courses_ibfk_1` FOREIGN KEY (`instructor_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -109,6 +111,7 @@ CREATE TABLE `courses` (
 
 LOCK TABLES `courses` WRITE;
 /*!40000 ALTER TABLE `courses` DISABLE KEYS */;
+INSERT INTO `courses` VALUES (1,'Introduccion a la Biotecnología Ambiental','La biotecnología ambiental aplica sistemas biológicos y microorganismos para prevenir, controlar y remediar la contaminación del aire, agua y suelo.','/uploads/thumbnails/Biotecnologia-Ambiental-introduccion-1-2048-1786526153173-223843741.webp',1,1,'2026-08-12 09:15:53','2026-08-12 09:15:53');
 /*!40000 ALTER TABLE `courses` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -132,7 +135,7 @@ CREATE TABLE `enrollments` (
   KEY `idx_course` (`course_id`),
   CONSTRAINT `enrollments_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `enrollments_ibfk_2` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -141,6 +144,7 @@ CREATE TABLE `enrollments` (
 
 LOCK TABLES `enrollments` WRITE;
 /*!40000 ALTER TABLE `enrollments` DISABLE KEYS */;
+INSERT INTO `enrollments` VALUES (1,3,1,'2026-08-12 16:13:23',100,'2026-08-12 16:14:02');
 /*!40000 ALTER TABLE `enrollments` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -165,7 +169,7 @@ CREATE TABLE `sessions` (
 
 LOCK TABLES `sessions` WRITE;
 /*!40000 ALTER TABLE `sessions` DISABLE KEYS */;
-INSERT INTO `sessions` VALUES ('1lCykW85NHHBwonBuccXQFTuQKp0EuqM',1786415285,'{\"cookie\":{\"originalMaxAge\":86400000,\"expires\":\"2026-08-11T02:28:05.265Z\",\"secure\":false,\"httpOnly\":true,\"path\":\"/\",\"sameSite\":\"lax\"},\"user\":{\"id\":11,\"name\":\"QA Student\",\"email\":\"qa.student@test.local\",\"role\":\"student\"}}'),('CJNPncjD4ksYgXcphAIqfWSoWQVn-Qle',1786415414,'{\"cookie\":{\"originalMaxAge\":86400000,\"expires\":\"2026-08-11T02:30:13.766Z\",\"secure\":false,\"httpOnly\":true,\"path\":\"/\",\"sameSite\":\"lax\"},\"user\":{\"id\":12,\"name\":\"QA Admin\",\"email\":\"qa.admin@test.local\",\"role\":\"admin\"}}'),('iRSP-qSdAEr2BHicn0-0e8BNrdOPIzNe',1786500473,'{\"cookie\":{\"originalMaxAge\":86400000,\"expires\":\"2026-08-12T02:07:42.963Z\",\"secure\":false,\"httpOnly\":true,\"path\":\"/\",\"sameSite\":\"lax\"},\"user\":{\"id\":2,\"name\":\"Estudiante LANBA\",\"email\":\"estudiantelms@cenat.com\",\"role\":\"student\"}}'),('n08h-9ZH3OeqrdwA73xf_uGiWbgdqtDs',1786415369,'{\"cookie\":{\"originalMaxAge\":86400000,\"expires\":\"2026-08-11T02:28:15.772Z\",\"secure\":false,\"httpOnly\":true,\"path\":\"/\",\"sameSite\":\"lax\"},\"user\":{\"id\":11,\"name\":\"QA Student\",\"email\":\"qa.student@test.local\",\"role\":\"student\"}}');
+INSERT INTO `sessions` VALUES ('hULT-z10TGWjewvQwUk7JfICxlNwP3mI',1786637754,'{\"cookie\":{\"originalMaxAge\":86400000,\"expires\":\"2026-08-13T16:15:35.965Z\",\"secure\":false,\"httpOnly\":true,\"path\":\"/\",\"sameSite\":\"lax\"},\"user\":{\"id\":1,\"name\":\"Administrador LANBA\",\"email\":\"adminlms@cenat.com\",\"role\":\"admin\"}}');
 /*!40000 ALTER TABLE `sessions` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -181,7 +185,7 @@ CREATE TABLE `users` (
   `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `email` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `role` enum('admin','student') COLLATE utf8mb4_unicode_ci DEFAULT 'student',
+  `role` enum('admin','student','teacher') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'student',
   `is_active` tinyint(1) DEFAULT '1',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -191,7 +195,7 @@ CREATE TABLE `users` (
   UNIQUE KEY `email` (`email`),
   KEY `idx_email` (`email`),
   KEY `idx_role` (`role`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -200,7 +204,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'Administrador LANBA','adminlms@cenat.com','$2a$10$.N7s0OE2s3iqbL4tsWC7mOnZmyfnrIWYn4PJZ3aYTEeLyWm8rAIR.','admin',1,'2026-08-11 02:06:18','2026-08-11 02:06:18',NULL,NULL),(2,'Estudiante LANBA','estudiantelms@cenat.com','$2a$10$uY59Lw.t0Ng4NBiuJeHThu7bw51QG88hl/9ewPuiSp8yiASHLBtvC','student',1,'2026-08-11 02:06:18','2026-08-11 02:06:18',NULL,NULL);
+INSERT INTO `users` VALUES (1,'Administrador LANBA','adminlms@cenat.com','$2a$10$.N7s0OE2s3iqbL4tsWC7mOnZmyfnrIWYn4PJZ3aYTEeLyWm8rAIR.','admin',1,'2026-08-11 02:06:18','2026-08-11 02:06:18',NULL,NULL),(2,'Estudiante LANBA','estudiantelms@cenat.com','$2a$10$uY59Lw.t0Ng4NBiuJeHThu7bw51QG88hl/9ewPuiSp8yiASHLBtvC','student',1,'2026-08-11 02:06:18','2026-08-12 19:41:09',NULL,NULL),(3,'Jazmin Calderon Quiros','jazmin@gmail.com','$2a$10$Xw39AhgrDRMVoDJrycnXTebL1b8OjOunQ0.GkBnfzJDTYf128iYEC','student',1,'2026-08-12 16:06:19','2026-08-12 16:06:19',NULL,NULL);
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -217,4 +221,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-08-10 20:08:15
+-- Dump completed on 2026-08-12 13:41:28

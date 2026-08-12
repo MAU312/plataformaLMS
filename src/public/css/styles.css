@@ -307,6 +307,7 @@ html {
 }
 
 .badge-admin    { background: #dc2626; color: white; }
+.badge-teacher  { background: #8b5cf6; color: white; }
 .badge-student  { background: #3b82f6; color: white; }
 .badge-active   { background: #10b981; color: white; }
 .badge-inactive { background: #6b7280; color: white; }

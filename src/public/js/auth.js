@@ -129,6 +129,10 @@ function isStudent() {
     return currentUser && currentUser.role === 'student';
 }
 
+function isTeacher() {
+    return currentUser && currentUser.role === 'teacher';
+}
+
 // =================================
 // Update UI based on auth state
 // =================================
@@ -223,5 +227,6 @@ window.getCurrentUser = getCurrentUser;
 window.isAuthenticated = isAuthenticated;
 window.isAdmin = isAdmin;
 window.isStudent = isStudent;
+window.isTeacher = isTeacher;
 window.requireAuth = requireAuth;
 window.requireAdmin = requireAdmin;
