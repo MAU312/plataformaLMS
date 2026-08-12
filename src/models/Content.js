@@ -2,6 +2,21 @@ import pool from '../config/db.js';
 
 class Content {
   /**
+   * "Redacta" un contenido para un usuario sin acceso (ver
+   * Course.canAccessMedia): siempre oculta la URL, y además el cuerpo de
+   * texto (`description`) si el tipo es 'text' — ahí `description` ES el
+   * contenido real de la lección, a diferencia de video/file donde es
+   * solo una descripción corta que no hace falta ocultar.
+   */
+  static redactForNoAccess(content) {
+    return {
+      ...content,
+      url: null,
+      description: content.type === 'text' ? null : content.description
+    };
+  }
+
+  /**
    * Obtener todos los contenidos
    */
   static async findAll() {

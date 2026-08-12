@@ -66,6 +66,31 @@ router.post(
   contentController.createFileContent
 );
 
+/**
+ * POST /api/contents/text
+ * Admin, o el profesor asignado al curso del body. Sin archivo (JSON
+ * puro), así que aquí sí req.body.course_id ya está disponible antes de
+ * requireCourseManager sin necesitar multer.
+ */
+router.post(
+  '/text',
+  isAuthenticated,
+  requireCourseManager((req) => req.body.course_id),
+  contentController.createTextContent
+);
+
+/**
+ * POST /api/contents/url
+ * Admin, o el profesor asignado al curso del body. Igual que /text, sin
+ * archivo.
+ */
+router.post(
+  '/url',
+  isAuthenticated,
+  requireCourseManager((req) => req.body.course_id),
+  contentController.createUrlContent
+);
+
 // ==============================================
 // RUTAS CON PARÁMETRO /:id Y SUBRUTAS
 // ==============================================
@@ -103,12 +128,17 @@ router.put(
   (req, res, next) => {
     const handleUpload = async (req, res, next) => {
       try {
-        const contentId = req.params.id;
-        const content = await import('../models/Content.js').then(m => m.default.findById(contentId));
+        const content = await Content.findById(req.params.id);
 
         if (!content) return next();
 
         req.contentType = content.type;
+
+        // Texto y URL no llevan archivo — no tiene sentido pasarlos por
+        // multer/verifyFileSignature (que esperan un req.file).
+        if (content.type === 'text' || content.type === 'url') {
+          return next();
+        }
 
         if (content.type === 'video') {
           return uploadVideo.single('video')(req, res, next);
@@ -121,7 +151,10 @@ router.put(
     };
     handleUpload(req, res, next);
   },
-  (req, res, next) => verifyFileSignature(req.contentType === 'video' ? 'video' : 'file')(req, res, next),
+  (req, res, next) => {
+    if (req.contentType === 'text' || req.contentType === 'url') return next();
+    verifyFileSignature(req.contentType === 'video' ? 'video' : 'file')(req, res, next);
+  },
   contentController.updateContent
 );
 

@@ -1,5 +1,6 @@
 import Course from '../models/Course.js';
 import User from '../models/User.js';
+import Content from '../models/Content.js';
 import { deleteFile } from '../middlewares/upload.middleware.js';
 import certificateGenerator from '../utils/certificate.js';
 
@@ -60,14 +61,15 @@ export const getCourseById = async (req, res) => {
     const canAccessMedia = await Course.canAccessMedia(id, req.session?.user);
 
     // Igual que en GET /api/contents/course/:courseId: solo admin,
-    // inscrito, o profesor asignado recibe las URLs reales de
-    // video/archivo. Este endpoint es público (sin isAuthenticated) a
-    // propósito para poder navegar el catálogo sin cuenta, así que sin
+    // inscrito, o profesor asignado recibe las URLs/texto reales de
+    // video/archivo/texto. Este endpoint es público (sin isAuthenticated)
+    // a propósito para poder navegar el catálogo sin cuenta, así que sin
     // este filtro cualquier visitante anónimo podía obtener las URLs
-    // reales de los videos de cualquier curso.
+    // reales de los videos (o el texto completo de una lección) de
+    // cualquier curso.
     const contents = canAccessMedia
       ? rawContents
-      : rawContents.map(({ url, ...rest }) => ({ ...rest, url: null }));
+      : rawContents.map(Content.redactForNoAccess);
 
     res.json({
       success: true,

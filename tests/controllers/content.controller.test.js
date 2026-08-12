@@ -6,6 +6,59 @@ import Content from '../../src/models/Content.js';
 import Course from '../../src/models/Course.js';
 import { mockReq, mockRes } from '../helpers/http.js';
 
+test('createTextContent: 400 si falta el título', async (t) => {
+  const req = mockReq({ body: { course_id: 1, description: 'algo de texto' } });
+  const res = mockRes();
+  await contentController.createTextContent(req, res);
+  assert.equal(res.statusCode, 400);
+});
+
+test('createTextContent: 400 si el texto viene vacío (solo espacios)', async (t) => {
+  const req = mockReq({ body: { course_id: 1, title: 'Lectura', description: '   ' } });
+  const res = mockRes();
+  await contentController.createTextContent(req, res);
+  assert.equal(res.statusCode, 400);
+});
+
+test('createTextContent: 201 y guarda el texto en description con url null', async (t) => {
+  const createCall = t.mock.method(Content, 'create', async () => 42);
+  const req = mockReq({ body: { course_id: 1, title: 'Lectura', description: 'contenido real de la lección' } });
+  const res = mockRes();
+  await contentController.createTextContent(req, res);
+
+  assert.equal(res.statusCode, 201);
+  const created = createCall.mock.calls[0].arguments[0];
+  assert.equal(created.type, 'text');
+  assert.equal(created.description, 'contenido real de la lección');
+  assert.equal(created.url, null);
+});
+
+test('createUrlContent: 400 si la URL no es http/https (ej. javascript:)', async (t) => {
+  const req = mockReq({ body: { course_id: 1, title: 'Video externo', url: 'javascript:alert(1)' } });
+  const res = mockRes();
+  await contentController.createUrlContent(req, res);
+  assert.equal(res.statusCode, 400);
+});
+
+test('createUrlContent: 400 si falta la URL', async (t) => {
+  const req = mockReq({ body: { course_id: 1, title: 'Video externo' } });
+  const res = mockRes();
+  await contentController.createUrlContent(req, res);
+  assert.equal(res.statusCode, 400);
+});
+
+test('createUrlContent: 201 con una URL https válida', async (t) => {
+  const createCall = t.mock.method(Content, 'create', async () => 43);
+  const req = mockReq({ body: { course_id: 1, title: 'Video externo', url: 'https://www.youtube.com/watch?v=abc' } });
+  const res = mockRes();
+  await contentController.createUrlContent(req, res);
+
+  assert.equal(res.statusCode, 201);
+  const created = createCall.mock.calls[0].arguments[0];
+  assert.equal(created.type, 'url');
+  assert.equal(created.url, 'https://www.youtube.com/watch?v=abc');
+});
+
 test('downloadFile: 404 si el contenido no existe', async (t) => {
   t.mock.method(Content, 'findById', async () => undefined);
   const req = mockReq({ params: { id: 1 }, session: { user: { id: 1, role: 'student' } } });

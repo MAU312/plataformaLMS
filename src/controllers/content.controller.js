@@ -5,6 +5,9 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+// Solo http(s) — rechaza esquemas como javascript:, data:, etc.
+const URL_REGEX = /^https?:\/\/.+/i;
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -21,15 +24,15 @@ export const getContentsByCourse = async (req, res) => {
       : await Content.findByCourse(courseId);
 
     // Solo un admin, un estudiante inscrito, o el profesor asignado al
-    // curso recibe las URLs reales de video/archivo. Cualquier otro
-    // usuario ve el listado (títulos, descripción, orden) pero sin
+    // curso recibe las URLs/texto reales de video/archivo/texto.
+    // Cualquier otro usuario ve el listado (títulos, orden) pero sin
     // acceso directo al contenido — así se fuerza la inscripción antes
-    // de poder reproducir o descargar.
+    // de poder reproducir, descargar, o leer una lección de texto.
     const canAccessMedia = await Course.canAccessMedia(courseId, req.session?.user);
 
     const responseData = canAccessMedia
       ? contents
-      : contents.map(({ url, ...rest }) => ({ ...rest, url: null }));
+      : contents.map(Content.redactForNoAccess);
 
     res.json({
       success: true,
@@ -60,11 +63,11 @@ export const getContentById = async (req, res) => {
     }
 
     // Mismo criterio que en los demás endpoints de contenido: solo admin,
-    // inscrito, o profesor asignado ve la URL real. Antes este endpoint
-    // público devolvía la URL sin ningún filtro.
+    // inscrito, o profesor asignado ve la URL/texto real. Antes este
+    // endpoint público devolvía la URL sin ningún filtro.
     const canAccessMedia = await Course.canAccessMedia(content.course_id, req.session?.user);
 
-    const responseData = canAccessMedia ? content : { ...content, url: null };
+    const responseData = canAccessMedia ? content : Content.redactForNoAccess(content);
 
     res.json({
       success: true,
@@ -177,6 +180,94 @@ export const createFileContent = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error al agregar archivo'
+    });
+  }
+};
+
+/**
+ * Crear nuevo contenido de tipo TEXT: sin archivo, el contenido en sí es
+ * el texto guardado en `description`.
+ */
+export const createTextContent = async (req, res) => {
+  try {
+    const { course_id, title, description } = req.body;
+
+    if (!course_id || !title) {
+      return res.status(400).json({
+        success: false,
+        message: 'El ID del curso y el título son requeridos'
+      });
+    }
+
+    if (!description || !String(description).trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'El contenido de texto es requerido'
+      });
+    }
+
+    const contentId = await Content.create({
+      course_id,
+      type: 'text',
+      title,
+      description,
+      url: null
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Contenido de texto agregado exitosamente',
+      data: { id: contentId }
+    });
+  } catch (error) {
+    console.error('Error al crear contenido de texto:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al agregar el contenido de texto'
+    });
+  }
+};
+
+/**
+ * Crear nuevo contenido de tipo URL: un video externo (ej. YouTube) en
+ * vez de un archivo subido — la URL se guarda directo, sin multer.
+ */
+export const createUrlContent = async (req, res) => {
+  try {
+    const { course_id, title, description, url } = req.body;
+
+    if (!course_id || !title) {
+      return res.status(400).json({
+        success: false,
+        message: 'El ID del curso y el título son requeridos'
+      });
+    }
+
+    if (!url || !URL_REGEX.test(String(url).trim())) {
+      return res.status(400).json({
+        success: false,
+        message: 'La URL debe ser un enlace http o https válido'
+      });
+    }
+
+    const contentId = await Content.create({
+      course_id,
+      type: 'url',
+      title,
+      description,
+      url: String(url).trim()
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'URL de video agregada exitosamente',
+      data: { id: contentId }
+    });
+  } catch (error) {
+    console.error('Error al crear contenido de URL:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al agregar la URL de video'
     });
   }
 };

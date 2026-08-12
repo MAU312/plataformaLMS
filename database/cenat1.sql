@@ -56,10 +56,10 @@ DROP TABLE IF EXISTS `contents`;
 CREATE TABLE `contents` (
   `id` int NOT NULL AUTO_INCREMENT,
   `course_id` int NOT NULL,
-  `type` enum('video','file') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `type` enum('video','file','text','url') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `title` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
   `description` text COLLATE utf8mb4_unicode_ci,
-  `url` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `file_size` int DEFAULT NULL COMMENT 'Size in bytes',
   `order_index` int DEFAULT '0',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
@@ -69,7 +69,7 @@ CREATE TABLE `contents` (
   KEY `idx_type` (`type`),
   KEY `idx_order` (`order_index`),
   CONSTRAINT `contents_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -252,4 +252,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-08-12 14:09:35
+-- Dump completed on 2026-08-12 14:18:38

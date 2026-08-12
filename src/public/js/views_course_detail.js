@@ -41,6 +41,8 @@ window.renderCourseDetail = async function(params) {
 
         const videos = contents.filter(c => c.type === 'video');
         const files = contents.filter(c => c.type === 'file');
+        const urlVideos = contents.filter(c => c.type === 'url');
+        const texts = contents.filter(c => c.type === 'text');
         const completedCount = contents.filter(c => c.completed).length;
         const progressPercent = contents.length > 0 ? Math.round((completedCount / contents.length) * 100) : 0;
 
@@ -118,6 +120,26 @@ window.renderCourseDetail = async function(params) {
                                 <p class="text-gray-600">Este curso aún no tiene videos disponibles</p>
                             </div>
                         `}
+
+                        ${urlVideos.length > 0 ? `
+                            <h2 class="text-xl font-bold text-gray-900 flex items-center mt-8">
+                                <i class="fas fa-link text-cenat-green mr-2"></i>
+                                Videos externos
+                            </h2>
+                            <div class="space-y-2">
+                                ${urlVideos.map(u => renderUrlContentRow(u, isLoggedIn && isEnrolled, hasAccess)).join('')}
+                            </div>
+                        ` : ''}
+
+                        ${texts.length > 0 ? `
+                            <h2 class="text-xl font-bold text-gray-900 flex items-center mt-8">
+                                <i class="fas fa-align-left text-cenat-green mr-2"></i>
+                                Lecturas
+                            </h2>
+                            <div class="space-y-3">
+                                ${texts.map(t => renderTextContentCard(t, isLoggedIn && isEnrolled, hasAccess)).join('')}
+                            </div>
+                        ` : ''}
                     </div>
 
                     <!-- Columna lateral: Archivos descargables -->
@@ -145,6 +167,8 @@ window.renderCourseDetail = async function(params) {
                             <ul class="text-sm text-gray-600 space-y-1">
                                 <li><i class="fas fa-video mr-2 text-gray-400"></i>${videos.length} videos</li>
                                 <li><i class="fas fa-file mr-2 text-gray-400"></i>${files.length} archivos</li>
+                                ${urlVideos.length > 0 ? `<li><i class="fas fa-link mr-2 text-gray-400"></i>${urlVideos.length} videos externos</li>` : ''}
+                                ${texts.length > 0 ? `<li><i class="fas fa-align-left mr-2 text-gray-400"></i>${texts.length} lecturas</li>` : ''}
                                 <li><i class="fas fa-users mr-2 text-gray-400"></i>${course.enrolled_count || 0} inscritos</li>
                             </ul>
                         </div>
@@ -245,6 +269,57 @@ function renderContentRow(content, isActiveVideo, canTrackProgress, type, hasAcc
                     <i class="fas fa-lock"></i>
                 </span>
             `) : ''}
+        </div>
+    `;
+}
+
+function renderUrlContentRow(content, canTrackProgress, hasAccess) {
+    const completed = content.completed || false;
+    return `
+        <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 transition">
+            ${canTrackProgress ? `
+                <button class="content-checkbox flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition ${completed ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-cenat-green'}"
+                    data-content-id="${content.id}" data-completed="${completed == 1 || completed === true ? 'true' : 'false'}" title="${completed ? 'Marcar como pendiente' : 'Marcar como completado'}">
+                    ${completed ? '<i class="fas fa-check text-white text-xs"></i>' : ''}
+                </button>
+            ` : ''}
+            <i class="fas ${hasAccess ? 'fa-link' : 'fa-lock'} text-xl ${hasAccess ? 'text-cenat-green' : 'text-gray-400'}"></i>
+            <div class="flex-1 min-w-0">
+                <p class="font-medium text-gray-900 truncate ${completed ? 'line-through text-gray-400' : ''}">${escapeHtml(content.title)}</p>
+                ${content.description ? `<p class="text-xs text-gray-500 truncate">${escapeHtml(content.description)}</p>` : ''}
+            </div>
+            ${hasAccess ? `
+                <a href="${content.url}" target="_blank" rel="noopener noreferrer" class="text-cenat-green hover:text-cenat-green-hover" title="Abrir video externo">
+                    <i class="fas fa-external-link-alt"></i>
+                </a>
+            ` : `
+                <span class="text-gray-400 text-xs" title="Inscríbete para ver">
+                    <i class="fas fa-lock"></i>
+                </span>
+            `}
+        </div>
+    `;
+}
+
+function renderTextContentCard(content, canTrackProgress, hasAccess) {
+    const completed = content.completed || false;
+    return `
+        <div class="bg-white rounded-xl border border-gray-100 p-4">
+            <div class="flex items-start gap-3">
+                ${canTrackProgress ? `
+                    <button class="content-checkbox flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition mt-1 ${completed ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-cenat-green'}"
+                        data-content-id="${content.id}" data-completed="${completed == 1 || completed === true ? 'true' : 'false'}" title="${completed ? 'Marcar como pendiente' : 'Marcar como completado'}">
+                        ${completed ? '<i class="fas fa-check text-white text-xs"></i>' : ''}
+                    </button>
+                ` : ''}
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-gray-900 ${completed ? 'line-through text-gray-400' : ''}">${escapeHtml(content.title)}</p>
+                    ${hasAccess
+                        ? `<p class="text-sm text-gray-600 mt-2 whitespace-pre-line">${escapeHtml(content.description || '')}</p>`
+                        : `<p class="text-sm text-gray-400 mt-2"><i class="fas fa-lock mr-1"></i> Inscríbete en este curso para ver esta lectura</p>`
+                    }
+                </div>
+            </div>
         </div>
     `;
 }

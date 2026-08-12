@@ -16,6 +16,8 @@ function initCourseContentManager(rerenderFn) {
 function renderCourseContentManagerHTML(course, contents) {
     const videos = contents.filter(c => c.type === 'video');
     const files = contents.filter(c => c.type === 'file');
+    const texts = contents.filter(c => c.type === 'text');
+    const urls = contents.filter(c => c.type === 'url');
 
     return `
         <div class="space-y-6">
@@ -39,6 +41,26 @@ function renderCourseContentManagerHTML(course, contents) {
                 </div>
             </div>
 
+            <!-- Sección URL de video externo -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold text-gray-900">
+                        <i class="fas fa-link text-cenat-green mr-2"></i> URL de video externo
+                    </h2>
+                    <button onclick="showAddUrlForm(${course.id})" class="text-sm bg-green-50 text-cenat-green px-3 py-1.5 rounded-lg hover:bg-green-100 transition">
+                        <i class="fas fa-plus mr-1"></i> Agregar URL
+                    </button>
+                </div>
+
+                <div id="add-url-form-container"></div>
+
+                <div id="urls-list" class="space-y-2">
+                    ${urls.length > 0 ? urls.map(url => renderContentItem(url, 'url')).join('') : `
+                        <p class="text-gray-500 text-sm text-center py-4">No hay URLs de video agregadas aún</p>
+                    `}
+                </div>
+            </div>
+
             <!-- Sección Archivos -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                 <div class="flex items-center justify-between mb-4">
@@ -58,18 +80,40 @@ function renderCourseContentManagerHTML(course, contents) {
                     `}
                 </div>
             </div>
+
+            <!-- Sección Texto -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold text-gray-900">
+                        <i class="fas fa-align-left text-cenat-green mr-2"></i> Texto
+                    </h2>
+                    <button onclick="showAddTextForm(${course.id})" class="text-sm bg-green-50 text-cenat-green px-3 py-1.5 rounded-lg hover:bg-green-100 transition">
+                        <i class="fas fa-plus mr-1"></i> Agregar texto
+                    </button>
+                </div>
+
+                <div id="add-text-form-container"></div>
+
+                <div id="texts-list" class="space-y-2">
+                    ${texts.length > 0 ? texts.map(text => renderContentItem(text, 'text')).join('') : `
+                        <p class="text-gray-500 text-sm text-center py-4">No hay contenido de texto agregado aún</p>
+                    `}
+                </div>
+            </div>
         </div>
     `;
 }
 
 function renderContentItem(content, type) {
-    const icon = type === 'video' ? 'fa-play-circle' : getFileIcon(content.url);
+    const icons = { video: 'fa-play-circle', url: 'fa-link', text: 'fa-align-left' };
+    const icon = icons[type] || getFileIcon(content.url);
     return `
         <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition">
             <i class="fas ${icon} text-xl text-cenat-green"></i>
             <div class="flex-1 min-w-0">
                 <p class="font-medium text-gray-900 truncate">${escapeHtml(content.title)}</p>
                 ${content.file_size ? `<p class="text-xs text-gray-500">${formatFileSize(content.file_size)}</p>` : ''}
+                ${type === 'url' ? `<p class="text-xs text-gray-500 truncate">${escapeHtml(content.url)}</p>` : ''}
             </div>
             <button onclick="deleteContentHandler(${content.id}, '${type}')" class="text-red-500 hover:text-red-700 px-2">
                 <i class="fas fa-trash"></i>
@@ -217,8 +261,128 @@ function showAddFileForm(courseId) {
     });
 }
 
+// =================================
+// Formulario para agregar TEXTO
+// =================================
+
+function showAddTextForm(courseId) {
+    const container = document.getElementById('add-text-form-container');
+
+    container.innerHTML = `
+        <form id="add-text-form" class="bg-green-50 rounded-lg p-4 mb-4 space-y-3">
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Título *</label>
+                <input type="text" id="text-title" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Ej: Lectura complementaria">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Contenido *</label>
+                <textarea id="text-content" required rows="5" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Escribe el texto que verán los estudiantes..."></textarea>
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" id="submit-text-btn" class="bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
+                    <i class="fas fa-check mr-1"></i> Guardar Texto
+                </button>
+                <button type="button" onclick="document.getElementById('add-text-form-container').innerHTML = ''" class="text-gray-600 px-4 py-2 text-sm">
+                    Cancelar
+                </button>
+            </div>
+        </form>
+    `;
+
+    document.getElementById('add-text-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const title = document.getElementById('text-title').value.trim();
+        const description = document.getElementById('text-content').value.trim();
+        const submitBtn = document.getElementById('submit-text-btn');
+
+        if (!title || !description) {
+            showToast('Título y contenido son requeridos', 'error');
+            return;
+        }
+
+        try {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Guardando...';
+
+            await contentsAPI.createText({ course_id: courseId, title, description });
+            showToast('Texto agregado exitosamente', 'success');
+            contentManagerRerender();
+
+        } catch (error) {
+            showToast(error.message || 'Error al guardar el texto', 'error');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-check mr-1"></i> Guardar Texto';
+        }
+    });
+}
+
+// =================================
+// Formulario para agregar URL de video externo
+// =================================
+
+function showAddUrlForm(courseId) {
+    const container = document.getElementById('add-url-form-container');
+
+    container.innerHTML = `
+        <form id="add-url-form" class="bg-green-50 rounded-lg p-4 mb-4 space-y-3">
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Título *</label>
+                <input type="text" id="url-title" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Ej: Video complementario en YouTube">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Descripción (opcional)</label>
+                <input type="text" id="url-description" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">URL del video *</label>
+                <input type="url" id="url-value" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="https://www.youtube.com/watch?v=...">
+                <p class="text-xs text-gray-500 mt-1">Debe empezar con http:// o https://</p>
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" id="submit-url-btn" class="bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
+                    <i class="fas fa-check mr-1"></i> Guardar URL
+                </button>
+                <button type="button" onclick="document.getElementById('add-url-form-container').innerHTML = ''" class="text-gray-600 px-4 py-2 text-sm">
+                    Cancelar
+                </button>
+            </div>
+        </form>
+    `;
+
+    document.getElementById('add-url-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const title = document.getElementById('url-title').value.trim();
+        const description = document.getElementById('url-description').value.trim();
+        const url = document.getElementById('url-value').value.trim();
+        const submitBtn = document.getElementById('submit-url-btn');
+
+        if (!title || !url) {
+            showToast('Título y URL son requeridos', 'error');
+            return;
+        }
+
+        try {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Guardando...';
+
+            await contentsAPI.createUrl({ course_id: courseId, title, description, url });
+            showToast('URL agregada exitosamente', 'success');
+            contentManagerRerender();
+
+        } catch (error) {
+            showToast(error.message || 'Error al guardar la URL', 'error');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-check mr-1"></i> Guardar URL';
+        }
+    });
+}
+
+const CONTENT_TYPE_LABELS = { video: 'el video', file: 'el archivo', text: 'el texto', url: 'la URL' };
+
 async function deleteContentHandler(id, type) {
-    const label = type === 'video' ? 'el video' : 'el archivo';
+    const label = CONTENT_TYPE_LABELS[type] || 'el contenido';
     if (!confirmAction(`¿Estás seguro de eliminar ${label}? Esta acción no se puede deshacer.`)) {
         return;
     }
@@ -237,4 +401,6 @@ window.renderCourseContentManagerHTML = renderCourseContentManagerHTML;
 window.renderContentItem = renderContentItem;
 window.showAddVideoForm = showAddVideoForm;
 window.showAddFileForm = showAddFileForm;
+window.showAddTextForm = showAddTextForm;
+window.showAddUrlForm = showAddUrlForm;
 window.deleteContentHandler = deleteContentHandler;
