@@ -1,5 +1,5 @@
 import { fileTypeFromFile } from 'file-type';
-import fs from 'fs';
+import fs from 'fs/promises';
 import path from 'path';
 
 /**
@@ -56,7 +56,7 @@ export function verifyFileSignature(kind) {
       const detected = await fileTypeFromFile(req.file.path);
 
       if (!expected || !detected || !expected.includes(detected.ext)) {
-        fs.unlink(req.file.path, () => {});
+        await fs.unlink(req.file.path).catch(() => {});
         return res.status(400).json({
           success: false,
           message: 'El contenido del archivo no coincide con su extensión. Verifica que no esté corrupto o haya sido renombrado.'
@@ -65,7 +65,7 @@ export function verifyFileSignature(kind) {
 
       next();
     } catch (error) {
-      fs.unlink(req.file.path, () => {});
+      await fs.unlink(req.file.path).catch(() => {});
       next(error);
     }
   };
