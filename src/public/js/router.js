@@ -97,6 +97,11 @@ const routes = {
         title: 'Estudiantes del Curso',
         render: (params) => window.renderTeacherCourseStudents(params),
         requireAuth: true
+    },
+    '/contents/:id/submissions': {
+        title: 'Entregas de la Tarea',
+        render: (params) => window.renderTaskSubmissions(params),
+        requireAuth: true
     }
 };
 

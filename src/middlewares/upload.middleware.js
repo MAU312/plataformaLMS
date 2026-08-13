@@ -11,8 +11,9 @@ const uploadsDir = path.join(__dirname, '../../uploads');
 const videosDir = path.join(uploadsDir, 'videos');
 const filesDir = path.join(uploadsDir, 'files');
 const thumbnailsDir = path.join(uploadsDir, 'thumbnails');
+const submissionsDir = path.join(uploadsDir, 'submissions');
 
-[uploadsDir, videosDir, filesDir, thumbnailsDir].forEach(dir => {
+[uploadsDir, videosDir, filesDir, thumbnailsDir, submissionsDir].forEach(dir => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -90,6 +91,31 @@ const fileFilter = (req, file, cb) => {
 
 export const uploadFile = multer({
   storage: fileStorage,
+  limits: {
+    fileSize: 50 * 1024 * 1024 // 50MB máximo
+  },
+  fileFilter: fileFilter
+});
+
+// =============================================
+// Configuración de almacenamiento para ENTREGAS DE TAREAS
+// (mismo límite y tipos permitidos que uploadFile)
+// =============================================
+
+const submissionStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, submissionsDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    const name = path.basename(file.originalname, ext).replace(/\s+/g, '-');
+    cb(null, `${name}-${uniqueSuffix}${ext}`);
+  }
+});
+
+export const uploadSubmission = multer({
+  storage: submissionStorage,
   limits: {
     fileSize: 50 * 1024 * 1024 // 50MB máximo
   },

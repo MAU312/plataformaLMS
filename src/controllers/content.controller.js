@@ -273,6 +273,56 @@ export const createUrlContent = async (req, res) => {
 };
 
 /**
+ * Crear nuevo contenido de tipo TASK (tarea): el archivo de
+ * instrucciones/plantilla es OPCIONAL (a diferencia de video/archivo,
+ * donde es obligatorio) — una tarea puede ser solo texto de
+ * instrucciones sin ningún archivo adjunto.
+ */
+export const createTaskContent = async (req, res) => {
+  try {
+    const { course_id, title, description } = req.body;
+
+    if (!course_id || !title) {
+      return res.status(400).json({
+        success: false,
+        message: 'El ID del curso y el título son requeridos'
+      });
+    }
+
+    let url = null;
+    let file_size = null;
+    if (req.file) {
+      url = `/uploads/files/${req.file.filename}`;
+      file_size = req.file.size;
+    }
+
+    const contentId = await Content.create({
+      course_id,
+      type: 'task',
+      title,
+      description,
+      url,
+      file_size
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Tarea agregada exitosamente',
+      data: { id: contentId }
+    });
+  } catch (error) {
+    console.error('Error al crear la tarea:', error);
+    if (req.file) {
+      deleteFile(`/uploads/files/${req.file.filename}`);
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Error al agregar la tarea'
+    });
+  }
+};
+
+/**
  * Actualizar contenido (solo admin)
  */
 export const updateContent = async (req, res) => {

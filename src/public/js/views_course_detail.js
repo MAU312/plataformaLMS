@@ -43,8 +43,18 @@ window.renderCourseDetail = async function(params) {
         const files = contents.filter(c => c.type === 'file');
         const urlVideos = contents.filter(c => c.type === 'url');
         const texts = contents.filter(c => c.type === 'text');
+        const tasks = contents.filter(c => c.type === 'task');
         const completedCount = contents.filter(c => c.completed).length;
         const progressPercent = contents.length > 0 ? Math.round((completedCount / contents.length) * 100) : 0;
+
+        // Estado de entrega de cada tarea (solo tiene sentido para un
+        // estudiante inscrito — para admin/profesor/no-inscrito no se
+        // pide, ya que no pueden entregar).
+        let submissionsByTask = {};
+        if (isLoggedIn && isEnrolled && tasks.length > 0) {
+            const submissionResponses = await Promise.all(tasks.map(t => contentsAPI.getMySubmission(t.id)));
+            tasks.forEach((t, i) => { submissionsByTask[t.id] = submissionResponses[i].data; });
+        }
 
         app.innerHTML = `
             <div class="bg-white border-b">
@@ -140,6 +150,16 @@ window.renderCourseDetail = async function(params) {
                                 ${texts.map(t => renderTextContentCard(t, isLoggedIn && isEnrolled, hasAccess)).join('')}
                             </div>
                         ` : ''}
+
+                        ${tasks.length > 0 ? `
+                            <h2 class="text-xl font-bold text-gray-900 flex items-center mt-8">
+                                <i class="fas fa-tasks text-cenat-green mr-2"></i>
+                                Tareas
+                            </h2>
+                            <div class="space-y-3">
+                                ${tasks.map(t => renderTaskCard(t, submissionsByTask[t.id], hasAccess)).join('')}
+                            </div>
+                        ` : ''}
                     </div>
 
                     <!-- Columna lateral: Archivos descargables -->
@@ -169,6 +189,7 @@ window.renderCourseDetail = async function(params) {
                                 <li><i class="fas fa-file mr-2 text-gray-400"></i>${files.length} archivos</li>
                                 ${urlVideos.length > 0 ? `<li><i class="fas fa-link mr-2 text-gray-400"></i>${urlVideos.length} videos externos</li>` : ''}
                                 ${texts.length > 0 ? `<li><i class="fas fa-align-left mr-2 text-gray-400"></i>${texts.length} lecturas</li>` : ''}
+                                ${tasks.length > 0 ? `<li><i class="fas fa-tasks mr-2 text-gray-400"></i>${tasks.length} tareas</li>` : ''}
                                 <li><i class="fas fa-users mr-2 text-gray-400"></i>${course.enrolled_count || 0} inscritos</li>
                             </ul>
                         </div>
@@ -222,6 +243,9 @@ window.renderCourseDetail = async function(params) {
 
         // Botón de inscripción
         setupEnrollButton(course.id);
+
+        // Formularios de entrega de tareas
+        setupTaskSubmitForms(course.id);
 
     } catch (error) {
         console.error('Error loading course:', error);
@@ -322,6 +346,101 @@ function renderTextContentCard(content, canTrackProgress, hasAccess) {
             </div>
         </div>
     `;
+}
+
+function renderTaskCard(task, submission, hasAccess) {
+    if (!hasAccess) {
+        return `
+            <div class="bg-white rounded-xl border border-gray-100 p-4">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-lock text-xl text-gray-400"></i>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium text-gray-900">${escapeHtml(task.title)}</p>
+                        <p class="text-sm text-gray-400 mt-1">Inscríbete en este curso para ver y entregar esta tarea</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    const hasInstructionsFile = !!task.url;
+    const isSubmitted = !!submission;
+    const isReviewed = isSubmitted && !!submission.reviewed_at;
+
+    return `
+        <div class="bg-white rounded-xl border border-gray-100 p-4">
+            <div class="flex items-start gap-3">
+                <i class="fas fa-tasks text-xl text-cenat-green mt-1"></i>
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-gray-900">${escapeHtml(task.title)}</p>
+                    ${task.description ? `<p class="text-sm text-gray-600 mt-1 whitespace-pre-line">${escapeHtml(task.description)}</p>` : ''}
+                    ${hasInstructionsFile ? `
+                        <button onclick="downloadContent(${task.id})" class="text-sm text-cenat-green hover:text-cenat-green-hover mt-2 inline-block">
+                            <i class="fas fa-download mr-1"></i> Descargar instrucciones
+                        </button>
+                    ` : ''}
+
+                    <div class="mt-3">
+                        ${isSubmitted ? `
+                            <div class="bg-green-50 rounded-lg p-3">
+                                <p class="text-sm text-green-700 font-medium">
+                                    <i class="fas fa-check-circle mr-1"></i>
+                                    ${isReviewed ? 'Entrega revisada' : 'Entregado — pendiente de revisión'}
+                                </p>
+                                <p class="text-xs text-gray-500 mt-1">Entregado el ${formatDate(submission.submitted_at)}</p>
+                                ${isReviewed && submission.feedback ? `
+                                    <p class="text-sm text-gray-700 mt-2"><strong>Comentario del profesor:</strong> ${escapeHtml(submission.feedback)}</p>
+                                ` : ''}
+                            </div>
+                        ` : `
+                            <form class="task-submit-form flex items-center gap-2" data-task-id="${task.id}">
+                                <input type="file" class="task-submit-file text-sm flex-1" required>
+                                <button type="submit" class="bg-cenat-green text-white px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap">
+                                    <i class="fas fa-upload mr-1"></i> Entregar
+                                </button>
+                            </form>
+                            <p class="text-xs text-gray-400 mt-1">Solo puedes entregar una vez — revisa el archivo antes de subirlo.</p>
+                        `}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function setupTaskSubmitForms(courseId) {
+    document.querySelectorAll('.task-submit-form').forEach(form => {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const taskId = form.dataset.taskId;
+            const fileInput = form.querySelector('.task-submit-file');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                showToast('Selecciona un archivo para entregar', 'error');
+                return;
+            }
+
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                await contentsAPI.submit(taskId, formData);
+                showToast('Tarea entregada exitosamente', 'success');
+                renderCourseDetail({ id: courseId });
+
+            } catch (error) {
+                showToast(error.message || 'Error al entregar la tarea', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-upload mr-1"></i> Entregar';
+            }
+        });
+    });
 }
 
 async function toggleContentCompleted(contentId, markAsCompleted, courseId) {

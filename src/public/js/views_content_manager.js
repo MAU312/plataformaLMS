@@ -18,6 +18,7 @@ function renderCourseContentManagerHTML(course, contents) {
     const files = contents.filter(c => c.type === 'file');
     const texts = contents.filter(c => c.type === 'text');
     const urls = contents.filter(c => c.type === 'url');
+    const tasks = contents.filter(c => c.type === 'task');
 
     return `
         <div class="space-y-6">
@@ -100,12 +101,32 @@ function renderCourseContentManagerHTML(course, contents) {
                     `}
                 </div>
             </div>
+
+            <!-- Sección Tareas -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold text-gray-900">
+                        <i class="fas fa-tasks text-cenat-green mr-2"></i> Tareas
+                    </h2>
+                    <button onclick="showAddTaskForm(${course.id})" class="text-sm bg-green-50 text-cenat-green px-3 py-1.5 rounded-lg hover:bg-green-100 transition">
+                        <i class="fas fa-plus mr-1"></i> Agregar tarea
+                    </button>
+                </div>
+
+                <div id="add-task-form-container"></div>
+
+                <div id="tasks-list" class="space-y-2">
+                    ${tasks.length > 0 ? tasks.map(task => renderTaskItem(task)).join('') : `
+                        <p class="text-gray-500 text-sm text-center py-4">No hay tareas agregadas aún</p>
+                    `}
+                </div>
+            </div>
         </div>
     `;
 }
 
 function renderContentItem(content, type) {
-    const icons = { video: 'fa-play-circle', url: 'fa-link', text: 'fa-align-left' };
+    const icons = { video: 'fa-play-circle', url: 'fa-link', text: 'fa-align-left', task: 'fa-tasks' };
     const icon = icons[type] || getFileIcon(content.url);
     return `
         <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition">
@@ -116,6 +137,24 @@ function renderContentItem(content, type) {
                 ${type === 'url' ? `<p class="text-xs text-gray-500 truncate">${escapeHtml(content.url)}</p>` : ''}
             </div>
             <button onclick="deleteContentHandler(${content.id}, '${type}')" class="text-red-500 hover:text-red-700 px-2">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    `;
+}
+
+function renderTaskItem(content) {
+    return `
+        <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition">
+            <i class="fas fa-tasks text-xl text-cenat-green"></i>
+            <div class="flex-1 min-w-0">
+                <p class="font-medium text-gray-900 truncate">${escapeHtml(content.title)}</p>
+                <p class="text-xs text-gray-500">${content.url ? 'Con archivo de instrucciones' : 'Sin archivo adjunto'}</p>
+            </div>
+            <a href="#/contents/${content.id}/submissions" class="text-cenat-green hover:text-cenat-green-hover text-sm whitespace-nowrap" title="Ver entregas">
+                <i class="fas fa-inbox mr-1"></i> Entregas
+            </a>
+            <button onclick="deleteContentHandler(${content.id}, 'task')" class="text-red-500 hover:text-red-700 px-2">
                 <i class="fas fa-trash"></i>
             </button>
         </div>
@@ -379,7 +418,77 @@ function showAddUrlForm(courseId) {
     });
 }
 
-const CONTENT_TYPE_LABELS = { video: 'el video', file: 'el archivo', text: 'el texto', url: 'la URL' };
+// =================================
+// Formulario para agregar TAREA
+// =================================
+
+function showAddTaskForm(courseId) {
+    const container = document.getElementById('add-task-form-container');
+
+    container.innerHTML = `
+        <form id="add-task-form" class="bg-green-50 rounded-lg p-4 mb-4 space-y-3">
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Título *</label>
+                <input type="text" id="task-title" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Ej: Ensayo final">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Instrucciones (opcional)</label>
+                <textarea id="task-description" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Describe qué debe entregar el estudiante..."></textarea>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Archivo de plantilla/instrucciones (opcional)</label>
+                <input type="file" id="task-file" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip,.rar" class="w-full text-sm">
+                <p class="text-xs text-gray-500 mt-1">PDF, DOCX, PPT, XLS, TXT, ZIP, RAR (máx. 50MB)</p>
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" id="submit-task-btn" class="bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
+                    <i class="fas fa-check mr-1"></i> Guardar Tarea
+                </button>
+                <button type="button" onclick="document.getElementById('add-task-form-container').innerHTML = ''" class="text-gray-600 px-4 py-2 text-sm">
+                    Cancelar
+                </button>
+            </div>
+        </form>
+    `;
+
+    document.getElementById('add-task-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const title = document.getElementById('task-title').value.trim();
+        const description = document.getElementById('task-description').value.trim();
+        const file = document.getElementById('task-file').files[0];
+        const submitBtn = document.getElementById('submit-task-btn');
+
+        if (!title) {
+            showToast('El título es requerido', 'error');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('course_id', courseId);
+        formData.append('title', title);
+        formData.append('description', description);
+        if (file) {
+            formData.append('file', file);
+        }
+
+        try {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Guardando...';
+
+            await contentsAPI.createTask(formData);
+            showToast('Tarea agregada exitosamente', 'success');
+            contentManagerRerender();
+
+        } catch (error) {
+            showToast(error.message || 'Error al guardar la tarea', 'error');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-check mr-1"></i> Guardar Tarea';
+        }
+    });
+}
+
+const CONTENT_TYPE_LABELS = { video: 'el video', file: 'el archivo', text: 'el texto', url: 'la URL', task: 'la tarea' };
 
 async function deleteContentHandler(id, type) {
     const label = CONTENT_TYPE_LABELS[type] || 'el contenido';
@@ -399,8 +508,10 @@ async function deleteContentHandler(id, type) {
 window.initCourseContentManager = initCourseContentManager;
 window.renderCourseContentManagerHTML = renderCourseContentManagerHTML;
 window.renderContentItem = renderContentItem;
+window.renderTaskItem = renderTaskItem;
 window.showAddVideoForm = showAddVideoForm;
 window.showAddFileForm = showAddFileForm;
 window.showAddTextForm = showAddTextForm;
 window.showAddUrlForm = showAddUrlForm;
+window.showAddTaskForm = showAddTaskForm;
 window.deleteContentHandler = deleteContentHandler;

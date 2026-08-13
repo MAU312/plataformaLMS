@@ -88,3 +88,21 @@ export const courseCreateLimiter = rateLimit({
     message: 'Demasiados cursos creados en poco tiempo. Intenta de nuevo más tarde.'
   }
 });
+
+/**
+ * Limita entregas de tareas: 20 por hora por usuario. Cada tarea solo
+ * admite una entrega de todos modos (UNIQUE en task_submissions), así que
+ * esto es sobre todo para evitar reintentos en bucle de un script/bug del
+ * cliente contra el endpoint de subida.
+ */
+export const submitTaskLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: byUser,
+  message: {
+    success: false,
+    message: 'Demasiados intentos de entrega. Intenta de nuevo más tarde.'
+  }
+});

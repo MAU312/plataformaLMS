@@ -111,6 +111,10 @@ const contentsAPI = {
     createFile: async (formData) => apiRequestFormData('/contents/file', formData),
     createText: async (data) => apiRequest('/contents/text', { method: 'POST', body: JSON.stringify(data) }),
     createUrl: async (data) => apiRequest('/contents/url', { method: 'POST', body: JSON.stringify(data) }),
+    createTask: async (formData) => apiRequestFormData('/contents/task', formData),
+    submit: async (id, formData) => apiRequestFormData(`/contents/${id}/submit`, formData),
+    getMySubmission: async (id) => apiRequest(`/contents/${id}/submission`),
+    getSubmissions: async (id) => apiRequest(`/contents/${id}/submissions`),
     update: async (id, formData) => {
         const response = await fetch(`${API_URL}/contents/${id}`, { method: 'PUT', body: formData, credentials: 'include' });
         const data = await response.json();
@@ -142,7 +146,17 @@ const usersAPI = {
     getByRole: async (role) => apiRequest(`/users/by-role/${role}`)
 };
 
+// =================================
+// Submissions API (entregas de tareas)
+// =================================
+
+const submissionsAPI = {
+    download: async (id) => { window.open(`${API_URL}/submissions/${id}/download`, '_blank'); },
+    review: async (id, data) => apiRequest(`/submissions/${id}/review`, { method: 'PUT', body: JSON.stringify(data) })
+};
+
 window.authAPI = authAPI;
 window.coursesAPI = coursesAPI;
 window.contentsAPI = contentsAPI;
 window.usersAPI = usersAPI;
+window.submissionsAPI = submissionsAPI;

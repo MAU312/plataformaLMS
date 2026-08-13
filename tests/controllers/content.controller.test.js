@@ -6,6 +6,40 @@ import Content from '../../src/models/Content.js';
 import Course from '../../src/models/Course.js';
 import { mockReq, mockRes } from '../helpers/http.js';
 
+test('createTaskContent: 201 sin archivo (las instrucciones pueden ir solo en el texto)', async (t) => {
+  const createCall = t.mock.method(Content, 'create', async () => 50);
+  const req = mockReq({ body: { course_id: 1, title: 'Ensayo final', description: 'Entrega un PDF de 2 páginas' } });
+  const res = mockRes();
+  await contentController.createTaskContent(req, res);
+
+  assert.equal(res.statusCode, 201);
+  const created = createCall.mock.calls[0].arguments[0];
+  assert.equal(created.type, 'task');
+  assert.equal(created.url, null);
+});
+
+test('createTaskContent: 201 con archivo de instrucciones adjunto', async (t) => {
+  const createCall = t.mock.method(Content, 'create', async () => 51);
+  const req = mockReq({
+    body: { course_id: 1, title: 'Ensayo final' },
+    file: { filename: 'instrucciones-123.pdf', size: 2048 }
+  });
+  const res = mockRes();
+  await contentController.createTaskContent(req, res);
+
+  assert.equal(res.statusCode, 201);
+  const created = createCall.mock.calls[0].arguments[0];
+  assert.equal(created.url, '/uploads/files/instrucciones-123.pdf');
+  assert.equal(created.file_size, 2048);
+});
+
+test('createTaskContent: 400 si falta el título', async (t) => {
+  const req = mockReq({ body: { course_id: 1 } });
+  const res = mockRes();
+  await contentController.createTaskContent(req, res);
+  assert.equal(res.statusCode, 400);
+});
+
 test('createTextContent: 400 si falta el título', async (t) => {
   const req = mockReq({ body: { course_id: 1, description: 'algo de texto' } });
   const res = mockRes();
