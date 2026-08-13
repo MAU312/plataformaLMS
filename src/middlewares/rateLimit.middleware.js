@@ -90,6 +90,24 @@ export const courseCreateLimiter = rateLimit({
 });
 
 /**
+ * Limita la creación de usuarios desde el panel de admin: 20 por hora por
+ * usuario admin. A diferencia de registerLimiter (5/hora por IP, pensado
+ * para frenar bots contra el registro público), esta ruta ya requiere
+ * sesión de admin, así que se agrupa por usuario en vez de por IP.
+ */
+export const userCreateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: byUser,
+  message: {
+    success: false,
+    message: 'Demasiados usuarios creados en poco tiempo. Intenta de nuevo más tarde.'
+  }
+});
+
+/**
  * Limita entregas de tareas: 20 por hora por usuario. Cada tarea solo
  * admite una entrega de todos modos (UNIQUE en task_submissions), así que
  * esto es sobre todo para evitar reintentos en bucle de un script/bug del

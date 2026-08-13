@@ -18,10 +18,15 @@ window.renderAdminUsers = async function(params) {
     currentUserSearch = '';
 
     app.innerHTML = renderAdminLayout(`
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-            <i class="fas fa-users text-cenat-green mr-2"></i>
-            Gestión de Usuarios
-        </h1>
+        <div class="flex items-center justify-between mb-6 gap-4 flex-wrap">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+                <i class="fas fa-users text-cenat-green mr-2"></i>
+                Gestión de Usuarios
+            </h1>
+            <button onclick="openCreateUserModal()" class="btn-cenat">
+                <i class="fas fa-user-plus"></i> Crear usuario
+            </button>
+        </div>
 
         <div class="relative mb-4">
             <input type="text" id="search-admin-users" placeholder="Buscar usuario por nombre o email..."
@@ -42,6 +47,107 @@ window.renderAdminUsers = async function(params) {
 
     await loadAdminUsers(1);
 };
+
+function openCreateUserModal() {
+    closeCreateUserModal();
+
+    const modal = document.createElement('div');
+    modal.id = 'create-user-modal';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center px-4';
+    modal.innerHTML = `
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeCreateUserModal()"></div>
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-w-md w-full fade-in">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+                    <i class="fas fa-user-plus text-cenat-green mr-2"></i> Crear usuario
+                </h2>
+                <button onclick="closeCreateUserModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-slate-200">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+
+            <form id="create-user-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Nombre completo *</label>
+                    <input type="text" id="new-user-name" required
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Email *</label>
+                    <input type="email" id="new-user-email" required
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Nombre de usuario (opcional)</label>
+                    <input type="text" id="new-user-username" minlength="3" maxlength="50"
+                        placeholder="Para iniciar sesión sin el correo"
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Contraseña *</label>
+                    <input type="password" id="new-user-password" required minlength="6"
+                        placeholder="Mínimo 6 caracteres"
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Rol *</label>
+                    <select id="new-user-role"
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
+                        <option value="student" selected>Estudiante</option>
+                        <option value="teacher">Profesor</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center gap-3 pt-2">
+                    <button type="submit" class="btn-cenat flex-1">Crear usuario</button>
+                    <button type="button" onclick="closeCreateUserModal()" class="text-gray-600 dark:text-slate-300 px-4 py-2 text-sm">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById('create-user-form').addEventListener('submit', handleCreateUserSubmit);
+}
+
+function closeCreateUserModal() {
+    const modal = document.getElementById('create-user-modal');
+    if (modal) modal.remove();
+}
+
+async function handleCreateUserSubmit(e) {
+    e.preventDefault();
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+
+    const data = {
+        name: document.getElementById('new-user-name').value.trim(),
+        email: document.getElementById('new-user-email').value.trim(),
+        username: document.getElementById('new-user-username').value.trim() || undefined,
+        password: document.getElementById('new-user-password').value,
+        role: document.getElementById('new-user-role').value
+    };
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Creando...';
+
+    try {
+        await usersAPI.create(data);
+        showToast('Usuario creado exitosamente', 'success');
+        closeCreateUserModal();
+        loadAdminUsers(currentUserPage);
+    } catch (error) {
+        showToast(error.message || 'Error al crear el usuario', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
+}
+
+window.openCreateUserModal = openCreateUserModal;
+window.closeCreateUserModal = closeCreateUserModal;
 
 async function loadAdminUsers(page) {
     const container = document.getElementById('users-table-container');

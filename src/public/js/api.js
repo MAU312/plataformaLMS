@@ -133,6 +133,7 @@ const contentsAPI = {
 // =================================
 
 const usersAPI = {
+    create: async (data) => apiRequest('/users', { method: 'POST', body: JSON.stringify(data) }),
     getAll: async ({ page = 1, limit = 10, search = '' } = {}) => {
         const params = new URLSearchParams({ page, limit });
         if (search) params.set('search', search);
