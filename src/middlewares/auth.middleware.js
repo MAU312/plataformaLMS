@@ -1,19 +1,43 @@
 import fs from 'fs/promises';
 import Course from '../models/Course.js';
+import User from '../models/User.js';
 
 /**
  * Middleware de autenticación
- * Verifica si el usuario tiene una sesión activa
+ * Verifica si el usuario tiene una sesión activa Y que siga siendo válida
+ * en base de datos. Sin esto, el rol/estado quedaba cacheado en
+ * req.session.user desde el login: si un admin desactivaba, borraba, o le
+ * cambiaba el rol a un usuario con sesión abierta, esa sesión seguía
+ * funcionando con los permisos viejos hasta que expirara la cookie (24h) o
+ * el usuario cerrara sesión manualmente.
  */
-export const isAuthenticated = (req, res, next) => {
-  if (req.session && req.session.user) {
-    return next();
+export const isAuthenticated = async (req, res, next) => {
+  if (!req.session || !req.session.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'No autorizado. Debes iniciar sesión.'
+    });
   }
-  
-  return res.status(401).json({
-    success: false,
-    message: 'No autorizado. Debes iniciar sesión.'
-  });
+
+  try {
+    const user = await User.findById(req.session.user.id);
+
+    if (!user || user.is_active == 0 || user.is_active === false) {
+      return req.session.destroy(() => {
+        res.status(401).json({
+          success: false,
+          message: 'Tu sesión ya no es válida. Inicia sesión de nuevo.'
+        });
+      });
+    }
+
+    // Sincroniza la sesión con la BD (ej. si un admin cambió el rol o el
+    // nombre de este usuario después de que inició sesión).
+    req.session.user = { id: user.id, name: user.name, email: user.email, role: user.role };
+    next();
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**

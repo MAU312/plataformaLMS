@@ -328,7 +328,7 @@ export const createTaskContent = async (req, res) => {
 export const updateContent = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, order_index } = req.body;
+    const { title, description, order_index, url } = req.body;
 
     const content = await Content.findById(id);
     if (!content) {
@@ -342,6 +342,18 @@ export const updateContent = async (req, res) => {
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
     if (order_index !== undefined) updateData.order_index = parseInt(order_index);
+
+    // Contenido tipo URL no lleva archivo: la única forma de "reemplazar"
+    // el contenido es cambiar el link.
+    if (content.type === 'url' && url !== undefined) {
+      if (!URL_REGEX.test(String(url).trim())) {
+        return res.status(400).json({
+          success: false,
+          message: 'La URL debe ser un enlace http o https válido'
+        });
+      }
+      updateData.url = String(url).trim();
+    }
 
     // Si se subió un nuevo archivo
     if (req.file) {
@@ -395,8 +407,9 @@ export const deleteContent = async (req, res) => {
       });
     }
 
-    // Eliminar archivo físico
-    if (content.url) {
+    // Eliminar archivo físico (type='url' no tiene archivo local, es un
+    // link externo — no hay nada que borrar del disco).
+    if (content.url && content.type !== 'url') {
       deleteFile(content.url);
     }
 
@@ -468,7 +481,11 @@ export const downloadFile = async (req, res) => {
       });
     }
 
-    if (content.type !== 'file') {
+    // El archivo de instrucciones de una tarea se guarda igual que un
+    // 'file' (mismo storage, misma carpeta no-estática), así que también
+    // se descarga por acá.
+    const isDownloadable = content.type === 'file' || (content.type === 'task' && content.url);
+    if (!isDownloadable) {
       return res.status(400).json({
         success: false,
         message: 'Este contenido no es un archivo descargable'
@@ -530,6 +547,16 @@ export const markContentCompleted = async (req, res) => {
       });
     }
 
+    // Una tarea se marca completada automáticamente al entregarla
+    // (ver submitTask) — no manualmente, o un estudiante podría marcarla
+    // como hecha sin haber entregado nada.
+    if (content.type === 'task') {
+      return res.status(400).json({
+        success: false,
+        message: 'El progreso de una tarea se actualiza automáticamente al entregarla'
+      });
+    }
+
     // Solo se puede marcar progreso en contenido de un curso en el que
     // se está inscrito (o si es admin). Antes cualquier usuario autenticado
     // podía marcar como completado contenido de cursos ajenos.
@@ -575,6 +602,15 @@ export const markContentIncomplete = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Contenido no encontrado'
+      });
+    }
+
+    // Misma regla que al marcar como completado: el progreso de una tarea
+    // solo lo controla la entrega.
+    if (content.type === 'task') {
+      return res.status(400).json({
+        success: false,
+        message: 'El progreso de una tarea se actualiza automáticamente al entregarla'
       });
     }
 

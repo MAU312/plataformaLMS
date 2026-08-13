@@ -163,6 +163,25 @@ test('downloadFile: un admin descarga sin necesitar inscripción', async (t) => 
   assert.equal(enrolledCheck.mock.calls.length, 0, 'un admin no debería requerir la verificación de inscripción');
 });
 
+test('downloadFile: una tarea con archivo de instrucciones (type=task, con url) SÍ se puede descargar', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 9, type: 'task', course_id: 1, url: '/uploads/files/instrucciones.pdf' }));
+  t.mock.method(Course, 'isUserEnrolled', async () => true);
+  t.mock.method(Course, 'isUserTeacher', async () => false);
+  t.mock.method(fs, 'existsSync', () => true);
+  const req = mockReq({ params: { id: 9 }, session: { user: { id: 1, role: 'student' } } });
+  const res = mockRes();
+  await contentController.downloadFile(req, res);
+  assert.equal(res.downloadCall.fileName, 'instrucciones.pdf');
+});
+
+test('downloadFile: 400 si es una tarea SIN archivo de instrucciones (type=task, url=null)', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 9, type: 'task', course_id: 1, url: null }));
+  const req = mockReq({ params: { id: 9 }, session: { user: { id: 1, role: 'student' } } });
+  const res = mockRes();
+  await contentController.downloadFile(req, res);
+  assert.equal(res.statusCode, 400);
+});
+
 test('markContentCompleted: 403 si un estudiante no inscrito intenta marcar progreso', async (t) => {
   t.mock.method(Content, 'findById', async () => ({ id: 1, course_id: 1 }));
   t.mock.method(Course, 'isUserEnrolled', async () => false);
@@ -186,6 +205,40 @@ test('markContentCompleted: éxito recalcula y devuelve el progreso', async (t) 
   assert.equal(res.body.data.progress, 50);
 });
 
+test('markContentCompleted: 400 si el contenido es una tarea (su progreso solo lo controla la entrega)', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 9, course_id: 1, type: 'task' }));
+  const markCall = t.mock.method(Content, 'markCompleted', async () => 10);
+  const req = mockReq({ params: { id: 9 }, session: { user: { id: 1, role: 'student' } } });
+  const res = mockRes();
+  await contentController.markContentCompleted(req, res);
+  assert.equal(res.statusCode, 400);
+  assert.equal(markCall.mock.calls.length, 0, 'no debe marcarse completada sin pasar por submitTask');
+});
+
+test('markContentIncomplete: 400 si el contenido es una tarea', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 9, course_id: 1, type: 'task' }));
+  const markCall = t.mock.method(Content, 'markIncomplete', async () => true);
+  const req = mockReq({ params: { id: 9 }, session: { user: { id: 1, role: 'student' } } });
+  const res = mockRes();
+  await contentController.markContentIncomplete(req, res);
+  assert.equal(res.statusCode, 400);
+  assert.equal(markCall.mock.calls.length, 0);
+});
+
+test('markContentIncomplete: éxito recalcula y devuelve el progreso', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 1, course_id: 1, type: 'video' }));
+  t.mock.method(Course, 'isUserEnrolled', async () => true);
+  t.mock.method(Content, 'markIncomplete', async () => true);
+  t.mock.method(Content, 'recalculateCourseProgress', async () => ({ progress: 0, total: 2, completed: 0 }));
+
+  const req = mockReq({ params: { id: 1 }, session: { user: { id: 1, role: 'student' } } });
+  const res = mockRes();
+  await contentController.markContentIncomplete(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.data.progress, 0);
+});
+
 test('getContentsByCourse: oculta URLs a un usuario con sesión pero no inscrito', async (t) => {
   t.mock.method(Content, 'findByCourseWithProgress', async () => ([{ id: 1, url: '/uploads/videos/x.mp4' }]));
   t.mock.method(Course, 'isUserEnrolled', async () => false);
@@ -206,4 +259,55 @@ test('getContentsByCourse: oculta URLs a un visitante anónimo (sin sesión)', a
   await contentController.getContentsByCourse(req, res);
 
   assert.equal(res.body.data[0].url, null);
+});
+
+test('updateContent: en type=url, permite editar la url si es un link http(s) válido', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'url', url: 'https://old.example.com' }));
+  const updateCall = t.mock.method(Content, 'update', async () => true);
+  const req = mockReq({ params: { id: 1 }, body: { url: 'https://youtube.com/watch?v=nuevo' } });
+  const res = mockRes();
+
+  await contentController.updateContent(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(updateCall.mock.calls[0].arguments[1].url, 'https://youtube.com/watch?v=nuevo');
+});
+
+test('updateContent: en type=url, rechaza una url que no sea http/https', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'url', url: 'https://old.example.com' }));
+  const updateCall = t.mock.method(Content, 'update', async () => true);
+  const req = mockReq({ params: { id: 1 }, body: { url: 'javascript:alert(1)' } });
+  const res = mockRes();
+
+  await contentController.updateContent(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(updateCall.mock.calls.length, 0);
+});
+
+test('deleteContent: en type=url no intenta borrar ningún archivo del disco (la "url" es un link externo)', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'url', url: 'https://youtube.com/watch?v=x' }));
+  t.mock.method(Content, 'delete', async () => true);
+  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
+  const req = mockReq({ params: { id: 1 } });
+  const res = mockRes();
+
+  await contentController.deleteContent(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(unlinkCall.mock.calls.length, 0);
+});
+
+test('deleteContent: en type=file SÍ borra el archivo del disco', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'file', url: '/uploads/files/x.pdf' }));
+  t.mock.method(Content, 'delete', async () => true);
+  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
+  t.mock.method(fs, 'existsSync', () => true);
+  const req = mockReq({ params: { id: 1 } });
+  const res = mockRes();
+
+  await contentController.deleteContent(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(unlinkCall.mock.calls.length, 1);
 });

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'fs';
 import * as courseController from '../../src/controllers/course.controller.js';
 import Course from '../../src/models/Course.js';
 import User from '../../src/models/User.js';
@@ -89,6 +90,43 @@ test('createCourse: sin teacher_ids en el body, asigna una lista vacía (curso s
   await courseController.createCourse(req, res);
 
   assert.deepEqual(assignCall.mock.calls[0].arguments[1], []);
+});
+
+test('createCourse: si Course.create falla, borra la miniatura recién subida (no queda huérfana)', async (t) => {
+  t.mock.method(Course, 'create', async () => { throw new Error('boom'); });
+  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
+  t.mock.method(fs, 'existsSync', () => true);
+  const req = mockReq({
+    body: { title: 'Curso nuevo' },
+    session: { user: { id: 1 } },
+    file: { filename: 'portada.png' }
+  });
+  const res = mockRes();
+
+  await courseController.createCourse(req, res);
+
+  assert.equal(res.statusCode, 500);
+  assert.equal(unlinkCall.mock.calls.length, 1, 'la miniatura subida no debe quedar huérfana en disco');
+});
+
+test('updateCourse: borra la miniatura anterior solo DESPUÉS de confirmar el UPDATE en BD', async (t) => {
+  t.mock.method(Course, 'findById', async () => ({ id: 1, title: 'Curso', thumbnail: '/uploads/thumbnails/vieja.png' }));
+  const callOrder = [];
+  t.mock.method(Course, 'update', async () => { callOrder.push('update'); return true; });
+  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => { callOrder.push('unlink'); });
+  t.mock.method(fs, 'existsSync', () => true);
+  const req = mockReq({
+    params: { id: 1 },
+    body: { title: 'Curso' },
+    file: { filename: 'nueva.png' }
+  });
+  const res = mockRes();
+
+  await courseController.updateCourse(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(unlinkCall.mock.calls.length, 1);
+  assert.deepEqual(callOrder, ['update', 'unlink'], 'el UPDATE en BD debe confirmar antes de borrar el archivo viejo');
 });
 
 test('updateCourse: con teacher_ids en el body, reemplaza los profesores asignados', async (t) => {

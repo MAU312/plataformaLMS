@@ -191,7 +191,7 @@ window.renderRegister = async function(params) {
                                     type="text"
                                     minlength="3"
                                     maxlength="50"
-                                    pattern="[a-zA-Z0-9_.\-]+"
+                                    pattern="[a-zA-Z0-9_.-]+"
                                     class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
                                     placeholder="Para iniciar sesión sin tu correo"
                                 >

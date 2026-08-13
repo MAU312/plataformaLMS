@@ -287,6 +287,20 @@ class Course {
       'DELETE FROM enrollments WHERE course_id = ? AND user_id = ?',
       [courseId, userId]
     );
+
+    if (result.affectedRows > 0) {
+      // Limpia también el progreso de este usuario en los contenidos del
+      // curso. Sin esto, si vuelve a inscribirse más adelante, el detalle
+      // del curso seguía mostrando contenidos viejos ya tildados como
+      // completados aunque el progreso general mostrara 0%.
+      await pool.query(
+        `DELETE cp FROM content_progress cp
+         INNER JOIN contents co ON co.id = cp.content_id
+         WHERE co.course_id = ? AND cp.user_id = ?`,
+        [courseId, userId]
+      );
+    }
+
     return result.affectedRows > 0;
   }
 

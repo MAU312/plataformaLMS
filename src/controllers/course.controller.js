@@ -153,6 +153,9 @@ export const createCourse = async (req, res) => {
     });
   } catch (error) {
     console.error('Error al crear curso:', error);
+    if (req.file) {
+      deleteFile(`/uploads/thumbnails/${req.file.filename}`);
+    }
     res.status(500).json({
       success: false,
       message: 'Error al crear curso'
@@ -195,15 +198,18 @@ export const updateCourse = async (req, res) => {
 
     // Si se subió nueva miniatura
     if (req.file) {
-      // Eliminar miniatura anterior si existe
-      if (course.thumbnail) {
-        deleteFile(course.thumbnail);
-      }
       updateData.thumbnail = `/uploads/thumbnails/${req.file.filename}`;
     }
 
     if (Object.keys(updateData).length > 0) {
       await Course.update(id, updateData);
+    }
+
+    // La miniatura anterior se borra recién después de que el UPDATE
+    // confirmó en BD — si se borrara antes y el UPDATE fallara, la BD
+    // quedaría apuntando a una imagen que ya no existe en disco.
+    if (req.file && course.thumbnail) {
+      deleteFile(course.thumbnail);
     }
 
     // Reemplazo total de profesores asignados, igual que al crear el curso.
