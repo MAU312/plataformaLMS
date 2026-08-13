@@ -81,6 +81,7 @@ function renderUsersTable(users, page, currentUserId, pagination) {
                         <th class="py-3 px-4">Rol</th>
                         <th class="py-3 px-4">Estado</th>
                         <th class="py-3 px-4">Registrado</th>
+                        <th class="py-3 px-4">Último ingreso</th>
                         <th class="py-3 px-4 text-right">Acciones</th>
                     </tr>
                 </thead>
@@ -110,6 +111,7 @@ function renderUsersTable(users, page, currentUserId, pagination) {
                                 </span>
                             </td>
                             <td class="py-3 px-4 text-gray-500 dark:text-slate-400">${formatDate(user.created_at)}</td>
+                            <td class="py-3 px-4 text-gray-500 dark:text-slate-400">${user.last_login ? formatDate(user.last_login) : 'Nunca'}</td>
                             <td class="py-3 px-4 text-right">
                                 <button
                                     onclick="toggleUserActive(${user.id})"

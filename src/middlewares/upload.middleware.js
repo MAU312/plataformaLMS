@@ -51,10 +51,14 @@ const videoFilter = (req, file, cb) => {
   }
 };
 
+// Exportada (no solo usada acá) para que server.js pueda referenciarla al
+// loguear el límite real, y para poder testearla sin duplicar el número.
+export const MAX_VIDEO_SIZE_BYTES = 2 * 1024 * 1024 * 1024; // 2GB
+
 export const uploadVideo = multer({
   storage: videoStorage,
   limits: {
-    fileSize: 500 * 1024 * 1024 // 500MB máximo
+    fileSize: MAX_VIDEO_SIZE_BYTES
   },
   fileFilter: videoFilter
 });

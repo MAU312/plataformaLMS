@@ -76,13 +76,23 @@
                         <i class="fas fa-chalkboard-teacher mr-1"></i> Mis Cursos (Profesor)
                     </a>
 
+                    <!-- Acciones de invitado (sin sesión) -->
+                    <div id="guest-actions" class="items-center gap-3" style="display:none;">
+                        <a href="#/login" class="text-gray-700 dark:text-slate-300 hover:text-cenat-green dark:hover:text-green-400 transition">
+                            Iniciar sesión
+                        </a>
+                        <a href="#/register" class="btn-cenat px-4 py-2 text-sm">
+                            Regístrate
+                        </a>
+                    </div>
+
                     <!-- Dark mode toggle -->
                     <button id="dark-mode-toggle" onclick="toggleDarkMode()" title="Cambiar modo oscuro/claro">
                         <i class="fas fa-moon text-gray-600 dark:text-yellow-400"></i>
                     </button>
 
                     <!-- User Menu -->
-                    <div class="relative">
+                    <div class="relative" id="user-menu-container">
                         <button id="user-menu-button"
                             class="flex items-center space-x-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition">
                             <i class="fas fa-user-circle text-2xl"></i>
@@ -136,14 +146,24 @@
                     style="display:none;">
                     <i class="fas fa-chalkboard-teacher mr-1"></i> Mis Cursos (Profesor)
                 </a>
-                <a href="#/profile"
-                    class="block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition">
-                    <i class="fas fa-user mr-1"></i> Mi Perfil
-                </a>
-                <button id="logout-btn-mobile"
-                    class="w-full text-left block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition">
-                    <i class="fas fa-sign-out-alt mr-1"></i> Cerrar Sesión
-                </button>
+                <div id="user-menu-container-mobile">
+                    <a href="#/profile"
+                        class="block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition">
+                        <i class="fas fa-user mr-1"></i> Mi Perfil
+                    </a>
+                    <button id="logout-btn-mobile"
+                        class="w-full text-left block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition">
+                        <i class="fas fa-sign-out-alt mr-1"></i> Cerrar Sesión
+                    </button>
+                </div>
+                <div id="guest-actions-mobile" style="display:none;">
+                    <a href="#/login" class="block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition">
+                        <i class="fas fa-sign-in-alt mr-1"></i> Iniciar sesión
+                    </a>
+                    <a href="#/register" class="block py-2 text-cenat-green font-semibold hover:text-cenat-green-hover transition">
+                        <i class="fas fa-user-plus mr-1"></i> Regístrate
+                    </a>
+                </div>
             </div>
         </div>
     </nav>

@@ -40,7 +40,9 @@ const routes = {
     '/course/:id': {
         title: 'Detalle del Curso',
         render: (params) => window.renderCourseDetail(params),
-        requireAuth: false
+        // Un invitado solo puede explorar el catálogo (/) — para ver el
+        // detalle de un curso se le pide iniciar sesión o registrarse.
+        requireAuth: true
     },
     '/admin': {
         title: 'Panel Administrativo',

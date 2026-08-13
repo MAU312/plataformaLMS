@@ -11,7 +11,7 @@ class User {
     const searchParams = search ? [`%${search}%`, `%${search}%`] : [];
 
     const [rows] = await pool.query(
-      `SELECT id, name, email, role, is_active, created_at FROM users ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      `SELECT id, name, username, email, role, is_active, created_at, last_login FROM users ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
       [...searchParams, limit, offset]
     );
 
@@ -37,7 +37,7 @@ class User {
 
   static async findById(id) {
     const [rows] = await pool.query(
-      'SELECT id, name, email, role, is_active, created_at FROM users WHERE id = ?',
+      'SELECT id, name, username, email, role, is_active, created_at, last_login FROM users WHERE id = ?',
       [id]
     );
     return rows[0];
@@ -51,10 +51,22 @@ class User {
     return rows[0];
   }
 
-  static async create({ name, email, password, role = 'student' }) {
+  /**
+   * Busca por email O por username en una sola consulta — permite que el
+   * login acepte cualquiera de los dos en el mismo campo.
+   */
+  static async findByEmailOrUsername(identifier) {
+    const [rows] = await pool.query(
+      'SELECT * FROM users WHERE email = ? OR username = ?',
+      [identifier, identifier]
+    );
+    return rows[0];
+  }
+
+  static async create({ name, username, email, password, role = 'student' }) {
     const [result] = await pool.query(
-      'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-      [name, email, password, role]
+      'INSERT INTO users (name, username, email, password, role) VALUES (?, ?, ?, ?, ?)',
+      [name, username || null, email, password, role]
     );
     return result.insertId;
   }
@@ -65,6 +77,13 @@ class User {
       [name, email, role, id]
     );
     return result.affectedRows > 0;
+  }
+
+  /**
+   * Registra el momento del último inicio de sesión exitoso.
+   */
+  static async updateLastLogin(id) {
+    await pool.query('UPDATE users SET last_login = NOW() WHERE id = ?', [id]);
   }
 
   /**

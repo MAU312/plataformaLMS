@@ -61,7 +61,7 @@ async function apiRequestFormData(endpoint, formData) {
 
 const authAPI = {
     login: async (email, password) => apiRequest('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
-    register: async (name, email, password, role = 'student') => apiRequest('/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password, role }) }),
+    register: async (name, email, password, username, role = 'student') => apiRequest('/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password, username, role }) }),
     logout: async () => apiRequest('/auth/logout', { method: 'POST' }),
     getCurrentUser: async () => apiRequest('/auth/me'),
     checkAuth: async () => apiRequest('/auth/check'),

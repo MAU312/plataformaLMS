@@ -62,7 +62,7 @@ async function login(email, password) {
 // Register
 // =================================
 
-async function register(name, email, password) {
+async function register(name, email, password, username) {
     try {
         // Validar datos
         if (!name || !email || !password) {
@@ -80,7 +80,7 @@ async function register(name, email, password) {
             return false;
         }
 
-        const response = await authAPI.register(name, email, password);
+        const response = await authAPI.register(name, email, password, username);
         
         if (response.success) {
             showToast('Registro exitoso. Por favor inicia sesión', 'success');
@@ -144,11 +144,25 @@ function updateUIForAuthenticatedUser() {
     const adminLinkMobile = document.getElementById('admin-link-mobile');
     const teacherLink = document.getElementById('teacher-link');
     const teacherLinkMobile = document.getElementById('teacher-link-mobile');
+    const myCoursesLink = document.getElementById('my-courses-link');
+    const myCoursesLinkMobile = document.getElementById('my-courses-link-mobile');
+    const userMenuContainer = document.getElementById('user-menu-container');
+    const userMenuContainerMobile = document.getElementById('user-menu-container-mobile');
+    const guestActions = document.getElementById('guest-actions');
+    const guestActionsMobile = document.getElementById('guest-actions-mobile');
 
-    // Mostrar navbar
+    // Mostrar navbar (con sesión, siempre visible)
     if (navbar) {
         navbar.classList.remove('hidden');
     }
+
+    // Con sesión: menú de usuario visible, acciones de invitado ocultas
+    if (userMenuContainer) userMenuContainer.style.display = '';
+    if (userMenuContainerMobile) userMenuContainerMobile.style.display = '';
+    if (guestActions) guestActions.style.display = 'none';
+    if (guestActionsMobile) guestActionsMobile.style.display = 'none';
+    if (myCoursesLink) myCoursesLink.style.display = '';
+    if (myCoursesLinkMobile) myCoursesLinkMobile.style.display = '';
 
     // Actualizar nombre de usuario
     if (userName && currentUser) {
@@ -179,11 +193,36 @@ function updateUIForAuthenticatedUser() {
 
 function updateUIForUnauthenticatedUser() {
     const navbar = document.getElementById('navbar');
-    
-    // Ocultar navbar
+    const myCoursesLink = document.getElementById('my-courses-link');
+    const myCoursesLinkMobile = document.getElementById('my-courses-link-mobile');
+    const adminLink = document.getElementById('admin-link');
+    const adminLinkMobile = document.getElementById('admin-link-mobile');
+    const teacherLink = document.getElementById('teacher-link');
+    const teacherLinkMobile = document.getElementById('teacher-link-mobile');
+    const userMenuContainer = document.getElementById('user-menu-container');
+    const userMenuContainerMobile = document.getElementById('user-menu-container-mobile');
+    const guestActions = document.getElementById('guest-actions');
+    const guestActionsMobile = document.getElementById('guest-actions-mobile');
+
+    // El navbar se mantiene visible para un invitado (antes se ocultaba
+    // por completo, dejando la pantalla sin ninguna forma de navegar a
+    // login/registro salvo escribiendo la URL a mano). Se ocultan solo
+    // las secciones que requieren sesión, y se muestran los accesos de
+    // invitado en su lugar.
     if (navbar) {
-        navbar.classList.add('hidden');
+        navbar.classList.remove('hidden');
     }
+
+    if (myCoursesLink) myCoursesLink.style.display = 'none';
+    if (myCoursesLinkMobile) myCoursesLinkMobile.style.display = 'none';
+    if (adminLink) adminLink.style.display = 'none';
+    if (adminLinkMobile) adminLinkMobile.style.display = 'none';
+    if (teacherLink) teacherLink.style.display = 'none';
+    if (teacherLinkMobile) teacherLinkMobile.style.display = 'none';
+    if (userMenuContainer) userMenuContainer.style.display = 'none';
+    if (userMenuContainerMobile) userMenuContainerMobile.style.display = 'none';
+    if (guestActions) guestActions.style.display = 'flex';
+    if (guestActionsMobile) guestActionsMobile.style.display = 'block';
 }
 
 function setupLogoutListeners() {

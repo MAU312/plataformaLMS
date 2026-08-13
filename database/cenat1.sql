@@ -247,19 +247,22 @@ DROP TABLE IF EXISTS `users`;
 CREATE TABLE `users` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `username` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `email` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `role` enum('admin','student','teacher') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'student',
   `is_active` tinyint(1) DEFAULT '1',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `last_login` timestamp NULL DEFAULT NULL,
   `reset_token_hash` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `reset_token_expires` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`),
+  UNIQUE KEY `username` (`username`),
   KEY `idx_email` (`email`),
   KEY `idx_role` (`role`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -268,7 +271,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'Administrador LANBA','adminlms@cenat.com','$2a$10$.N7s0OE2s3iqbL4tsWC7mOnZmyfnrIWYn4PJZ3aYTEeLyWm8rAIR.','admin',1,'2026-08-11 02:06:18','2026-08-11 02:06:18',NULL,NULL),(2,'Estudiante LANBA','estudiantelms@cenat.com','$2a$10$uY59Lw.t0Ng4NBiuJeHThu7bw51QG88hl/9ewPuiSp8yiASHLBtvC','student',1,'2026-08-11 02:06:18','2026-08-12 19:41:09',NULL,NULL),(3,'Jazmin Calderon Quiros','jazmin@gmail.com','$2a$10$Xw39AhgrDRMVoDJrycnXTebL1b8OjOunQ0.GkBnfzJDTYf128iYEC','student',1,'2026-08-12 16:06:19','2026-08-12 16:06:19',NULL,NULL);
+INSERT INTO `users` VALUES (1,'Administrador LANBA',NULL,'adminlms@cenat.com','$2a$10$.N7s0OE2s3iqbL4tsWC7mOnZmyfnrIWYn4PJZ3aYTEeLyWm8rAIR.','admin',1,'2026-08-11 02:06:18','2026-08-13 03:06:23','2026-08-13 03:06:23',NULL,NULL),(2,'Estudiante LANBA',NULL,'estudiantelms@cenat.com','$2a$10$uY59Lw.t0Ng4NBiuJeHThu7bw51QG88hl/9ewPuiSp8yiASHLBtvC','student',1,'2026-08-11 02:06:18','2026-08-12 19:41:09',NULL,NULL,NULL),(3,'Jazmin Calderon Quiros',NULL,'jazmin@gmail.com','$2a$10$Xw39AhgrDRMVoDJrycnXTebL1b8OjOunQ0.GkBnfzJDTYf128iYEC','student',1,'2026-08-12 16:06:19','2026-08-12 16:06:19',NULL,NULL,NULL);
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -285,4 +288,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-08-12 14:32:34
+-- Dump completed on 2026-08-12 21:08:07

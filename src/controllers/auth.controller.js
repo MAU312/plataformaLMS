@@ -6,12 +6,16 @@ import mailer from '../config/mailer.js';
 // Regex simple pero suficiente para validar formato de email en el backend
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Username: 3-50 caracteres, letras/números/punto/guion/guion bajo. Nada de
+// espacios ni '@' — así nunca se puede confundir con un email al hacer login.
+const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{3,50}$/;
+
 export const register = async (req, res) => {
   try {
     // IMPORTANTE: 'role' NUNCA se toma del body. El registro público
     // siempre crea usuarios 'student'. Crear admins se hace desde un
     // endpoint protegido (ver user.routes.js) o directo en base de datos.
-    const { name, email, password } = req.body;
+    const { name, email, password, username } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, message: 'Nombre, email y contraseña son requeridos' });
@@ -27,14 +31,34 @@ export const register = async (req, res) => {
       return res.status(400).json({ success: false, message: 'La contraseña debe tener al menos 6 caracteres' });
     }
 
+    // El username es opcional al registrarse.
+    let normalizedUsername = null;
+    if (username && String(username).trim()) {
+      normalizedUsername = String(username).trim();
+      if (!USERNAME_REGEX.test(normalizedUsername)) {
+        return res.status(400).json({
+          success: false,
+          message: 'El nombre de usuario debe tener 3-50 caracteres: letras, números, puntos, guiones o guiones bajos'
+        });
+      }
+    }
+
     const existingUser = await User.findByEmail(normalizedEmail);
     if (existingUser) {
       return res.status(400).json({ success: false, message: 'El email ya está registrado' });
     }
 
+    if (normalizedUsername) {
+      const existingUsername = await User.findByEmailOrUsername(normalizedUsername);
+      if (existingUsername) {
+        return res.status(400).json({ success: false, message: 'Ese nombre de usuario ya está en uso' });
+      }
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const userId = await User.create({
       name: String(name).trim(),
+      username: normalizedUsername,
       email: normalizedEmail,
       password: hashedPassword,
       role: 'student' // fijo, sin excepciones, para todo registro público
@@ -42,6 +66,9 @@ export const register = async (req, res) => {
 
     res.status(201).json({ success: true, message: 'Usuario registrado exitosamente', data: { id: userId } });
   } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ success: false, message: 'El email o nombre de usuario ya está en uso' });
+    }
     console.error('Error en registro:', error);
     res.status(500).json({ success: false, message: 'Error al registrar usuario' });
   }
@@ -49,18 +76,23 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
+    // El campo sigue llamándose "email" en el body por compatibilidad con
+    // el frontend existente, pero ahora acepta también un username: si
+    // contiene '@' se normaliza como email (minúsculas); si no, se usa tal
+    // cual (el username sí distingue mayúsculas de minúsculas).
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Email y contraseña son requeridos' });
+      return res.status(400).json({ success: false, message: 'Correo/usuario y contraseña son requeridos' });
     }
 
-    const normalizedEmail = String(email).trim().toLowerCase();
-    const user = await User.findByEmail(normalizedEmail);
+    const identifier = String(email).trim();
+    const normalizedIdentifier = identifier.includes('@') ? identifier.toLowerCase() : identifier;
+    const user = await User.findByEmailOrUsername(normalizedIdentifier);
 
     // Hash "dummy" para comparar aunque el usuario no exista. Así el tiempo
     // de respuesta es similar en ambos casos y no se puede usar el login
-    // para enumerar qué emails están registrados (timing attack).
+    // para enumerar qué emails/usuarios están registrados (timing attack).
     const hashToCompare = user ? user.password : '$2a$10$aAxccBGObjG/Dk0fWyIl1esr2QYvJxG/TqFX7JWjQAecw/9k.gfry';
     const isValidPassword = await bcrypt.compare(password, hashToCompare);
 
@@ -77,6 +109,8 @@ export const login = async (req, res) => {
         message: 'Tu cuenta ha sido desactivada. Contacta al administrador.'
       });
     }
+
+    await User.updateLastLogin(user.id);
 
     req.session.user = {
       id: user.id,

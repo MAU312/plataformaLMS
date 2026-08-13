@@ -27,22 +27,22 @@ window.renderLogin = async function(params) {
                 <!-- Formulario de Login -->
                 <form id="login-form" class="mt-8 space-y-6">
                     <div class="space-y-4">
-                        <!-- Email -->
+                        <!-- Correo o usuario -->
                         <div>
                             <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
-                                Correo Electrónico
+                                Correo o nombre de usuario
                             </label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <i class="fas fa-envelope text-gray-400"></i>
+                                    <i class="fas fa-user text-gray-400"></i>
                                 </div>
-                                <input 
-                                    id="email" 
-                                    name="email" 
-                                    type="email" 
-                                    required 
+                                <input
+                                    id="email"
+                                    name="email"
+                                    type="text"
+                                    required
                                     class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
-                                    placeholder="tu@email.com"
+                                    placeholder="tu@email.com o tu usuario"
                                 >
                             </div>
                         </div>
@@ -176,6 +176,28 @@ window.renderRegister = async function(params) {
                             </div>
                         </div>
 
+                        <!-- Username (opcional) -->
+                        <div>
+                            <label for="username" class="block text-sm font-medium text-gray-700 mb-1">
+                                Nombre de usuario (opcional)
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-at text-gray-400"></i>
+                                </div>
+                                <input
+                                    id="username"
+                                    name="username"
+                                    type="text"
+                                    minlength="3"
+                                    maxlength="50"
+                                    pattern="[a-zA-Z0-9_.\-]+"
+                                    class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
+                                    placeholder="Para iniciar sesión sin tu correo"
+                                >
+                            </div>
+                        </div>
+
                         <!-- Password -->
                         <div>
                             <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
@@ -235,9 +257,10 @@ window.renderRegister = async function(params) {
         
         const name = document.getElementById('name').value;
         const email = document.getElementById('email').value;
+        const username = document.getElementById('username').value.trim();
         const password = document.getElementById('password').value;
-        
-        const success = await register(name, email, password);
+
+        const success = await register(name, email, password, username || undefined);
 
         if (success) {
             // Redirigir al login después de 1 segundo

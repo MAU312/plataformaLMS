@@ -36,6 +36,49 @@ test('register: falla si el email ya está registrado', async (t) => {
   assert.match(res.body.message, /ya está registrado/);
 });
 
+test('register: falla si el username tiene un formato inválido (ej. con espacios)', async (t) => {
+  t.mock.method(User, 'findByEmail', async () => undefined);
+  const req = mockReq({ body: { name: 'Ana', email: 'ana@test.com', password: '123456', username: 'nombre con espacios' } });
+  const res = mockRes();
+  await authController.register(req, res);
+  assert.equal(res.statusCode, 400);
+});
+
+test('register: falla si el username ya está en uso', async (t) => {
+  t.mock.method(User, 'findByEmail', async () => undefined);
+  t.mock.method(User, 'findByEmailOrUsername', async () => ({ id: 99 }));
+  const req = mockReq({ body: { name: 'Ana', email: 'ana@test.com', password: '123456', username: 'ana_dev' } });
+  const res = mockRes();
+  await authController.register(req, res);
+  assert.equal(res.statusCode, 400);
+  assert.match(res.body.message, /usuario ya está en uso/);
+});
+
+test('register: éxito con username válido, se guarda tal cual (recortado)', async (t) => {
+  t.mock.method(User, 'findByEmail', async () => undefined);
+  t.mock.method(User, 'findByEmailOrUsername', async () => undefined);
+  const createCall = t.mock.method(User, 'create', async () => 42);
+  const req = mockReq({ body: { name: 'Ana', email: 'ana@test.com', password: '123456', username: '  ana_dev  ' } });
+  const res = mockRes();
+
+  await authController.register(req, res);
+
+  assert.equal(res.statusCode, 201);
+  assert.equal(createCall.mock.calls[0].arguments[0].username, 'ana_dev');
+});
+
+test('register: username es opcional — sin él, se guarda null y no se valida nada de username', async (t) => {
+  t.mock.method(User, 'findByEmail', async () => undefined);
+  const createCall = t.mock.method(User, 'create', async () => 42);
+  const req = mockReq({ body: { name: 'Ana', email: 'ana@test.com', password: '123456' } });
+  const res = mockRes();
+
+  await authController.register(req, res);
+
+  assert.equal(res.statusCode, 201);
+  assert.equal(createCall.mock.calls[0].arguments[0].username, null);
+});
+
 test('register: normaliza email/nombre e ignora cualquier role recibido en el body', async (t) => {
   t.mock.method(User, 'findByEmail', async () => undefined);
   const createCall = t.mock.method(User, 'create', async () => 42);
@@ -61,8 +104,8 @@ test('login: falla si faltan credenciales', async () => {
   assert.equal(res.statusCode, 400);
 });
 
-test('login: credenciales inválidas si el email no existe', async (t) => {
-  t.mock.method(User, 'findByEmail', async () => undefined);
+test('login: credenciales inválidas si el email/usuario no existe', async (t) => {
+  t.mock.method(User, 'findByEmailOrUsername', async () => undefined);
   const req = mockReq({ body: { email: 'nadie@test.com', password: 'cualquiera' } });
   const res = mockRes();
   await authController.login(req, res);
@@ -71,7 +114,7 @@ test('login: credenciales inválidas si el email no existe', async (t) => {
 
 test('login: credenciales inválidas con contraseña incorrecta', async (t) => {
   const hash = bcrypt.hashSync('correcta123', 10);
-  t.mock.method(User, 'findByEmail', async () => (
+  t.mock.method(User, 'findByEmailOrUsername', async () => (
     { id: 1, name: 'Ana', email: 'ana@test.com', password: hash, is_active: 1, role: 'student' }
   ));
   const req = mockReq({ body: { email: 'ana@test.com', password: 'incorrecta' } });
@@ -82,7 +125,7 @@ test('login: credenciales inválidas con contraseña incorrecta', async (t) => {
 
 test('login: cuenta desactivada con contraseña correcta responde 403', async (t) => {
   const hash = bcrypt.hashSync('correcta123', 10);
-  t.mock.method(User, 'findByEmail', async () => (
+  t.mock.method(User, 'findByEmailOrUsername', async () => (
     { id: 1, name: 'Ana', email: 'ana@test.com', password: hash, is_active: 0, role: 'student' }
   ));
   const req = mockReq({ body: { email: 'ana@test.com', password: 'correcta123' } });
@@ -91,11 +134,12 @@ test('login: cuenta desactivada con contraseña correcta responde 403', async (t
   assert.equal(res.statusCode, 403);
 });
 
-test('login exitoso guarda al usuario en sesión sin exponer el hash de contraseña', async (t) => {
+test('login exitoso guarda al usuario en sesión sin exponer el hash de contraseña, y registra el último ingreso', async (t) => {
   const hash = bcrypt.hashSync('correcta123', 10);
-  t.mock.method(User, 'findByEmail', async () => (
+  const findCall = t.mock.method(User, 'findByEmailOrUsername', async () => (
     { id: 7, name: 'Ana', email: 'ana@test.com', password: hash, is_active: 1, role: 'student' }
   ));
+  const lastLoginCall = t.mock.method(User, 'updateLastLogin', async () => {});
   const session = {};
   const req = mockReq({ body: { email: 'ana@test.com', password: 'correcta123' }, session });
   const res = mockRes();
@@ -107,6 +151,23 @@ test('login exitoso guarda al usuario en sesión sin exponer el hash de contrase
   assert.equal(session.user.role, 'student');
   assert.equal('password' in session.user, false);
   assert.equal('password' in res.body.data.user, false);
+  assert.equal(findCall.mock.calls[0].arguments[0], 'ana@test.com', 'email normalizado a minúsculas antes de buscar');
+  assert.equal(lastLoginCall.mock.calls[0].arguments[0], 7);
+});
+
+test('login: acepta un username (sin @) tal cual, sin forzar minúsculas', async (t) => {
+  const hash = bcrypt.hashSync('correcta123', 10);
+  const findCall = t.mock.method(User, 'findByEmailOrUsername', async () => (
+    { id: 8, name: 'Ana', email: 'ana@test.com', password: hash, is_active: 1, role: 'student' }
+  ));
+  t.mock.method(User, 'updateLastLogin', async () => {});
+  const req = mockReq({ body: { email: '  Ana_Dev  ', password: 'correcta123' }, session: {} });
+  const res = mockRes();
+
+  await authController.login(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(findCall.mock.calls[0].arguments[0], 'Ana_Dev', 'username se recorta pero NO se baja a minúsculas (sí distingue mayúsculas)');
 });
 
 test('logout destruye la sesión', async () => {

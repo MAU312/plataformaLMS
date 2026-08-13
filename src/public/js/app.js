@@ -15,6 +15,10 @@ async function initApp() {
         initRouter();
         
         // 3. Si el usuario está autenticado y está en login/register, redirigir
+        // al inicio (o al panel admin). Para el caso contrario — invitado
+        // intentando entrar a una ruta protegida — el router ya se encarga
+        // solo (ver requireAuth en handleRoute()), no hace falta duplicar
+        // esa lista de rutas públicas acá.
         if (isAuthenticated()) {
             const currentRoute = window.location.hash.slice(1);
             if (currentRoute === '/login' || currentRoute === '/register' || currentRoute === '') {
@@ -24,16 +28,8 @@ async function initApp() {
                     window.location.hash = '#/';
                 }
             }
-        } else {
-            // Si no está autenticado y no está en login/register, redirigir a login
-            const currentRoute = window.location.hash.slice(1);
-            const publicRoutes = ['/login', '/register', '/forgot-password', '/'];
-
-            if (!publicRoutes.includes(currentRoute) && !currentRoute.startsWith('/course/') && !currentRoute.startsWith('/reset-password/')) {
-                window.location.hash = '#/login';
-            }
         }
-        
+
     } catch (error) {
         console.error('Error initializing app:', error);
         showToast('Error al inicializar la aplicación', 'error');

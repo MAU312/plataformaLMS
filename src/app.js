@@ -187,13 +187,21 @@ const testDB = async () => {
 
 const startServer = async () => {
   await testDB();
-  
-  app.listen(PORT, () => {
+
+  const server = app.listen(PORT, () => {
     console.log('\n🚀 ================================');
     console.log(`🚀 Servidor LMS LANBA - CeNAT corriendo`);
     console.log(`🚀 URL: http://localhost:${PORT}`);
     console.log('🚀 ================================\n');
   });
+
+  // Con el límite de video en 2GB (ver upload.middleware.js), una subida en
+  // una red lenta puede tardar bastante más que los 5 minutos por defecto
+  // de Node para requestTimeout — sin este ajuste, el servidor cortaba la
+  // conexión a medio subir. No se deja en 0 (sin límite): eso abriría la
+  // puerta a conexiones colgadas indefinidamente (riesgo tipo slow-loris).
+  server.requestTimeout = 60 * 60 * 1000; // 60 minutos
+  server.headersTimeout = 65 * 1000; // los headers sí deben llegar rápido
 };
 
 // =============================================

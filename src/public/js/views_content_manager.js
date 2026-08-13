@@ -181,7 +181,7 @@ function showAddVideoForm(courseId) {
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Archivo de video *</label>
                 <input type="file" id="video-file" accept="video/*" required class="w-full text-sm">
-                <p class="text-xs text-gray-500 mt-1">Formatos: MP4, AVI, MOV, WEBM (máx. 500MB)</p>
+                <p class="text-xs text-gray-500 mt-1">Formatos: MP4, AVI, MOV, WEBM (máx. 2GB)</p>
             </div>
             <div id="video-upload-progress" class="hidden">
                 <div class="progress-bar"><div id="video-progress-fill" class="progress-fill" style="width: 0%"></div></div>
