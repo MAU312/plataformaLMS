@@ -44,8 +44,17 @@ window.renderCourseDetail = async function(params) {
         const urlVideos = contents.filter(c => c.type === 'url');
         const texts = contents.filter(c => c.type === 'text');
         const tasks = contents.filter(c => c.type === 'task');
-        const completedCount = contents.filter(c => c.completed).length;
-        const progressPercent = contents.length > 0 ? Math.round((completedCount / contents.length) * 100) : 0;
+        const forums = contents.filter(c => c.type === 'forum');
+        // El foro no cuenta para el progreso del curso (es una discusión
+        // abierta, sin estado "completado") — igual que en el servidor
+        // (Content.recalculateCourseProgress), se excluye del total para
+        // que el % mostrado y la visibilidad del botón de certificado
+        // coincidan con lo que realmente evalúa el backend.
+        const progressTrackableContents = contents.filter(c => c.type !== 'forum');
+        const completedCount = progressTrackableContents.filter(c => c.completed).length;
+        const progressPercent = progressTrackableContents.length > 0
+            ? Math.round((completedCount / progressTrackableContents.length) * 100)
+            : 0;
 
         // Estado de entrega de cada tarea (solo tiene sentido para un
         // estudiante inscrito — para admin/profesor/no-inscrito no se
@@ -81,11 +90,11 @@ window.renderCourseDetail = async function(params) {
                         </div>
                     </div>
 
-                    ${isLoggedIn && isEnrolled && contents.length > 0 ? `
+                    ${isLoggedIn && isEnrolled && progressTrackableContents.length > 0 ? `
                         <div class="mt-6 bg-white/10 rounded-lg p-4">
                             <div class="flex justify-between text-sm text-white mb-1">
                                 <span><i class="fas fa-chart-line mr-1"></i> Tu progreso</span>
-                                <span id="course-progress-label">${progressPercent}% (${completedCount}/${contents.length})</span>
+                                <span id="course-progress-label">${progressPercent}% (${completedCount}/${progressTrackableContents.length})</span>
                             </div>
                             <div class="progress-bar bg-white/20">
                                 <div id="course-progress-fill" class="progress-fill" style="width: ${progressPercent}%"></div>
@@ -160,6 +169,16 @@ window.renderCourseDetail = async function(params) {
                                 ${tasks.map(t => renderTaskCard(t, submissionsByTask[t.id], hasAccess)).join('')}
                             </div>
                         ` : ''}
+
+                        ${forums.length > 0 ? `
+                            <h2 class="text-xl font-bold text-gray-900 flex items-center mt-8">
+                                <i class="fas fa-comments text-cenat-green mr-2"></i>
+                                Foros
+                            </h2>
+                            <div class="space-y-3">
+                                ${forums.map(f => renderForumCard(f, hasAccess)).join('')}
+                            </div>
+                        ` : ''}
                     </div>
 
                     <!-- Columna lateral: Archivos descargables -->
@@ -190,6 +209,7 @@ window.renderCourseDetail = async function(params) {
                                 ${urlVideos.length > 0 ? `<li><i class="fas fa-link mr-2 text-gray-400"></i>${urlVideos.length} videos externos</li>` : ''}
                                 ${texts.length > 0 ? `<li><i class="fas fa-align-left mr-2 text-gray-400"></i>${texts.length} lecturas</li>` : ''}
                                 ${tasks.length > 0 ? `<li><i class="fas fa-tasks mr-2 text-gray-400"></i>${tasks.length} tareas</li>` : ''}
+                                ${forums.length > 0 ? `<li><i class="fas fa-comments mr-2 text-gray-400"></i>${forums.length} foros</li>` : ''}
                                 <li><i class="fas fa-users mr-2 text-gray-400"></i>${course.enrolled_count || 0} inscritos</li>
                             </ul>
                         </div>
@@ -342,6 +362,37 @@ function renderTextContentCard(content, canTrackProgress, hasAccess) {
                         ? `<p class="text-sm text-gray-600 mt-2 whitespace-pre-line">${escapeHtml(content.description || '')}</p>`
                         : `<p class="text-sm text-gray-400 mt-2"><i class="fas fa-lock mr-1"></i> Inscríbete en este curso para ver esta lectura</p>`
                     }
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderForumCard(forum, hasAccess) {
+    if (!hasAccess) {
+        return `
+            <div class="bg-white rounded-xl border border-gray-100 p-4">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-lock text-xl text-gray-400"></i>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium text-gray-900">${escapeHtml(forum.title)}</p>
+                        <p class="text-sm text-gray-400 mt-1">Inscríbete en este curso para participar en este foro</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="bg-white rounded-xl border border-gray-100 p-4">
+            <div class="flex items-start gap-3">
+                <i class="fas fa-comments text-xl text-cenat-green mt-1"></i>
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-gray-900">${escapeHtml(forum.title)}</p>
+                    <p class="text-sm text-gray-600 mt-1 line-clamp-2 whitespace-pre-line">${escapeHtml(forum.description || '')}</p>
+                    <a href="#/forum/${forum.id}" class="text-sm text-cenat-green hover:text-cenat-green-hover mt-2 inline-block">
+                        <i class="fas fa-comment-dots mr-1"></i> Participar en el foro
+                    </a>
                 </div>
             </div>
         </div>

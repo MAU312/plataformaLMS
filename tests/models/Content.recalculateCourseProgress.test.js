@@ -42,3 +42,19 @@ test('recalculateCourseProgress: progreso es 0 si el curso no tiene contenidos (
   const result = await Content.recalculateCourseProgress(10, 20);
   assert.equal(result.progress, 0);
 });
+
+test('recalculateCourseProgress: excluye los contenidos type=forum del total y de los completados (un foro no cuenta para el progreso)', async (t) => {
+  const queryCall = t.mock.method(pool, 'query', async (sql) => {
+    if (sql.includes('COUNT(*) as total')) return [[{ total: 3 }]];
+    if (sql.includes('COUNT(*) as completed')) return [[{ completed: 3 }]];
+    return [{ affectedRows: 1 }];
+  });
+
+  await Content.recalculateCourseProgress(10, 20);
+
+  const totalCall = queryCall.mock.calls.find(c => c.arguments[0].includes('COUNT(*) as total'));
+  const completedCall = queryCall.mock.calls.find(c => c.arguments[0].includes('COUNT(*) as completed'));
+
+  assert.match(totalCall.arguments[0], /type != 'forum'/);
+  assert.match(completedCall.arguments[0], /co\.type != 'forum'/);
+});

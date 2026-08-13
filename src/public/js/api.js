@@ -112,6 +112,9 @@ const contentsAPI = {
     createText: async (data) => apiRequest('/contents/text', { method: 'POST', body: JSON.stringify(data) }),
     createUrl: async (data) => apiRequest('/contents/url', { method: 'POST', body: JSON.stringify(data) }),
     createTask: async (formData) => apiRequestFormData('/contents/task', formData),
+    createForum: async (data) => apiRequest('/contents/forum', { method: 'POST', body: JSON.stringify(data) }),
+    getForumThread: async (id) => apiRequest(`/contents/${id}/forum`),
+    postForumReply: async (id, data) => apiRequest(`/contents/${id}/forum`, { method: 'POST', body: JSON.stringify(data) }),
     submit: async (id, formData) => apiRequestFormData(`/contents/${id}/submit`, formData),
     getMySubmission: async (id) => apiRequest(`/contents/${id}/submission`),
     getSubmissions: async (id) => apiRequest(`/contents/${id}/submissions`),
@@ -148,6 +151,15 @@ const usersAPI = {
 };
 
 // =================================
+// Forum posts API (editar/borrar una respuesta puntual)
+// =================================
+
+const forumPostsAPI = {
+    update: async (id, data) => apiRequest(`/forum-posts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: async (id) => apiRequest(`/forum-posts/${id}`, { method: 'DELETE' })
+};
+
+// =================================
 // Submissions API (entregas de tareas)
 // =================================
 
@@ -160,4 +172,5 @@ window.authAPI = authAPI;
 window.coursesAPI = coursesAPI;
 window.contentsAPI = contentsAPI;
 window.usersAPI = usersAPI;
+window.forumPostsAPI = forumPostsAPI;
 window.submissionsAPI = submissionsAPI;

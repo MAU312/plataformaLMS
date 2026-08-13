@@ -323,6 +323,52 @@ export const createTaskContent = async (req, res) => {
 };
 
 /**
+ * Crear nuevo tema de foro: el profesor/admin escribe el post principal
+ * (guardado en `description`, igual que en 'text') y los estudiantes
+ * inscritos responden después vía forum.controller.js — este endpoint solo
+ * crea el tema, no acepta respuestas.
+ */
+export const createForumContent = async (req, res) => {
+  try {
+    const { course_id, title, description } = req.body;
+
+    if (!course_id || !title) {
+      return res.status(400).json({
+        success: false,
+        message: 'El ID del curso y el título son requeridos'
+      });
+    }
+
+    if (!description || !String(description).trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'El texto principal del tema es requerido'
+      });
+    }
+
+    const contentId = await Content.create({
+      course_id,
+      type: 'forum',
+      title,
+      description,
+      url: null
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Tema de foro creado exitosamente',
+      data: { id: contentId }
+    });
+  } catch (error) {
+    console.error('Error al crear el tema de foro:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al crear el tema de foro'
+    });
+  }
+};
+
+/**
  * Actualizar contenido (solo admin)
  */
 export const updateContent = async (req, res) => {
@@ -547,13 +593,16 @@ export const markContentCompleted = async (req, res) => {
       });
     }
 
-    // Una tarea se marca completada automáticamente al entregarla
-    // (ver submitTask) — no manualmente, o un estudiante podría marcarla
-    // como hecha sin haber entregado nada.
-    if (content.type === 'task') {
+    // Una tarea se marca completada automáticamente al entregarla (ver
+    // submitTask) — no manualmente, o un estudiante podría marcarla como
+    // hecha sin haber entregado nada. Un foro no se "completa": es una
+    // discusión abierta, no cuenta para el progreso del curso.
+    if (content.type === 'task' || content.type === 'forum') {
       return res.status(400).json({
         success: false,
-        message: 'El progreso de una tarea se actualiza automáticamente al entregarla'
+        message: content.type === 'forum'
+          ? 'El foro no cuenta para el progreso del curso'
+          : 'El progreso de una tarea se actualiza automáticamente al entregarla'
       });
     }
 
@@ -606,11 +655,13 @@ export const markContentIncomplete = async (req, res) => {
     }
 
     // Misma regla que al marcar como completado: el progreso de una tarea
-    // solo lo controla la entrega.
-    if (content.type === 'task') {
+    // solo lo controla la entrega, y un foro no cuenta para el progreso.
+    if (content.type === 'task' || content.type === 'forum') {
       return res.status(400).json({
         success: false,
-        message: 'El progreso de una tarea se actualiza automáticamente al entregarla'
+        message: content.type === 'forum'
+          ? 'El foro no cuenta para el progreso del curso'
+          : 'El progreso de una tarea se actualiza automáticamente al entregarla'
       });
     }
 

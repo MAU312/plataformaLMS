@@ -17,6 +17,16 @@ test('redactForNoAccess: para type=text, también oculta description (ahí vive 
   assert.equal(result.description, null);
 });
 
+test('redactForNoAccess: para type=forum, también oculta description (ahí vive el post principal del tema)', () => {
+  const result = Content.redactForNoAccess({
+    id: 1,
+    type: 'forum',
+    url: null,
+    description: 'Discutan el capítulo 3 del texto — esto no debería filtrarse sin inscripción'
+  });
+  assert.equal(result.description, null);
+});
+
 test('redactForNoAccess: para video/file/url, NO toca description (ahí solo hay una descripción corta, no el contenido)', () => {
   const video = Content.redactForNoAccess({ id: 1, type: 'video', url: '/uploads/videos/x.mp4', description: 'Introducción al curso' });
   const file = Content.redactForNoAccess({ id: 2, type: 'file', url: '/uploads/files/x.pdf', description: 'Guía en PDF' });

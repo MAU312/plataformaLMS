@@ -19,6 +19,7 @@ function renderCourseContentManagerHTML(course, contents) {
     const texts = contents.filter(c => c.type === 'text');
     const urls = contents.filter(c => c.type === 'url');
     const tasks = contents.filter(c => c.type === 'task');
+    const forums = contents.filter(c => c.type === 'forum');
 
     return `
         <div class="space-y-6">
@@ -121,6 +122,26 @@ function renderCourseContentManagerHTML(course, contents) {
                     `}
                 </div>
             </div>
+
+            <!-- Sección Foro -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold text-gray-900">
+                        <i class="fas fa-comments text-cenat-green mr-2"></i> Foro
+                    </h2>
+                    <button onclick="showAddForumForm(${course.id})" class="text-sm bg-green-50 text-cenat-green px-3 py-1.5 rounded-lg hover:bg-green-100 transition">
+                        <i class="fas fa-plus mr-1"></i> Agregar tema
+                    </button>
+                </div>
+
+                <div id="add-forum-form-container"></div>
+
+                <div id="forums-list" class="space-y-2">
+                    ${forums.length > 0 ? forums.map(forum => renderForumItem(forum)).join('') : `
+                        <p class="text-gray-500 text-sm text-center py-4">No hay temas de foro agregados aún</p>
+                    `}
+                </div>
+            </div>
         </div>
     `;
 }
@@ -155,6 +176,24 @@ function renderTaskItem(content) {
                 <i class="fas fa-inbox mr-1"></i> Entregas
             </a>
             <button onclick="deleteContentHandler(${content.id}, 'task')" class="text-red-500 hover:text-red-700 px-2">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    `;
+}
+
+function renderForumItem(content) {
+    return `
+        <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition">
+            <i class="fas fa-comments text-xl text-cenat-green"></i>
+            <div class="flex-1 min-w-0">
+                <p class="font-medium text-gray-900 truncate">${escapeHtml(content.title)}</p>
+                <p class="text-xs text-gray-500 truncate">${escapeHtml(content.description || '')}</p>
+            </div>
+            <a href="#/forum/${content.id}" class="text-cenat-green hover:text-cenat-green-hover text-sm whitespace-nowrap" title="Ver foro">
+                <i class="fas fa-comment-dots mr-1"></i> Ver foro
+            </a>
+            <button onclick="deleteContentHandler(${content.id}, 'forum')" class="text-red-500 hover:text-red-700 px-2">
                 <i class="fas fa-trash"></i>
             </button>
         </div>
@@ -419,6 +458,62 @@ function showAddUrlForm(courseId) {
 }
 
 // =================================
+// Formulario para agregar TEMA DE FORO
+// =================================
+
+function showAddForumForm(courseId) {
+    const container = document.getElementById('add-forum-form-container');
+
+    container.innerHTML = `
+        <form id="add-forum-form" class="bg-green-50 rounded-lg p-4 mb-4 space-y-3">
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Título del tema *</label>
+                <input type="text" id="forum-title" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Ej: Discusión sobre el capítulo 3">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Texto principal *</label>
+                <textarea id="forum-description" required rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Escribe la pregunta o el tema que los estudiantes van a discutir..."></textarea>
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" id="submit-forum-btn" class="bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
+                    <i class="fas fa-check mr-1"></i> Crear Tema
+                </button>
+                <button type="button" onclick="document.getElementById('add-forum-form-container').innerHTML = ''" class="text-gray-600 px-4 py-2 text-sm">
+                    Cancelar
+                </button>
+            </div>
+        </form>
+    `;
+
+    document.getElementById('add-forum-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const title = document.getElementById('forum-title').value.trim();
+        const description = document.getElementById('forum-description').value.trim();
+        const submitBtn = document.getElementById('submit-forum-btn');
+
+        if (!title || !description) {
+            showToast('Título y texto principal son requeridos', 'error');
+            return;
+        }
+
+        try {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Creando...';
+
+            await contentsAPI.createForum({ course_id: courseId, title, description });
+            showToast('Tema de foro creado exitosamente', 'success');
+            contentManagerRerender();
+
+        } catch (error) {
+            showToast(error.message || 'Error al crear el tema de foro', 'error');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-check mr-1"></i> Crear Tema';
+        }
+    });
+}
+
+// =================================
 // Formulario para agregar TAREA
 // =================================
 
@@ -488,7 +583,7 @@ function showAddTaskForm(courseId) {
     });
 }
 
-const CONTENT_TYPE_LABELS = { video: 'el video', file: 'el archivo', text: 'el texto', url: 'la URL', task: 'la tarea' };
+const CONTENT_TYPE_LABELS = { video: 'el video', file: 'el archivo', text: 'el texto', url: 'la URL', task: 'la tarea', forum: 'el tema de foro (se borran también todas sus respuestas)' };
 
 async function deleteContentHandler(id, type) {
     const label = CONTENT_TYPE_LABELS[type] || 'el contenido';
@@ -509,9 +604,11 @@ window.initCourseContentManager = initCourseContentManager;
 window.renderCourseContentManagerHTML = renderCourseContentManagerHTML;
 window.renderContentItem = renderContentItem;
 window.renderTaskItem = renderTaskItem;
+window.renderForumItem = renderForumItem;
 window.showAddVideoForm = showAddVideoForm;
 window.showAddFileForm = showAddFileForm;
 window.showAddTextForm = showAddTextForm;
 window.showAddUrlForm = showAddUrlForm;
 window.showAddTaskForm = showAddTaskForm;
+window.showAddForumForm = showAddForumForm;
 window.deleteContentHandler = deleteContentHandler;

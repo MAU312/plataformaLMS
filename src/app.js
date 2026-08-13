@@ -17,6 +17,7 @@ import courseRoutes from './routes/course.routes.js';
 import contentRoutes from './routes/content.routes.js';
 import userRoutes from './routes/user.routes.js';
 import submissionRoutes from './routes/submission.routes.js';
+import forumRoutes from './routes/forum.routes.js';
 
 dotenv.config();
 
@@ -111,6 +112,7 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/contents', contentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/submissions', submissionRoutes);
+app.use('/api/forum-posts', forumRoutes);
 
 // =============================================
 // SPA - Todas las rutas devuelven index.html

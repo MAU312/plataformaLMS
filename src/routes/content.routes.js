@@ -1,6 +1,7 @@
 import express from 'express';
 import * as contentController from '../controllers/content.controller.js';
 import * as submissionController from '../controllers/submission.controller.js';
+import * as forumController from '../controllers/forum.controller.js';
 import Content from '../models/Content.js';
 import Course from '../models/Course.js';
 import { isAuthenticated, requireCourseManager } from '../middlewares/auth.middleware.js';
@@ -113,6 +114,18 @@ router.post(
   contentController.createTaskContent
 );
 
+/**
+ * POST /api/contents/forum
+ * Crea el tema (post principal) de un foro. Admin, o el profesor asignado
+ * al curso del body. Igual que /text: sin archivo.
+ */
+router.post(
+  '/forum',
+  isAuthenticated,
+  requireCourseManager((req) => req.body.course_id),
+  contentController.createForumContent
+);
+
 // ==============================================
 // RUTAS CON PARÁMETRO /:id Y SUBRUTAS
 // ==============================================
@@ -191,6 +204,20 @@ router.get(
 );
 
 /**
+ * GET /api/contents/:id/forum
+ * Tema + respuestas de un foro. Admin, inscrito, o profesor asignado.
+ */
+router.get('/:id/forum', isAuthenticated, forumController.listPosts);
+
+/**
+ * POST /api/contents/:id/forum
+ * Publica una respuesta en el foro. Mismo acceso que ver el hilo — a
+ * diferencia de crear el TEMA (POST /forum, solo admin/profesor), acá
+ * cualquier admin/inscrito/profesor puede responder.
+ */
+router.post('/:id/forum', isAuthenticated, forumController.createPost);
+
+/**
  * GET /api/contents/:id
  */
 router.get('/:id', contentController.getContentById);
@@ -212,9 +239,10 @@ router.put(
 
         req.contentType = content.type;
 
-        // Texto y URL no llevan archivo — no tiene sentido pasarlos por
-        // multer/verifyFileSignature (que esperan un req.file).
-        if (content.type === 'text' || content.type === 'url') {
+        // Texto, URL y el post principal de un foro no llevan archivo —
+        // no tiene sentido pasarlos por multer/verifyFileSignature (que
+        // esperan un req.file).
+        if (content.type === 'text' || content.type === 'url' || content.type === 'forum') {
           return next();
         }
 
@@ -230,7 +258,7 @@ router.put(
     handleUpload(req, res, next);
   },
   (req, res, next) => {
-    if (req.contentType === 'text' || req.contentType === 'url') return next();
+    if (req.contentType === 'text' || req.contentType === 'url' || req.contentType === 'forum') return next();
     verifyFileSignature(req.contentType === 'video' ? 'video' : 'file')(req, res, next);
   },
   contentController.updateContent

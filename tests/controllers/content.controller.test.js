@@ -33,6 +33,28 @@ test('createTaskContent: 201 con archivo de instrucciones adjunto', async (t) =>
   assert.equal(created.file_size, 2048);
 });
 
+test('createForumContent: 201 con título y texto principal', async (t) => {
+  const createCall = t.mock.method(Content, 'create', async () => 60);
+  const req = mockReq({ body: { course_id: 1, title: 'Discusión del capítulo 3', description: '¿Qué opinan del capítulo 3?' } });
+  const res = mockRes();
+  await contentController.createForumContent(req, res);
+
+  assert.equal(res.statusCode, 201);
+  const created = createCall.mock.calls[0].arguments[0];
+  assert.equal(created.type, 'forum');
+  assert.equal(created.url, null);
+});
+
+test('createForumContent: 400 si falta el texto principal', async (t) => {
+  const createCall = t.mock.method(Content, 'create', async () => 60);
+  const req = mockReq({ body: { course_id: 1, title: 'Discusión del capítulo 3' } });
+  const res = mockRes();
+  await contentController.createForumContent(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(createCall.mock.calls.length, 0);
+});
+
 test('createTaskContent: 400 si falta el título', async (t) => {
   const req = mockReq({ body: { course_id: 1 } });
   const res = mockRes();
@@ -217,6 +239,26 @@ test('markContentCompleted: 400 si el contenido es una tarea (su progreso solo l
 
 test('markContentIncomplete: 400 si el contenido es una tarea', async (t) => {
   t.mock.method(Content, 'findById', async () => ({ id: 9, course_id: 1, type: 'task' }));
+  const markCall = t.mock.method(Content, 'markIncomplete', async () => true);
+  const req = mockReq({ params: { id: 9 }, session: { user: { id: 1, role: 'student' } } });
+  const res = mockRes();
+  await contentController.markContentIncomplete(req, res);
+  assert.equal(res.statusCode, 400);
+  assert.equal(markCall.mock.calls.length, 0);
+});
+
+test('markContentCompleted: 400 si el contenido es un foro (no cuenta para el progreso)', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 9, course_id: 1, type: 'forum' }));
+  const markCall = t.mock.method(Content, 'markCompleted', async () => 10);
+  const req = mockReq({ params: { id: 9 }, session: { user: { id: 1, role: 'student' } } });
+  const res = mockRes();
+  await contentController.markContentCompleted(req, res);
+  assert.equal(res.statusCode, 400);
+  assert.equal(markCall.mock.calls.length, 0);
+});
+
+test('markContentIncomplete: 400 si el contenido es un foro', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 9, course_id: 1, type: 'forum' }));
   const markCall = t.mock.method(Content, 'markIncomplete', async () => true);
   const req = mockReq({ params: { id: 9 }, session: { user: { id: 1, role: 'student' } } });
   const res = mockRes();

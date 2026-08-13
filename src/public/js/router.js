@@ -104,6 +104,11 @@ const routes = {
         title: 'Entregas de la Tarea',
         render: (params) => window.renderTaskSubmissions(params),
         requireAuth: true
+    },
+    '/forum/:id': {
+        title: 'Foro',
+        render: (params) => window.renderForumThread(params),
+        requireAuth: true
     }
 };
 

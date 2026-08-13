@@ -4,15 +4,16 @@ class Content {
   /**
    * "Redacta" un contenido para un usuario sin acceso (ver
    * Course.canAccessMedia): siempre oculta la URL, y además el cuerpo de
-   * texto (`description`) si el tipo es 'text' — ahí `description` ES el
-   * contenido real de la lección, a diferencia de video/file donde es
-   * solo una descripción corta que no hace falta ocultar.
+   * texto (`description`) si el tipo es 'text' o 'forum' — ahí
+   * `description` ES el contenido real (la lección, o el post principal
+   * del tema), a diferencia de video/file donde es solo una descripción
+   * corta que no hace falta ocultar.
    */
   static redactForNoAccess(content) {
     return {
       ...content,
       url: null,
-      description: content.type === 'text' ? null : content.description
+      description: (content.type === 'text' || content.type === 'forum') ? null : content.description
     };
   }
 
@@ -241,19 +242,21 @@ class Content {
    * Devuelve el nuevo porcentaje calculado.
    */
   static async recalculateCourseProgress(courseId, userId) {
-    // Contar total de contenidos del curso
+    // Contar total de contenidos del curso. Un foro queda fuera: es una
+    // discusión abierta sin un estado "completado", y contarlo dejaría a
+    // los estudiantes sin poder llegar nunca al 100% ni sacar certificado.
     const [totalRows] = await pool.query(
-      'SELECT COUNT(*) as total FROM contents WHERE course_id = ?',
+      "SELECT COUNT(*) as total FROM contents WHERE course_id = ? AND type != 'forum'",
       [courseId]
     );
     const total = totalRows[0].total;
 
     // Contar contenidos completados por el usuario en ese curso
     const [completedRows] = await pool.query(
-      `SELECT COUNT(*) as completed 
+      `SELECT COUNT(*) as completed
        FROM content_progress cp
        INNER JOIN contents co ON co.id = cp.content_id
-       WHERE co.course_id = ? AND cp.user_id = ?`,
+       WHERE co.course_id = ? AND cp.user_id = ? AND co.type != 'forum'`,
       [courseId, userId]
     );
     const completed = completedRows[0].completed;
