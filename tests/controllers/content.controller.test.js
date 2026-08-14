@@ -4,6 +4,7 @@ import fs from 'fs';
 import * as contentController from '../../src/controllers/content.controller.js';
 import Content from '../../src/models/Content.js';
 import Course from '../../src/models/Course.js';
+import TaskSubmission from '../../src/models/TaskSubmission.js';
 import { mockReq, mockRes } from '../helpers/http.js';
 
 test('createTaskContent: 201 sin archivo (las instrucciones pueden ir solo en el texto)', async (t) => {
@@ -494,4 +495,52 @@ test('deleteContent: en type=file SÍ borra el archivo del disco', async (t) => 
 
   assert.equal(res.statusCode, 200);
   assert.equal(unlinkCall.mock.calls.length, 1);
+});
+
+test('deleteContent: al borrar una tarea con entregas, también borra del disco el archivo de cada entrega (si no, quedan huérfanas)', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 9, type: 'task', course_id: 1, url: '/uploads/files/instrucciones.pdf' }));
+  t.mock.method(Content, 'delete', async () => true);
+  t.mock.method(TaskSubmission, 'findAllByContent', async () => ([
+    { id: 1, file_url: '/uploads/submissions/a.pdf' },
+    { id: 2, file_url: '/uploads/submissions/b.docx' }
+  ]));
+  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
+  t.mock.method(fs, 'existsSync', () => true);
+  const req = mockReq({ params: { id: 9 } });
+  const res = mockRes();
+
+  await contentController.deleteContent(req, res);
+
+  assert.equal(res.statusCode, 200);
+  // 1 por el archivo de instrucciones de la tarea + 2 por las entregas
+  assert.equal(unlinkCall.mock.calls.length, 3);
+});
+
+test('deleteContent: una tarea sin entregas no intenta borrar ningún archivo de entrega', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 9, type: 'task', course_id: 1, url: null }));
+  t.mock.method(Content, 'delete', async () => true);
+  t.mock.method(TaskSubmission, 'findAllByContent', async () => ([]));
+  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
+  const req = mockReq({ params: { id: 9 } });
+  const res = mockRes();
+
+  await contentController.deleteContent(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(unlinkCall.mock.calls.length, 0);
+});
+
+test('deleteContent: en un tipo que no es tarea, no consulta TaskSubmission.findAllByContent', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'video', url: '/uploads/videos/x.mp4' }));
+  t.mock.method(Content, 'delete', async () => true);
+  const findSubmissionsCall = t.mock.method(TaskSubmission, 'findAllByContent', async () => ([]));
+  t.mock.method(fs, 'unlinkSync', () => {});
+  t.mock.method(fs, 'existsSync', () => true);
+  const req = mockReq({ params: { id: 1 } });
+  const res = mockRes();
+
+  await contentController.deleteContent(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(findSubmissionsCall.mock.calls.length, 0);
 });

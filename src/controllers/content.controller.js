@@ -1,5 +1,6 @@
 import Content from '../models/Content.js';
 import Course from '../models/Course.js';
+import TaskSubmission from '../models/TaskSubmission.js';
 import { deleteFile } from '../middlewares/upload.middleware.js';
 import fs from 'fs';
 import path from 'path';
@@ -597,6 +598,15 @@ export const deleteContent = async (req, res) => {
     // link externo — no hay nada que borrar del disco).
     if (content.url && content.type !== 'url') {
       deleteFile(content.url);
+    }
+
+    // Si es una tarea, también hay que borrar del disco el archivo de
+    // cada entrega ANTES de borrar la tarea — la fila en task_submissions
+    // se borra sola en cascada (FK ON DELETE CASCADE), pero el archivo
+    // subido no, y quedaba huérfano en /uploads/submissions.
+    if (content.type === 'task') {
+      const submissions = await TaskSubmission.findAllByContent(id);
+      submissions.forEach(submission => deleteFile(submission.file_url));
     }
 
     const deleted = await Content.delete(id);
