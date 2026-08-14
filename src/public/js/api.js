@@ -113,6 +113,7 @@ const contentsAPI = {
     createUrl: async (data) => apiRequest('/contents/url', { method: 'POST', body: JSON.stringify(data) }),
     createTask: async (formData) => apiRequestFormData('/contents/task', formData),
     createForum: async (data) => apiRequest('/contents/forum', { method: 'POST', body: JSON.stringify(data) }),
+    createFolder: async (data) => apiRequest('/contents/folder', { method: 'POST', body: JSON.stringify(data) }),
     getForumThread: async (id) => apiRequest(`/contents/${id}/forum`),
     postForumReply: async (id, data) => apiRequest(`/contents/${id}/forum`, { method: 'POST', body: JSON.stringify(data) }),
     submit: async (id, formData) => apiRequestFormData(`/contents/${id}/submit`, formData),

@@ -62,6 +62,138 @@ test('createTaskContent: 400 si falta el título', async (t) => {
   assert.equal(res.statusCode, 400);
 });
 
+// =================================
+// Carpetas
+// =================================
+
+test('createFolderContent: 201 con título (sin url, sin descripción, sin folder_id — no hay subcarpetas)', async (t) => {
+  const createCall = t.mock.method(Content, 'create', async () => 70);
+  const req = mockReq({ body: { course_id: 1, title: 'Semana 1' } });
+  const res = mockRes();
+  await contentController.createFolderContent(req, res);
+
+  assert.equal(res.statusCode, 201);
+  const created = createCall.mock.calls[0].arguments[0];
+  assert.equal(created.type, 'folder');
+  assert.equal(created.url, null);
+  assert.equal(created.folder_id, null);
+});
+
+test('createFolderContent: 400 si falta el título', async (t) => {
+  const req = mockReq({ body: { course_id: 1 } });
+  const res = mockRes();
+  await contentController.createFolderContent(req, res);
+  assert.equal(res.statusCode, 400);
+});
+
+test('createTextContent: con folder_id válido (carpeta del mismo curso), la asigna a esa carpeta', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 5, type: 'folder', course_id: 1 }));
+  const createCall = t.mock.method(Content, 'create', async () => 71);
+  const req = mockReq({ body: { course_id: 1, title: 'Lectura', description: 'texto', folder_id: 5 } });
+  const res = mockRes();
+  await contentController.createTextContent(req, res);
+
+  assert.equal(res.statusCode, 201);
+  assert.equal(createCall.mock.calls[0].arguments[0].folder_id, 5);
+});
+
+test('createTextContent: 400 si folder_id apunta a un contenido que no es carpeta', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 5, type: 'file', course_id: 1 }));
+  const createCall = t.mock.method(Content, 'create', async () => 71);
+  const req = mockReq({ body: { course_id: 1, title: 'Lectura', description: 'texto', folder_id: 5 } });
+  const res = mockRes();
+  await contentController.createTextContent(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(createCall.mock.calls.length, 0);
+});
+
+test('createTextContent: 400 si folder_id apunta a una carpeta de OTRO curso', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 5, type: 'folder', course_id: 999 }));
+  const req = mockReq({ body: { course_id: 1, title: 'Lectura', description: 'texto', folder_id: 5 } });
+  const res = mockRes();
+  await contentController.createTextContent(req, res);
+  assert.equal(res.statusCode, 400);
+});
+
+test('createVideoContent: folder_id inválido borra el video ya subido al disco (no queda huérfano)', async (t) => {
+  t.mock.method(Content, 'findById', async () => undefined);
+  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
+  t.mock.method(fs, 'existsSync', () => true);
+  const createCall = t.mock.method(Content, 'create', async () => 72);
+
+  const req = mockReq({
+    body: { course_id: 1, title: 'Video', folder_id: 999 },
+    file: { filename: 'video.mp4', size: 1000 }
+  });
+  const res = mockRes();
+  await contentController.createVideoContent(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(createCall.mock.calls.length, 0);
+  assert.equal(unlinkCall.mock.calls.length, 1, 'el video subido no debe quedar huérfano en disco');
+});
+
+test('updateContent: mueve el contenido a otra carpeta válida del mismo curso', async (t) => {
+  t.mock.method(Content, 'findById', async (id) => {
+    if (String(id) === '9') return { id: 9, type: 'file', course_id: 1, url: null };
+    return { id: 5, type: 'folder', course_id: 1 };
+  });
+  const updateCall = t.mock.method(Content, 'update', async () => true);
+  const req = mockReq({ params: { id: 9 }, body: { folder_id: 5 } });
+  const res = mockRes();
+  await contentController.updateContent(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(updateCall.mock.calls[0].arguments[1].folder_id, 5);
+});
+
+test('updateContent: folder_id: null explícito saca el contenido de su carpeta', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 9, type: 'file', course_id: 1, url: null }));
+  const updateCall = t.mock.method(Content, 'update', async () => true);
+  const req = mockReq({ params: { id: 9 }, body: { folder_id: null } });
+  const res = mockRes();
+  await contentController.updateContent(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(updateCall.mock.calls[0].arguments[1].folder_id, null);
+});
+
+test('updateContent: 400 si se intenta meter una carpeta dentro de otra carpeta (un solo nivel)', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 9, type: 'folder', course_id: 1, url: null }));
+  const updateCall = t.mock.method(Content, 'update', async () => true);
+  const req = mockReq({ params: { id: 9 }, body: { folder_id: 5 } });
+  const res = mockRes();
+  await contentController.updateContent(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(updateCall.mock.calls.length, 0);
+});
+
+test('deleteContent: 400 si la carpeta todavía tiene contenido adentro', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 5, type: 'folder', course_id: 1, url: null }));
+  t.mock.method(Content, 'hasChildren', async () => true);
+  const deleteCall = t.mock.method(Content, 'delete', async () => true);
+  const req = mockReq({ params: { id: 5 } });
+  const res = mockRes();
+  await contentController.deleteContent(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(deleteCall.mock.calls.length, 0, 'no debe borrar una carpeta no vacía');
+});
+
+test('deleteContent: una carpeta vacía sí se puede borrar', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 5, type: 'folder', course_id: 1, url: null }));
+  t.mock.method(Content, 'hasChildren', async () => false);
+  const deleteCall = t.mock.method(Content, 'delete', async () => true);
+  const req = mockReq({ params: { id: 5 } });
+  const res = mockRes();
+  await contentController.deleteContent(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(deleteCall.mock.calls.length, 1);
+});
+
 test('createTextContent: 400 si falta el título', async (t) => {
   const req = mockReq({ body: { course_id: 1, description: 'algo de texto' } });
   const res = mockRes();
@@ -263,6 +395,16 @@ test('markContentIncomplete: 400 si el contenido es un foro', async (t) => {
   const req = mockReq({ params: { id: 9 }, session: { user: { id: 1, role: 'student' } } });
   const res = mockRes();
   await contentController.markContentIncomplete(req, res);
+  assert.equal(res.statusCode, 400);
+  assert.equal(markCall.mock.calls.length, 0);
+});
+
+test('markContentCompleted: 400 si el contenido es una carpeta (no cuenta para el progreso)', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 9, course_id: 1, type: 'folder' }));
+  const markCall = t.mock.method(Content, 'markCompleted', async () => 10);
+  const req = mockReq({ params: { id: 9 }, session: { user: { id: 1, role: 'student' } } });
+  const res = mockRes();
+  await contentController.markContentCompleted(req, res);
   assert.equal(res.statusCode, 400);
   assert.equal(markCall.mock.calls.length, 0);
 });

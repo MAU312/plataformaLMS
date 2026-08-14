@@ -126,6 +126,18 @@ router.post(
   contentController.createForumContent
 );
 
+/**
+ * POST /api/contents/folder
+ * Crea una carpeta para agrupar otro contenido del curso. Admin, o el
+ * profesor asignado al curso del body. Sin archivo.
+ */
+router.post(
+  '/folder',
+  isAuthenticated,
+  requireCourseManager((req) => req.body.course_id),
+  contentController.createFolderContent
+);
+
 // ==============================================
 // RUTAS CON PARÁMETRO /:id Y SUBRUTAS
 // ==============================================
@@ -239,10 +251,12 @@ router.put(
 
         req.contentType = content.type;
 
-        // Texto, URL y el post principal de un foro no llevan archivo —
-        // no tiene sentido pasarlos por multer/verifyFileSignature (que
-        // esperan un req.file).
-        if (content.type === 'text' || content.type === 'url' || content.type === 'forum') {
+        // Texto, URL, el post principal de un foro, y una carpeta no
+        // llevan archivo — no tiene sentido pasarlos por
+        // multer/verifyFileSignature (que esperan un req.file). Una
+        // carpeta solo se actualiza para cambiarle el título o moverla
+        // (folder_id no aplica a una carpeta, ver updateContent).
+        if (['text', 'url', 'forum', 'folder'].includes(content.type)) {
           return next();
         }
 
@@ -258,7 +272,7 @@ router.put(
     handleUpload(req, res, next);
   },
   (req, res, next) => {
-    if (req.contentType === 'text' || req.contentType === 'url' || req.contentType === 'forum') return next();
+    if (['text', 'url', 'forum', 'folder'].includes(req.contentType)) return next();
     verifyFileSignature(req.contentType === 'video' ? 'video' : 'file')(req, res, next);
   },
   contentController.updateContent

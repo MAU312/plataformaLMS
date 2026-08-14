@@ -39,18 +39,34 @@ window.renderCourseDetail = async function(params) {
             contents = contentsResponse.data || contents;
         }
 
-        const videos = contents.filter(c => c.type === 'video');
-        const files = contents.filter(c => c.type === 'file');
-        const urlVideos = contents.filter(c => c.type === 'url');
-        const texts = contents.filter(c => c.type === 'text');
-        const tasks = contents.filter(c => c.type === 'task');
-        const forums = contents.filter(c => c.type === 'forum');
-        // El foro no cuenta para el progreso del curso (es una discusión
-        // abierta, sin estado "completado") — igual que en el servidor
-        // (Content.recalculateCourseProgress), se excluye del total para
+        const folders = contents.filter(c => c.type === 'folder');
+        const isTopLevel = c => !c.folder_id;
+
+        // Arrays para la grilla principal: solo lo que NO está dentro de
+        // una carpeta (lo que sí lo está se muestra agrupado más abajo).
+        const videos = contents.filter(c => c.type === 'video' && isTopLevel(c));
+        const files = contents.filter(c => c.type === 'file' && isTopLevel(c));
+        const urlVideos = contents.filter(c => c.type === 'url' && isTopLevel(c));
+        const texts = contents.filter(c => c.type === 'text' && isTopLevel(c));
+        const tasks = contents.filter(c => c.type === 'task' && isTopLevel(c));
+        const forums = contents.filter(c => c.type === 'forum' && isTopLevel(c));
+
+        // Conteos de la tarjeta de información: sobre TODO el curso,
+        // incluyendo lo que está dentro de una carpeta.
+        const allVideosCount = contents.filter(c => c.type === 'video').length;
+        const allFilesCount = contents.filter(c => c.type === 'file').length;
+        const allUrlsCount = contents.filter(c => c.type === 'url').length;
+        const allTextsCount = contents.filter(c => c.type === 'text').length;
+        const allTasksCount = contents.filter(c => c.type === 'task').length;
+        const allForumsCount = contents.filter(c => c.type === 'forum').length;
+
+        // El foro y una carpeta no cuentan para el progreso del curso (una
+        // discusión abierta y un simple agrupador no tienen estado
+        // "completado") — igual que en el servidor
+        // (Content.recalculateCourseProgress), se excluyen del total para
         // que el % mostrado y la visibilidad del botón de certificado
         // coincidan con lo que realmente evalúa el backend.
-        const progressTrackableContents = contents.filter(c => c.type !== 'forum');
+        const progressTrackableContents = contents.filter(c => c.type !== 'forum' && c.type !== 'folder');
         const completedCount = progressTrackableContents.filter(c => c.completed).length;
         const progressPercent = progressTrackableContents.length > 0
             ? Math.round((completedCount / progressTrackableContents.length) * 100)
@@ -58,11 +74,13 @@ window.renderCourseDetail = async function(params) {
 
         // Estado de entrega de cada tarea (solo tiene sentido para un
         // estudiante inscrito — para admin/profesor/no-inscrito no se
-        // pide, ya que no pueden entregar).
+        // pide, ya que no pueden entregar). Se pide para TODAS las tareas
+        // del curso, estén o no dentro de una carpeta.
+        const allTasks = contents.filter(c => c.type === 'task');
         let submissionsByTask = {};
-        if (isLoggedIn && isEnrolled && tasks.length > 0) {
-            const submissionResponses = await Promise.all(tasks.map(t => contentsAPI.getMySubmission(t.id)));
-            tasks.forEach((t, i) => { submissionsByTask[t.id] = submissionResponses[i].data; });
+        if (isLoggedIn && isEnrolled && allTasks.length > 0) {
+            const submissionResponses = await Promise.all(allTasks.map(t => contentsAPI.getMySubmission(t.id)));
+            allTasks.forEach((t, i) => { submissionsByTask[t.id] = submissionResponses[i].data; });
         }
 
         app.innerHTML = `
@@ -179,6 +197,16 @@ window.renderCourseDetail = async function(params) {
                                 ${forums.map(f => renderForumCard(f, hasAccess)).join('')}
                             </div>
                         ` : ''}
+
+                        ${folders.length > 0 ? `
+                            <h2 class="text-xl font-bold text-gray-900 flex items-center mt-8">
+                                <i class="fas fa-folder text-cenat-green mr-2"></i>
+                                Carpetas
+                            </h2>
+                            <div class="space-y-3">
+                                ${folders.map(folder => renderCourseFolderCard(folder, contents, hasAccess, isLoggedIn && isEnrolled, submissionsByTask)).join('')}
+                            </div>
+                        ` : ''}
                     </div>
 
                     <!-- Columna lateral: Archivos descargables -->
@@ -204,12 +232,13 @@ window.renderCourseDetail = async function(params) {
                                 Información del curso
                             </h3>
                             <ul class="text-sm text-gray-600 space-y-1">
-                                <li><i class="fas fa-video mr-2 text-gray-400"></i>${videos.length} videos</li>
-                                <li><i class="fas fa-file mr-2 text-gray-400"></i>${files.length} archivos</li>
-                                ${urlVideos.length > 0 ? `<li><i class="fas fa-link mr-2 text-gray-400"></i>${urlVideos.length} videos externos</li>` : ''}
-                                ${texts.length > 0 ? `<li><i class="fas fa-align-left mr-2 text-gray-400"></i>${texts.length} lecturas</li>` : ''}
-                                ${tasks.length > 0 ? `<li><i class="fas fa-tasks mr-2 text-gray-400"></i>${tasks.length} tareas</li>` : ''}
-                                ${forums.length > 0 ? `<li><i class="fas fa-comments mr-2 text-gray-400"></i>${forums.length} foros</li>` : ''}
+                                <li><i class="fas fa-video mr-2 text-gray-400"></i>${allVideosCount} videos</li>
+                                <li><i class="fas fa-file mr-2 text-gray-400"></i>${allFilesCount} archivos</li>
+                                ${allUrlsCount > 0 ? `<li><i class="fas fa-link mr-2 text-gray-400"></i>${allUrlsCount} videos externos</li>` : ''}
+                                ${allTextsCount > 0 ? `<li><i class="fas fa-align-left mr-2 text-gray-400"></i>${allTextsCount} lecturas</li>` : ''}
+                                ${allTasksCount > 0 ? `<li><i class="fas fa-tasks mr-2 text-gray-400"></i>${allTasksCount} tareas</li>` : ''}
+                                ${allForumsCount > 0 ? `<li><i class="fas fa-comments mr-2 text-gray-400"></i>${allForumsCount} foros</li>` : ''}
+                                ${folders.length > 0 ? `<li><i class="fas fa-folder mr-2 text-gray-400"></i>${folders.length} carpetas</li>` : ''}
                                 <li><i class="fas fa-users mr-2 text-gray-400"></i>${course.enrolled_count || 0} inscritos</li>
                             </ul>
                         </div>
@@ -396,6 +425,84 @@ function renderForumCard(forum, hasAccess) {
                 </div>
             </div>
         </div>
+    `;
+}
+
+/**
+ * Dispatcher: cada tipo de contenido dentro de una carpeta se dibuja con
+ * el mismo renderer que ya se usa fuera de carpetas — reutilizarlos evita
+ * duplicar el marcado, y los listeners globales (checkbox de progreso,
+ * click para reproducir video, formulario de entrega de tarea) ya
+ * funcionan solos porque se enganchan por clase/atributo en todo el
+ * documento, no por contenedor.
+ */
+function renderFolderItem(content, canTrackProgress, hasAccess, submission) {
+    switch (content.type) {
+        case 'video':
+            return renderContentRow(content, false, canTrackProgress, 'video', hasAccess);
+        case 'file':
+            return renderContentRow(content, false, canTrackProgress, 'file', hasAccess);
+        case 'url':
+            return renderUrlContentRow(content, canTrackProgress, hasAccess);
+        case 'text':
+            return renderTextContentCard(content, canTrackProgress, hasAccess);
+        case 'task':
+            return renderTaskCard(content, submission, hasAccess);
+        case 'forum':
+            return renderForumCard(content, hasAccess);
+        default:
+            return '';
+    }
+}
+
+function renderCourseFolderCard(folder, allContents, hasAccess, canTrackProgress, submissionsByTask) {
+    if (!hasAccess) {
+        return `
+            <div class="bg-white rounded-xl border border-gray-100 p-4">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-lock text-xl text-gray-400"></i>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium text-gray-900">${escapeHtml(folder.title)}</p>
+                        <p class="text-sm text-gray-400 mt-1">Inscríbete en este curso para ver el contenido de esta carpeta</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    const items = allContents.filter(c => c.folder_id === folder.id);
+    // El foro no tiene estado "completado" (ver progressTrackableContents
+    // más arriba) — se deja fuera del conteo de la carpeta por la misma
+    // razón. Así el badge de "completada" es consistente con el % de
+    // progreso general del curso.
+    const trackableItems = items.filter(c => c.type !== 'forum');
+    const completedItems = trackableItems.filter(c => c.completed).length;
+    const allCompleted = canTrackProgress && trackableItems.length > 0 && completedItems === trackableItems.length;
+
+    return `
+        <details class="bg-white rounded-xl border ${allCompleted ? 'border-green-200' : 'border-gray-100'} overflow-hidden" open>
+            <summary class="cursor-pointer list-none p-4 flex items-center gap-3">
+                <i class="fas ${allCompleted ? 'fa-folder text-green-500' : 'fa-folder-open text-cenat-green'} text-xl"></i>
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-gray-900">${escapeHtml(folder.title)}</p>
+                    <p class="text-xs text-gray-400">${items.length} ${items.length === 1 ? 'elemento' : 'elementos'}</p>
+                </div>
+                ${canTrackProgress && trackableItems.length > 0 ? (
+                    allCompleted ? `
+                        <span class="flex items-center gap-1 text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-full flex-shrink-0">
+                            <i class="fas fa-check-circle"></i> Completada
+                        </span>
+                    ` : `
+                        <span class="text-xs text-gray-400 flex-shrink-0">${completedItems}/${trackableItems.length} completado${completedItems === 1 ? '' : 's'}</span>
+                    `
+                ) : ''}
+            </summary>
+            <div class="px-4 pb-4 space-y-2 border-t border-gray-100 pt-3">
+                ${items.length > 0 ? items.map(item => renderFolderItem(item, canTrackProgress, hasAccess, submissionsByTask[item.id])).join('') : `
+                    <p class="text-gray-500 text-sm text-center py-2">Esta carpeta todavía no tiene contenido</p>
+                `}
+            </div>
+        </details>
     `;
 }
 

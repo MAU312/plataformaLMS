@@ -12,6 +12,38 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
+ * Valida un folder_id opcional recibido del body: vacío/null/undefined
+ * significa "sin carpeta" (nivel superior). Si viene, la carpeta debe
+ * existir, ser type='folder', y pertenecer al MISMO curso — así no se
+ * puede colgar contenido de la carpeta de otro curso, ni meterlo "dentro"
+ * de un contenido que no sea una carpeta.
+ */
+/**
+ * Mensaje de por qué un tipo de contenido no se puede marcar
+ * completado/pendiente manualmente, o null si sí se puede. Una tarea la
+ * marca automáticamente submitTask al entregar; un foro y una carpeta no
+ * tienen un estado "completado" real (son discusión abierta / agrupador),
+ * así que ninguno de los tres debe contar para el progreso del curso.
+ */
+function uncompletableReason(type) {
+  if (type === 'task') return 'El progreso de una tarea se actualiza automáticamente al entregarla';
+  if (type === 'forum') return 'El foro no cuenta para el progreso del curso';
+  if (type === 'folder') return 'Una carpeta no cuenta para el progreso del curso';
+  return null;
+}
+
+async function resolveFolderId(folderIdInput, courseId) {
+  if (folderIdInput === undefined || folderIdInput === null || folderIdInput === '') {
+    return { ok: true, folderId: null };
+  }
+  const folder = await Content.findById(folderIdInput);
+  if (!folder || folder.type !== 'folder' || String(folder.course_id) !== String(courseId)) {
+    return { ok: false };
+  }
+  return { ok: true, folderId: folder.id };
+}
+
+/**
  * Obtener todos los contenidos de un curso
  * Si hay sesión activa, incluye el estado "completed" de cada contenido
  */
@@ -87,7 +119,7 @@ export const getContentById = async (req, res) => {
  */
 export const createVideoContent = async (req, res) => {
   try {
-    const { course_id, title, description } = req.body;
+    const { course_id, title, description, folder_id } = req.body;
 
     if (!course_id || !title) {
       return res.status(400).json({
@@ -103,6 +135,12 @@ export const createVideoContent = async (req, res) => {
       });
     }
 
+    const folderCheck = await resolveFolderId(folder_id, course_id);
+    if (!folderCheck.ok) {
+      deleteFile(`/uploads/videos/${req.file.filename}`);
+      return res.status(400).json({ success: false, message: 'La carpeta indicada no existe en este curso' });
+    }
+
     const url = `/uploads/videos/${req.file.filename}`;
     const file_size = req.file.size;
 
@@ -112,7 +150,8 @@ export const createVideoContent = async (req, res) => {
       title,
       description,
       url,
-      file_size
+      file_size,
+      folder_id: folderCheck.folderId
     });
 
     res.status(201).json({
@@ -138,7 +177,7 @@ export const createVideoContent = async (req, res) => {
  */
 export const createFileContent = async (req, res) => {
   try {
-    const { course_id, title, description } = req.body;
+    const { course_id, title, description, folder_id } = req.body;
 
     if (!course_id || !title) {
       return res.status(400).json({
@@ -154,6 +193,12 @@ export const createFileContent = async (req, res) => {
       });
     }
 
+    const folderCheck = await resolveFolderId(folder_id, course_id);
+    if (!folderCheck.ok) {
+      deleteFile(`/uploads/files/${req.file.filename}`);
+      return res.status(400).json({ success: false, message: 'La carpeta indicada no existe en este curso' });
+    }
+
     const url = `/uploads/files/${req.file.filename}`;
     const file_size = req.file.size;
 
@@ -163,7 +208,8 @@ export const createFileContent = async (req, res) => {
       title,
       description,
       url,
-      file_size
+      file_size,
+      folder_id: folderCheck.folderId
     });
 
     res.status(201).json({
@@ -190,7 +236,7 @@ export const createFileContent = async (req, res) => {
  */
 export const createTextContent = async (req, res) => {
   try {
-    const { course_id, title, description } = req.body;
+    const { course_id, title, description, folder_id } = req.body;
 
     if (!course_id || !title) {
       return res.status(400).json({
@@ -206,12 +252,18 @@ export const createTextContent = async (req, res) => {
       });
     }
 
+    const folderCheck = await resolveFolderId(folder_id, course_id);
+    if (!folderCheck.ok) {
+      return res.status(400).json({ success: false, message: 'La carpeta indicada no existe en este curso' });
+    }
+
     const contentId = await Content.create({
       course_id,
       type: 'text',
       title,
       description,
-      url: null
+      url: null,
+      folder_id: folderCheck.folderId
     });
 
     res.status(201).json({
@@ -234,7 +286,7 @@ export const createTextContent = async (req, res) => {
  */
 export const createUrlContent = async (req, res) => {
   try {
-    const { course_id, title, description, url } = req.body;
+    const { course_id, title, description, url, folder_id } = req.body;
 
     if (!course_id || !title) {
       return res.status(400).json({
@@ -250,12 +302,18 @@ export const createUrlContent = async (req, res) => {
       });
     }
 
+    const folderCheck = await resolveFolderId(folder_id, course_id);
+    if (!folderCheck.ok) {
+      return res.status(400).json({ success: false, message: 'La carpeta indicada no existe en este curso' });
+    }
+
     const contentId = await Content.create({
       course_id,
       type: 'url',
       title,
       description,
-      url: String(url).trim()
+      url: String(url).trim(),
+      folder_id: folderCheck.folderId
     });
 
     res.status(201).json({
@@ -280,13 +338,19 @@ export const createUrlContent = async (req, res) => {
  */
 export const createTaskContent = async (req, res) => {
   try {
-    const { course_id, title, description } = req.body;
+    const { course_id, title, description, folder_id } = req.body;
 
     if (!course_id || !title) {
       return res.status(400).json({
         success: false,
         message: 'El ID del curso y el título son requeridos'
       });
+    }
+
+    const folderCheck = await resolveFolderId(folder_id, course_id);
+    if (!folderCheck.ok) {
+      if (req.file) deleteFile(`/uploads/files/${req.file.filename}`);
+      return res.status(400).json({ success: false, message: 'La carpeta indicada no existe en este curso' });
     }
 
     let url = null;
@@ -302,7 +366,8 @@ export const createTaskContent = async (req, res) => {
       title,
       description,
       url,
-      file_size
+      file_size,
+      folder_id: folderCheck.folderId
     });
 
     res.status(201).json({
@@ -330,7 +395,7 @@ export const createTaskContent = async (req, res) => {
  */
 export const createForumContent = async (req, res) => {
   try {
-    const { course_id, title, description } = req.body;
+    const { course_id, title, description, folder_id } = req.body;
 
     if (!course_id || !title) {
       return res.status(400).json({
@@ -346,12 +411,18 @@ export const createForumContent = async (req, res) => {
       });
     }
 
+    const folderCheck = await resolveFolderId(folder_id, course_id);
+    if (!folderCheck.ok) {
+      return res.status(400).json({ success: false, message: 'La carpeta indicada no existe en este curso' });
+    }
+
     const contentId = await Content.create({
       course_id,
       type: 'forum',
       title,
       description,
-      url: null
+      url: null,
+      folder_id: folderCheck.folderId
     });
 
     res.status(201).json({
@@ -369,12 +440,52 @@ export const createForumContent = async (req, res) => {
 };
 
 /**
+ * Crear una carpeta: solo agrupa otro contenido del mismo curso (video,
+ * archivo, texto, URL, tarea o foro) bajo su folder_id — no lleva url ni
+ * texto propio. Una carpeta nunca puede tener folder_id (no hay
+ * subcarpetas, un solo nivel de anidamiento).
+ */
+export const createFolderContent = async (req, res) => {
+  try {
+    const { course_id, title } = req.body;
+
+    if (!course_id || !title) {
+      return res.status(400).json({
+        success: false,
+        message: 'El ID del curso y el título son requeridos'
+      });
+    }
+
+    const contentId = await Content.create({
+      course_id,
+      type: 'folder',
+      title,
+      description: null,
+      url: null,
+      folder_id: null
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Carpeta creada exitosamente',
+      data: { id: contentId }
+    });
+  } catch (error) {
+    console.error('Error al crear la carpeta:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al crear la carpeta'
+    });
+  }
+};
+
+/**
  * Actualizar contenido (solo admin)
  */
 export const updateContent = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, order_index, url } = req.body;
+    const { title, description, order_index, url, folder_id } = req.body;
 
     const content = await Content.findById(id);
     if (!content) {
@@ -388,6 +499,22 @@ export const updateContent = async (req, res) => {
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
     if (order_index !== undefined) updateData.order_index = parseInt(order_index);
+
+    // Mover el contenido a otra carpeta (o sacarlo con folder_id: null).
+    // Una carpeta no puede meterse dentro de otra (un solo nivel).
+    if (folder_id !== undefined) {
+      if (content.type === 'folder') {
+        return res.status(400).json({
+          success: false,
+          message: 'Una carpeta no puede estar dentro de otra carpeta'
+        });
+      }
+      const folderCheck = await resolveFolderId(folder_id, content.course_id);
+      if (!folderCheck.ok) {
+        return res.status(400).json({ success: false, message: 'La carpeta indicada no existe en este curso' });
+      }
+      updateData.folder_id = folderCheck.folderId;
+    }
 
     // Contenido tipo URL no lleva archivo: la única forma de "reemplazar"
     // el contenido es cambiar el link.
@@ -451,6 +578,19 @@ export const deleteContent = async (req, res) => {
         success: false,
         message: 'Contenido no encontrado'
       });
+    }
+
+    // Una carpeta con contenido adentro no se borra de un tirón (evita
+    // perder por accidente tareas con entregas, u otro contenido, que
+    // estaban agrupados ahí) — hay que vaciarla o mover su contenido antes.
+    if (content.type === 'folder') {
+      const hasChildren = await Content.hasChildren(id);
+      if (hasChildren) {
+        return res.status(400).json({
+          success: false,
+          message: 'La carpeta todavía tiene contenido adentro. Vacíala (muévelo o bórralo) antes de eliminarla.'
+        });
+      }
     }
 
     // Eliminar archivo físico (type='url' no tiene archivo local, es un
@@ -593,17 +733,9 @@ export const markContentCompleted = async (req, res) => {
       });
     }
 
-    // Una tarea se marca completada automáticamente al entregarla (ver
-    // submitTask) — no manualmente, o un estudiante podría marcarla como
-    // hecha sin haber entregado nada. Un foro no se "completa": es una
-    // discusión abierta, no cuenta para el progreso del curso.
-    if (content.type === 'task' || content.type === 'forum') {
-      return res.status(400).json({
-        success: false,
-        message: content.type === 'forum'
-          ? 'El foro no cuenta para el progreso del curso'
-          : 'El progreso de una tarea se actualiza automáticamente al entregarla'
-      });
+    const blockedReason = uncompletableReason(content.type);
+    if (blockedReason) {
+      return res.status(400).json({ success: false, message: blockedReason });
     }
 
     // Solo se puede marcar progreso en contenido de un curso en el que
@@ -654,15 +786,10 @@ export const markContentIncomplete = async (req, res) => {
       });
     }
 
-    // Misma regla que al marcar como completado: el progreso de una tarea
-    // solo lo controla la entrega, y un foro no cuenta para el progreso.
-    if (content.type === 'task' || content.type === 'forum') {
-      return res.status(400).json({
-        success: false,
-        message: content.type === 'forum'
-          ? 'El foro no cuenta para el progreso del curso'
-          : 'El progreso de una tarea se actualiza automáticamente al entregarla'
-      });
+    // Misma regla que al marcar como completado.
+    const blockedReason = uncompletableReason(content.type);
+    if (blockedReason) {
+      return res.status(400).json({ success: false, message: blockedReason });
     }
 
     // Misma regla que al marcar como completado.

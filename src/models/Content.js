@@ -83,30 +83,38 @@ class Content {
   }
 
   /**
-   * Crear un nuevo contenido
+   * Crear un nuevo contenido. `folder_id` (null = "sin carpeta") escopa el
+   * orden: el siguiente order_index se calcula entre los hermanos de esa
+   * misma carpeta (o los del nivel superior), no contra todo el curso —
+   * así cada carpeta empieza su propia numeración desde 1. El operador
+   * `<=>` es NULL-safe: `folder_id <=> NULL` si no hay carpeta, o
+   * `folder_id <=> 5` si la hay, sin necesitar dos queries distintas.
    */
-  static async create({ course_id, type, title, description, url, file_size, order_index }) {
-    // Si no se proporciona order_index, obtener el siguiente disponible
+  static async create({ course_id, type, title, description, url, file_size, order_index, folder_id }) {
+    const folderId = folder_id || null;
+
     if (order_index === undefined) {
       const [maxOrder] = await pool.query(
-        'SELECT COALESCE(MAX(order_index), 0) + 1 as next_order FROM contents WHERE course_id = ?',
-        [course_id]
+        'SELECT COALESCE(MAX(order_index), 0) + 1 as next_order FROM contents WHERE course_id = ? AND folder_id <=> ?',
+        [course_id, folderId]
       );
       order_index = maxOrder[0].next_order;
     }
 
     const [result] = await pool.query(
-      `INSERT INTO contents (course_id, type, title, description, url, file_size, order_index) 
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [course_id, type, title, description || null, url, file_size || null, order_index]
+      `INSERT INTO contents (course_id, type, title, description, url, file_size, order_index, folder_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [course_id, type, title, description || null, url, file_size || null, order_index, folderId]
     );
     return result.insertId;
   }
 
   /**
-   * Actualizar contenido
+   * Actualizar contenido. `folder_id` se distingue de "no lo toques"
+   * (undefined) con `!== undefined`, igual que los demás campos — así se
+   * puede mandar `folder_id: null` explícito para sacar algo de su carpeta.
    */
-  static async update(id, { title, description, url, order_index }) {
+  static async update(id, { title, description, url, order_index, folder_id }) {
     const fields = [];
     const values = [];
 
@@ -126,6 +134,10 @@ class Content {
       fields.push('order_index = ?');
       values.push(order_index);
     }
+    if (folder_id !== undefined) {
+      fields.push('folder_id = ?');
+      values.push(folder_id);
+    }
 
     if (fields.length === 0) return false;
 
@@ -135,6 +147,19 @@ class Content {
       values
     );
     return result.affectedRows > 0;
+  }
+
+  /**
+   * true si una carpeta todavía tiene contenido adentro (folder_id
+   * apuntando a ella) — se usa para bloquear su borrado hasta que esté
+   * vacía, en vez de borrar todo en cascada.
+   */
+  static async hasChildren(folderId) {
+    const [rows] = await pool.query(
+      'SELECT id FROM contents WHERE folder_id = ? LIMIT 1',
+      [folderId]
+    );
+    return rows.length > 0;
   }
 
   /**
@@ -242,11 +267,12 @@ class Content {
    * Devuelve el nuevo porcentaje calculado.
    */
   static async recalculateCourseProgress(courseId, userId) {
-    // Contar total de contenidos del curso. Un foro queda fuera: es una
-    // discusión abierta sin un estado "completado", y contarlo dejaría a
-    // los estudiantes sin poder llegar nunca al 100% ni sacar certificado.
+    // Contar total de contenidos del curso. Un foro queda fuera (discusión
+    // abierta, sin estado "completado") y una carpeta también (es solo un
+    // agrupador, no contenido en sí) — contarlos dejaría a los estudiantes
+    // sin poder llegar nunca al 100% ni sacar certificado.
     const [totalRows] = await pool.query(
-      "SELECT COUNT(*) as total FROM contents WHERE course_id = ? AND type != 'forum'",
+      "SELECT COUNT(*) as total FROM contents WHERE course_id = ? AND type NOT IN ('forum', 'folder')",
       [courseId]
     );
     const total = totalRows[0].total;
@@ -256,7 +282,7 @@ class Content {
       `SELECT COUNT(*) as completed
        FROM content_progress cp
        INNER JOIN contents co ON co.id = cp.content_id
-       WHERE co.course_id = ? AND cp.user_id = ? AND co.type != 'forum'`,
+       WHERE co.course_id = ? AND cp.user_id = ? AND co.type NOT IN ('forum', 'folder')`,
       [courseId, userId]
     );
     const completed = completedRows[0].completed;
