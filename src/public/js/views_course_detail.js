@@ -42,14 +42,14 @@ window.renderCourseDetail = async function(params) {
         const folders = contents.filter(c => c.type === 'folder');
         const isTopLevel = c => !c.folder_id;
 
-        // Arrays para la grilla principal: solo lo que NO está dentro de
-        // una carpeta (lo que sí lo está se muestra agrupado más abajo).
+        // Videos de nivel superior: sección propia con el reproductor
+        // grande, igual que antes. El resto de tipos (URL/Archivo/Texto/
+        // Tarea/Foro) de nivel superior se muestran en UNA sola lista
+        // mezclada, en el orden exacto que definió el profesor (ver
+        // renderContentItemByType) — el mismo patrón que ya usa cada
+        // carpeta para su propio contenido.
         const videos = contents.filter(c => c.type === 'video' && isTopLevel(c));
-        const files = contents.filter(c => c.type === 'file' && isTopLevel(c));
-        const urlVideos = contents.filter(c => c.type === 'url' && isTopLevel(c));
-        const texts = contents.filter(c => c.type === 'text' && isTopLevel(c));
-        const tasks = contents.filter(c => c.type === 'task' && isTopLevel(c));
-        const forums = contents.filter(c => c.type === 'forum' && isTopLevel(c));
+        const mixedItems = contents.filter(c => c.type !== 'video' && c.type !== 'folder' && isTopLevel(c));
 
         // Conteos de la tarjeta de información: sobre TODO el curso,
         // incluyendo lo que está dentro de una carpeta.
@@ -158,43 +158,13 @@ window.renderCourseDetail = async function(params) {
                             </div>
                         `}
 
-                        ${urlVideos.length > 0 ? `
+                        ${mixedItems.length > 0 ? `
                             <h2 class="text-xl font-bold text-gray-900 flex items-center mt-8">
-                                <i class="fas fa-link text-cenat-green mr-2"></i>
-                                Videos externos
-                            </h2>
-                            <div class="space-y-2">
-                                ${urlVideos.map(u => renderUrlContentRow(u, isLoggedIn && isEnrolled, hasAccess)).join('')}
-                            </div>
-                        ` : ''}
-
-                        ${texts.length > 0 ? `
-                            <h2 class="text-xl font-bold text-gray-900 flex items-center mt-8">
-                                <i class="fas fa-align-left text-cenat-green mr-2"></i>
-                                Lecturas
+                                <i class="fas fa-list text-cenat-green mr-2"></i>
+                                Contenido
                             </h2>
                             <div class="space-y-3">
-                                ${texts.map(t => renderTextContentCard(t, isLoggedIn && isEnrolled, hasAccess)).join('')}
-                            </div>
-                        ` : ''}
-
-                        ${tasks.length > 0 ? `
-                            <h2 class="text-xl font-bold text-gray-900 flex items-center mt-8">
-                                <i class="fas fa-tasks text-cenat-green mr-2"></i>
-                                Tareas
-                            </h2>
-                            <div class="space-y-3">
-                                ${tasks.map(t => renderTaskCard(t, submissionsByTask[t.id], hasAccess)).join('')}
-                            </div>
-                        ` : ''}
-
-                        ${forums.length > 0 ? `
-                            <h2 class="text-xl font-bold text-gray-900 flex items-center mt-8">
-                                <i class="fas fa-comments text-cenat-green mr-2"></i>
-                                Foros
-                            </h2>
-                            <div class="space-y-3">
-                                ${forums.map(f => renderForumCard(f, hasAccess)).join('')}
+                                ${mixedItems.map(item => renderContentItemByType(item, isLoggedIn && isEnrolled, hasAccess, submissionsByTask[item.id])).join('')}
                             </div>
                         ` : ''}
 
@@ -209,22 +179,8 @@ window.renderCourseDetail = async function(params) {
                         ` : ''}
                     </div>
 
-                    <!-- Columna lateral: Archivos descargables -->
+                    <!-- Columna lateral -->
                     <div class="space-y-6">
-                        <h2 class="text-xl font-bold text-gray-900 flex items-center">
-                            <i class="fas fa-file-download text-cenat-green mr-2"></i>
-                            Materiales descargables
-                        </h2>
-
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-3">
-                            ${files.length > 0 ? files.map(file => renderContentRow(file, false, isLoggedIn && isEnrolled, 'file', hasAccess)).join('') : `
-                                <div class="empty-state">
-                                    <i class="fas fa-folder-open"></i>
-                                    <p class="text-gray-600 text-sm">No hay archivos disponibles</p>
-                                </div>
-                            `}
-                        </div>
-
                         <!-- Card de información -->
                         <div class="bg-green-50 rounded-xl p-4 border border-green-100">
                             <h3 class="font-semibold text-gray-900 mb-2">
@@ -259,12 +215,20 @@ window.renderCourseDetail = async function(params) {
                 // Si el click fue en el checkbox, no cambiar el video
                 if (e.target.closest('.content-checkbox')) return;
 
+                // Un video dentro de una carpeta también tiene esta clase
+                // (ver renderContentItemByType), pero si el curso no tiene
+                // NINGÚN video a nivel superior no existe el reproductor
+                // grande de arriba — sin este chequeo, hacer click en un
+                // video de carpeta rompía con un error de consola.
+                const mainVideo = document.getElementById('main-video');
+                if (!mainVideo) return;
+
                 const url = this.dataset.url;
                 const title = this.dataset.title;
 
-                document.getElementById('main-video').querySelector('source').src = url;
-                document.getElementById('main-video').load();
-                document.getElementById('main-video').play();
+                mainVideo.querySelector('source').src = url;
+                mainVideo.load();
+                mainVideo.play();
                 document.getElementById('current-video-title').textContent = title;
 
                 document.querySelectorAll('.video-item').forEach(v => {
@@ -436,7 +400,7 @@ function renderForumCard(forum, hasAccess) {
  * funcionan solos porque se enganchan por clase/atributo en todo el
  * documento, no por contenedor.
  */
-function renderFolderItem(content, canTrackProgress, hasAccess, submission) {
+function renderContentItemByType(content, canTrackProgress, hasAccess, submission) {
     switch (content.type) {
         case 'video':
             return renderContentRow(content, false, canTrackProgress, 'video', hasAccess);
@@ -490,7 +454,7 @@ function renderCourseFolderCard(folder, allContents, hasAccess, canTrackProgress
                 <span id="folder-badge-${folder.id}" class="flex-shrink-0">${renderFolderBadgeContent(canTrackProgress, trackableItems.length, completedItems, allCompleted)}</span>
             </summary>
             <div class="px-4 pb-4 space-y-2 border-t border-gray-100 pt-3">
-                ${items.length > 0 ? items.map(item => renderFolderItem(item, canTrackProgress, hasAccess, submissionsByTask[item.id])).join('') : `
+                ${items.length > 0 ? items.map(item => renderContentItemByType(item, canTrackProgress, hasAccess, submissionsByTask[item.id])).join('') : `
                     <p class="text-gray-500 text-sm text-center py-2">Esta carpeta todavía no tiene contenido</p>
                 `}
             </div>

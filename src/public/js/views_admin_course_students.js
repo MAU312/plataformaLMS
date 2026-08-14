@@ -57,6 +57,7 @@ function renderStudentsTableHTML(students) {
                         <th class="py-3 px-4">Email</th>
                         <th class="py-3 px-4">Progreso</th>
                         <th class="py-3 px-4">Inscrito</th>
+                        <th class="py-3 px-4">Último ingreso</th>
                         <th class="py-3 px-4">Completado</th>
                     </tr>
                 </thead>
@@ -74,6 +75,7 @@ function renderStudentsTableHTML(students) {
                                 </div>
                             </td>
                             <td class="py-3 px-4 text-gray-500 dark:text-slate-400">${formatDate(student.enrolled_at)}</td>
+                            <td class="py-3 px-4 text-gray-500 dark:text-slate-400">${student.last_login ? formatDate(student.last_login) : 'Nunca'}</td>
                             <td class="py-3 px-4">
                                 ${student.completed_at
                                     ? `<span class="badge badge-active"><i class="fas fa-certificate mr-1"></i> ${formatDate(student.completed_at)}</span>`

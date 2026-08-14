@@ -81,52 +81,195 @@ function renderFolderCard(courseId, contents, folder) {
 }
 
 /**
- * Las 6 secciones de contenido (Videos/URL/Archivos/Texto/Tareas/Foro),
- * filtradas a lo que cuelga de `folderId` (null = sin carpeta). `nested`
- * cambia el estilo: cards completas con sombra a nivel superior, bloques
- * simples sin repetir el borde cuando ya están dentro de la card de una
- * carpeta.
+ * Videos con su propia sección (a nivel superior comparten reproductor
+ * con la vista del estudiante), y el resto de tipos (URL/Archivo/Texto/
+ * Tarea/Foro) en UNA lista única arrastrable, ordenada por order_index —
+ * así el profesor puede, por ejemplo, poner un foro arriba de una tarea.
+ * `folderId` (null = sin carpeta) escopa tanto qué contenido entra en
+ * cada lista como qué ids se reordenan juntos al soltar (ver
+ * persistContentOrder más abajo): mezclar ids de carpetas distintas en
+ * un mismo POST /reorder rompería el orden de la otra carpeta, así que
+ * cada lista es su propio ".sortable-list" independiente. `nested` cambia
+ * el estilo: cards completas con sombra a nivel superior, bloques simples
+ * sin repetir el borde cuando ya están dentro de la card de una carpeta.
  */
 function renderContentTypeSections(courseId, contents, folderId, nested) {
     const inScope = c => (c.folder_id || null) === folderId;
     const videos = contents.filter(c => c.type === 'video' && inScope(c));
-    const urls = contents.filter(c => c.type === 'url' && inScope(c));
-    const files = contents.filter(c => c.type === 'file' && inScope(c));
-    const texts = contents.filter(c => c.type === 'text' && inScope(c));
-    const tasks = contents.filter(c => c.type === 'task' && inScope(c));
-    const forums = contents.filter(c => c.type === 'forum' && inScope(c));
+    const mixedItems = contents.filter(c => c.type !== 'video' && c.type !== 'folder' && inScope(c));
 
     const folderArg = folderId === null ? 'null' : folderId;
     const wrap = nested ? '' : 'bg-white rounded-xl shadow-sm border border-gray-100 p-6';
     const headingSize = nested ? 'text-sm' : 'text-lg';
 
-    const section = (icon, label, addLabel, showFn, listBase, items, renderFn, emptyLabel) => `
+    const videoSection = `
         <div class="${wrap}">
             <div class="flex items-center justify-between mb-3">
                 <h3 class="${headingSize} font-bold text-gray-900">
-                    <i class="fas ${icon} text-cenat-green mr-2"></i> ${label}
+                    <i class="fas fa-video text-cenat-green mr-2"></i> Videos
                 </h3>
-                <button onclick="${showFn}(${courseId}, ${folderArg})" class="text-xs bg-green-50 text-cenat-green px-3 py-1.5 rounded-lg hover:bg-green-100 transition">
-                    <i class="fas fa-plus mr-1"></i> ${addLabel}
+                <button onclick="showAddVideoForm(${courseId}, ${folderArg})" class="text-xs bg-green-50 text-cenat-green px-3 py-1.5 rounded-lg hover:bg-green-100 transition">
+                    <i class="fas fa-plus mr-1"></i> Agregar video
                 </button>
             </div>
-            <div id="${scopeId(`add-${listBase}-form-container`, folderId)}"></div>
-            <div id="${scopeId(`${listBase}-list`, folderId)}" class="space-y-2">
-                ${items.length > 0 ? items.map(renderFn).join('') : `
-                    <p class="text-gray-500 text-sm text-center py-4">${emptyLabel}</p>
+            <div id="${scopeId('add-video-form-container', folderId)}"></div>
+            <div id="${scopeId('video-list', folderId)}" class="space-y-2 sortable-list" data-course-id="${courseId}">
+                ${videos.length > 0 ? videos.map(renderDraggableItem).join('') : `
+                    <p class="text-gray-500 text-sm text-center py-4">No hay videos agregados aún</p>
                 `}
             </div>
         </div>
     `;
 
-    return [
-        section('fa-video', 'Videos', 'Agregar video', 'showAddVideoForm', 'video', videos, v => renderContentItem(v, 'video'), 'No hay videos agregados aún'),
-        section('fa-link', 'URL de video externo', 'Agregar URL', 'showAddUrlForm', 'url', urls, u => renderContentItem(u, 'url'), 'No hay URLs de video agregadas aún'),
-        section('fa-file', 'Archivos', 'Agregar archivo', 'showAddFileForm', 'file', files, f => renderContentItem(f, 'file'), 'No hay archivos agregados aún'),
-        section('fa-align-left', 'Texto', 'Agregar texto', 'showAddTextForm', 'text', texts, t => renderContentItem(t, 'text'), 'No hay contenido de texto agregado aún'),
-        section('fa-tasks', 'Tareas', 'Agregar tarea', 'showAddTaskForm', 'task', tasks, renderTaskItem, 'No hay tareas agregadas aún'),
-        section('fa-comments', 'Foro', 'Agregar tema', 'showAddForumForm', 'forum', forums, renderForumItem, 'No hay temas de foro agregados aún')
-    ].join('');
+    const addButtons = [
+        ['showAddUrlForm', 'fa-link', 'URL'],
+        ['showAddFileForm', 'fa-file', 'Archivo'],
+        ['showAddTextForm', 'fa-align-left', 'Texto'],
+        ['showAddTaskForm', 'fa-tasks', 'Tarea'],
+        ['showAddForumForm', 'fa-comments', 'Foro']
+    ].map(([fn, icon, label]) => `
+        <button onclick="${fn}(${courseId}, ${folderArg})" class="text-xs bg-green-50 text-cenat-green px-3 py-1.5 rounded-lg hover:bg-green-100 transition whitespace-nowrap">
+            <i class="fas ${icon} mr-1"></i> ${label}
+        </button>
+    `).join('');
+
+    const mixedSection = `
+        <div class="${wrap}">
+            <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+                <h3 class="${headingSize} font-bold text-gray-900">
+                    <i class="fas fa-list text-cenat-green mr-2"></i> Contenido
+                </h3>
+                <div class="flex flex-wrap gap-2">${addButtons}</div>
+            </div>
+            <div id="${scopeId('add-url-form-container', folderId)}"></div>
+            <div id="${scopeId('add-file-form-container', folderId)}"></div>
+            <div id="${scopeId('add-text-form-container', folderId)}"></div>
+            <div id="${scopeId('add-task-form-container', folderId)}"></div>
+            <div id="${scopeId('add-forum-form-container', folderId)}"></div>
+            ${mixedItems.length > 1 ? `
+                <p class="text-xs text-gray-400 mb-2"><i class="fas fa-arrows-alt-v mr-1"></i> Arrastra para cambiar el orden</p>
+            ` : ''}
+            <div id="${scopeId('content-list', folderId)}" class="space-y-2 sortable-list" data-course-id="${courseId}">
+                ${mixedItems.length > 0 ? mixedItems.map(renderDraggableItem).join('') : `
+                    <p class="text-gray-500 text-sm text-center py-4">No hay contenido agregado aún</p>
+                `}
+            </div>
+        </div>
+    `;
+
+    return videoSection + mixedSection;
+}
+
+/**
+ * Dispatcher: cada tipo de contenido se dibuja con el mismo renderer de
+ * fila que ya existía por tipo — reutilizarlos evita duplicar el markup.
+ */
+function renderManagerContentItem(content) {
+    switch (content.type) {
+        case 'video': return renderContentItem(content, 'video');
+        case 'url': return renderContentItem(content, 'url');
+        case 'file': return renderContentItem(content, 'file');
+        case 'text': return renderContentItem(content, 'text');
+        case 'task': return renderTaskItem(content);
+        case 'forum': return renderForumItem(content);
+        default: return '';
+    }
+}
+
+/**
+ * Envuelve una fila de contenido con lo necesario para arrastrarla:
+ * `draggable="true"`, un mango visual (decorativo — arrastrar desde
+ * cualquier parte de la fila funciona igual, salvo desde un botón/link,
+ * que el navegador no deja iniciar un drag ahí por default) y
+ * `data-content-id` para leer el nuevo orden al soltar.
+ */
+function renderDraggableItem(content) {
+    return `
+        <div class="draggable-item flex items-stretch gap-1" draggable="true" data-content-id="${content.id}">
+            <span class="drag-handle flex items-center px-1 text-gray-300 hover:text-gray-500 cursor-grab flex-shrink-0" title="Arrastrar para reordenar">
+                <i class="fas fa-grip-vertical"></i>
+            </span>
+            <div class="flex-1 min-w-0">${renderManagerContentItem(content)}</div>
+        </div>
+    `;
+}
+
+// =================================
+// Drag-and-drop para reordenar contenido
+// =================================
+// Delegado en document (no en cada lista): las listas se reconstruyen
+// por completo en cada re-render, así que un listener por documento no
+// necesita re-engancharse cada vez que se agrega/borra/reordena algo.
+
+let draggedItem = null;
+
+document.addEventListener('dragstart', (e) => {
+    const item = e.target.closest('.draggable-item');
+    if (!item) return;
+    draggedItem = item;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => item.classList.add('opacity-40'), 0);
+});
+
+document.addEventListener('dragend', () => {
+    if (draggedItem) draggedItem.classList.remove('opacity-40');
+    draggedItem = null;
+});
+
+document.addEventListener('dragover', (e) => {
+    if (!draggedItem) return;
+    const container = e.target.closest('.sortable-list');
+    // Solo se puede reordenar DENTRO de la misma lista (misma carpeta/nivel
+    // Y mismo tipo de lista, Videos o Contenido) — arrastrar hacia otra
+    // lista no hace nada, a propósito: no se mueve contenido entre
+    // carpetas ni entre Videos y Contenido arrastrando.
+    if (!container || !container.contains(draggedItem)) return;
+    e.preventDefault();
+
+    const afterElement = getDragAfterElement(container, e.clientY);
+    if (afterElement == null) {
+        container.appendChild(draggedItem);
+    } else {
+        container.insertBefore(draggedItem, afterElement);
+    }
+});
+
+document.addEventListener('drop', async (e) => {
+    if (!draggedItem) return;
+    const container = e.target.closest('.sortable-list');
+    if (!container || !container.contains(draggedItem)) return;
+    e.preventDefault();
+    await persistContentOrder(container);
+});
+
+function getDragAfterElement(container, y) {
+    const items = [...container.querySelectorAll('.draggable-item:not(.opacity-40)')];
+    return items.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) {
+            return { offset, element: child };
+        }
+        return closest;
+    }, { offset: Number.NEGATIVE_INFINITY, element: null }).element;
+}
+
+/**
+ * Persiste el orden visual actual de una lista contra el servidor. Si
+ * falla, se vuelve a renderizar todo el panel para recuperar el orden
+ * real (el UPDATE no llegó a aplicarse, así que el servidor sigue
+ * teniendo el orden de antes de arrastrar).
+ */
+async function persistContentOrder(container) {
+    const courseId = container.dataset.courseId;
+    const ids = [...container.querySelectorAll('.draggable-item')].map(el => Number(el.dataset.contentId));
+
+    try {
+        await contentsAPI.reorder(courseId, ids);
+    } catch (error) {
+        showToast(error.message || 'Error al reordenar el contenido', 'error');
+        contentManagerRerender();
+    }
 }
 
 function renderContentItem(content, type) {

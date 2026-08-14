@@ -250,7 +250,7 @@ class Course {
    */
   static async getEnrolledStudents(courseId) {
     const [rows] = await pool.query(
-      `SELECT u.id, u.name, u.email, e.progress, e.enrolled_at, e.completed_at
+      `SELECT u.id, u.name, u.email, u.last_login, e.progress, e.enrolled_at, e.completed_at
        FROM enrollments e
        INNER JOIN users u ON u.id = e.user_id
        WHERE e.course_id = ?
