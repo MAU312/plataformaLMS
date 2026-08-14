@@ -229,6 +229,21 @@ document.addEventListener('dragend', () => {
     draggedItem = null;
 });
 
+/**
+ * true si `container` es la lista de la que salió `draggedItem` — NO
+ * alcanza con `container.contains(draggedItem)`: desde que una carpeta es
+ * un ítem arrastrable más de la lista de nivel superior (ver
+ * renderDraggableFolderItem), la lista interna de esa carpeta queda
+ * anidada DENTRO del DOM de la lista externa, así que "contains" da true
+ * aunque sean listas distintas — eso dejaba sacar un contenido de adentro
+ * de una carpeta arrastrándolo hacia afuera (o viceversa). Comparando
+ * contra el ".sortable-list" ancestro más cercano del propio ítem
+ * arrastrado nos aseguramos de que sea EXACTAMENTE la misma lista.
+ */
+function isSameSortableList(container, item) {
+    return !!container && item.closest('.sortable-list') === container;
+}
+
 document.addEventListener('dragover', (e) => {
     if (!draggedItem) return;
     const container = e.target.closest('.sortable-list');
@@ -236,7 +251,7 @@ document.addEventListener('dragover', (e) => {
     // Y mismo tipo de lista, Videos o Contenido) — arrastrar hacia otra
     // lista no hace nada, a propósito: no se mueve contenido entre
     // carpetas ni entre Videos y Contenido arrastrando.
-    if (!container || !container.contains(draggedItem)) return;
+    if (!isSameSortableList(container, draggedItem)) return;
     e.preventDefault();
 
     const afterElement = getDragAfterElement(container, e.clientY);
@@ -250,7 +265,7 @@ document.addEventListener('dragover', (e) => {
 document.addEventListener('drop', async (e) => {
     if (!draggedItem) return;
     const container = e.target.closest('.sortable-list');
-    if (!container || !container.contains(draggedItem)) return;
+    if (!isSameSortableList(container, draggedItem)) return;
     e.preventDefault();
     await persistContentOrder(container);
 });
