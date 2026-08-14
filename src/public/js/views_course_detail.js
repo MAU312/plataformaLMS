@@ -480,22 +480,14 @@ function renderCourseFolderCard(folder, allContents, hasAccess, canTrackProgress
     const allCompleted = canTrackProgress && trackableItems.length > 0 && completedItems === trackableItems.length;
 
     return `
-        <details class="bg-white rounded-xl border ${allCompleted ? 'border-green-200' : 'border-gray-100'} overflow-hidden" open>
+        <details id="folder-details-${folder.id}" data-folder-id="${folder.id}" class="bg-white rounded-xl border ${allCompleted ? 'border-green-200' : 'border-gray-100'} overflow-hidden" open>
             <summary class="cursor-pointer list-none p-4 flex items-center gap-3">
-                <i class="fas ${allCompleted ? 'fa-folder text-green-500' : 'fa-folder-open text-cenat-green'} text-xl"></i>
+                <i id="folder-icon-${folder.id}" class="fas ${allCompleted ? 'fa-folder text-green-500' : 'fa-folder-open text-cenat-green'} text-xl"></i>
                 <div class="flex-1 min-w-0">
                     <p class="font-medium text-gray-900">${escapeHtml(folder.title)}</p>
                     <p class="text-xs text-gray-400">${items.length} ${items.length === 1 ? 'elemento' : 'elementos'}</p>
                 </div>
-                ${canTrackProgress && trackableItems.length > 0 ? (
-                    allCompleted ? `
-                        <span class="flex items-center gap-1 text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-full flex-shrink-0">
-                            <i class="fas fa-check-circle"></i> Completada
-                        </span>
-                    ` : `
-                        <span class="text-xs text-gray-400 flex-shrink-0">${completedItems}/${trackableItems.length} completado${completedItems === 1 ? '' : 's'}</span>
-                    `
-                ) : ''}
+                <span id="folder-badge-${folder.id}" class="flex-shrink-0">${renderFolderBadgeContent(canTrackProgress, trackableItems.length, completedItems, allCompleted)}</span>
             </summary>
             <div class="px-4 pb-4 space-y-2 border-t border-gray-100 pt-3">
                 ${items.length > 0 ? items.map(item => renderFolderItem(item, canTrackProgress, hasAccess, submissionsByTask[item.id])).join('') : `
@@ -504,6 +496,26 @@ function renderCourseFolderCard(folder, allContents, hasAccess, canTrackProgress
             </div>
         </details>
     `;
+}
+
+/**
+ * El contenido del badge de "completada"/"X de Y" en el encabezado de una
+ * carpeta — factorizado porque se necesita tanto al renderizar la página
+ * como al refrescarlo en el sitio después de tildar un checkbox (ver
+ * refreshFolderBadge), sin duplicar el markup en los dos lugares.
+ */
+function renderFolderBadgeContent(canTrackProgress, trackableCount, completedCount, allCompleted) {
+    if (!canTrackProgress || trackableCount === 0) return '';
+
+    if (allCompleted) {
+        return `
+            <span class="flex items-center gap-1 text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                <i class="fas fa-check-circle"></i> Completada
+            </span>
+        `;
+    }
+
+    return `<span class="text-xs text-gray-400">${completedCount}/${trackableCount} completado${completedCount === 1 ? '' : 's'}</span>`;
 }
 
 function renderTaskCard(task, submission, hasAccess) {
@@ -642,6 +654,16 @@ async function toggleContentCompleted(contentId, markAsCompleted, courseId) {
         if (progressFill) progressFill.style.width = `${newProgress}%`;
         if (progressLabel) progressLabel.textContent = `${newProgress}% (${completedContents}/${totalContents})`;
 
+        // Si este contenido vive dentro de una carpeta, su badge de
+        // "completada"/"X de Y" no se actualiza solo con lo de arriba (se
+        // calculó una sola vez al renderizar la página) — hay que
+        // recalcularlo. No sabemos el folder_id de antemano acá, así que
+        // se resuelve subiendo desde el checkbox hasta su <details>.
+        const folderDetails = checkbox ? checkbox.closest('details[data-folder-id]') : null;
+        if (folderDetails) {
+            await refreshFolderBadge(folderDetails.dataset.folderId, courseId);
+        }
+
         // Toast + celebración si llegó al 100%
         if (markAsCompleted && newProgress === 100) {
             showCourseCompletionModal(courseId);
@@ -651,6 +673,46 @@ async function toggleContentCompleted(contentId, markAsCompleted, courseId) {
 
     } catch (error) {
         showToast(error.message || 'Error al actualizar el progreso', 'error');
+    }
+}
+
+/**
+ * Recalcula el badge de una carpeta (X/Y completados, o "Completada")
+ * pidiendo el contenido fresco del curso — el checkbox recién tildado ya
+ * actualizó su propio estado visual, pero el conteo de la carpeta necesita
+ * mirar TODOS sus items (incluye tareas, que no tienen checkbox propio:
+ * se completan al entregar, no clickeando acá).
+ */
+async function refreshFolderBadge(folderId, courseId) {
+    try {
+        const contentsResponse = await contentsAPI.getByCourse(courseId);
+        const contents = contentsResponse.data || [];
+        const items = contents.filter(c => String(c.folder_id) === String(folderId));
+        const trackableItems = items.filter(c => c.type !== 'forum');
+        const completedItems = trackableItems.filter(c => c.completed).length;
+        const allCompleted = trackableItems.length > 0 && completedItems === trackableItems.length;
+
+        const badgeEl = document.getElementById(`folder-badge-${folderId}`);
+        if (badgeEl) badgeEl.innerHTML = renderFolderBadgeContent(true, trackableItems.length, completedItems, allCompleted);
+
+        const detailsEl = document.getElementById(`folder-details-${folderId}`);
+        if (detailsEl) {
+            detailsEl.classList.toggle('border-green-200', allCompleted);
+            detailsEl.classList.toggle('border-gray-100', !allCompleted);
+        }
+
+        const iconEl = document.getElementById(`folder-icon-${folderId}`);
+        if (iconEl) {
+            iconEl.classList.toggle('fa-folder', allCompleted);
+            iconEl.classList.toggle('fa-folder-open', !allCompleted);
+            iconEl.classList.toggle('text-green-500', allCompleted);
+            iconEl.classList.toggle('text-cenat-green', !allCompleted);
+        }
+    } catch (error) {
+        // No crítico: el checkbox y la barra general ya quedaron
+        // actualizados. Si esto falla, el badge de la carpeta queda
+        // desactualizado hasta la próxima recarga, sin romper el resto.
+        console.error('Error al refrescar el estado de la carpeta:', error);
     }
 }
 
