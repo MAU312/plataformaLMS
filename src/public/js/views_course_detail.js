@@ -49,7 +49,11 @@ window.renderCourseDetail = async function(params) {
         // renderContentItemByType) — el mismo patrón que ya usa cada
         // carpeta para su propio contenido.
         const videos = contents.filter(c => c.type === 'video' && isTopLevel(c));
-        const mixedItems = contents.filter(c => c.type !== 'video' && c.type !== 'folder' && isTopLevel(c));
+        // Una carpeta (folder_id siempre null, sin subcarpetas) se mezcla
+        // en la misma lista que URL/Archivo/Texto/Tarea/Foro, en el orden
+        // exacto que definió el profesor — así puede aparecer antes o
+        // después de una tarea puntual (ver renderContentItemByType).
+        const mixedItems = contents.filter(c => c.type !== 'video' && isTopLevel(c));
 
         // Conteos de la tarjeta de información: sobre TODO el curso,
         // incluyendo lo que está dentro de una carpeta.
@@ -126,7 +130,7 @@ window.renderCourseDetail = async function(params) {
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <!-- Columna principal: Videos -->
                     <div class="lg:col-span-2 space-y-6">
-                        <h2 class="text-xl font-bold text-gray-900 flex items-center">
+                        <h2 id="videos-section" class="text-xl font-bold text-gray-900 flex items-center scroll-mt-4">
                             <i class="fas fa-play-circle text-cenat-green mr-2"></i>
                             Videos del curso
                         </h2>
@@ -164,17 +168,14 @@ window.renderCourseDetail = async function(params) {
                                 Contenido
                             </h2>
                             <div class="space-y-3">
-                                ${mixedItems.map(item => renderContentItemByType(item, isLoggedIn && isEnrolled, hasAccess, submissionsByTask[item.id])).join('')}
-                            </div>
-                        ` : ''}
-
-                        ${folders.length > 0 ? `
-                            <h2 class="text-xl font-bold text-gray-900 flex items-center mt-8">
-                                <i class="fas fa-folder text-cenat-green mr-2"></i>
-                                Carpetas
-                            </h2>
-                            <div class="space-y-3">
-                                ${folders.map(folder => renderCourseFolderCard(folder, contents, hasAccess, isLoggedIn && isEnrolled, submissionsByTask)).join('')}
+                                ${mixedItems.map(item => `
+                                    <div id="content-anchor-${item.id}" class="scroll-mt-4">
+                                        ${item.type === 'folder'
+                                            ? renderCourseFolderCard(item, contents, hasAccess, isLoggedIn && isEnrolled, submissionsByTask)
+                                            : renderContentItemByType(item, isLoggedIn && isEnrolled, hasAccess, submissionsByTask[item.id])
+                                        }
+                                    </div>
+                                `).join('')}
                             </div>
                         ` : ''}
                     </div>
@@ -188,13 +189,13 @@ window.renderCourseDetail = async function(params) {
                                 Información del curso
                             </h3>
                             <ul class="text-sm text-gray-600 space-y-1">
-                                <li><i class="fas fa-video mr-2 text-gray-400"></i>${allVideosCount} videos</li>
-                                <li><i class="fas fa-file mr-2 text-gray-400"></i>${allFilesCount} archivos</li>
-                                ${allUrlsCount > 0 ? `<li><i class="fas fa-link mr-2 text-gray-400"></i>${allUrlsCount} videos externos</li>` : ''}
-                                ${allTextsCount > 0 ? `<li><i class="fas fa-align-left mr-2 text-gray-400"></i>${allTextsCount} lecturas</li>` : ''}
-                                ${allTasksCount > 0 ? `<li><i class="fas fa-tasks mr-2 text-gray-400"></i>${allTasksCount} tareas</li>` : ''}
-                                ${allForumsCount > 0 ? `<li><i class="fas fa-comments mr-2 text-gray-400"></i>${allForumsCount} foros</li>` : ''}
-                                ${folders.length > 0 ? `<li><i class="fas fa-folder mr-2 text-gray-400"></i>${folders.length} carpetas</li>` : ''}
+                                ${renderCourseInfoLink('fa-video', allVideosCount, 'videos', 'videos-section')}
+                                ${renderCourseInfoLink('fa-file', allFilesCount, 'archivos', anchorForType(contents, 'file'))}
+                                ${allUrlsCount > 0 ? renderCourseInfoLink('fa-link', allUrlsCount, 'videos externos', anchorForType(contents, 'url')) : ''}
+                                ${allTextsCount > 0 ? renderCourseInfoLink('fa-align-left', allTextsCount, 'lecturas', anchorForType(contents, 'text')) : ''}
+                                ${allTasksCount > 0 ? renderCourseInfoLink('fa-tasks', allTasksCount, 'tareas', anchorForType(contents, 'task')) : ''}
+                                ${allForumsCount > 0 ? renderCourseInfoLink('fa-comments', allForumsCount, 'foros', anchorForType(contents, 'forum')) : ''}
+                                ${folders.length > 0 ? renderCourseInfoLink('fa-folder', folders.length, 'carpetas', anchorForType(contents, 'folder')) : ''}
                                 <li><i class="fas fa-users mr-2 text-gray-400"></i>${course.enrolled_count || 0} inscritos</li>
                             </ul>
                         </div>
@@ -273,6 +274,38 @@ window.renderCourseDetail = async function(params) {
         `;
     }
 };
+
+/**
+ * Id del anchor (ver "content-anchor-${id}" en el renderizado de
+ * mixedItems y de renderCourseFolderCard) del PRIMER contenido de un tipo
+ * dado, en cualquier lugar del curso (a nivel superior o dentro de una
+ * carpeta). Es lo que hace clickeable la tarjeta "Información del curso":
+ * clickear "3 foros" baja hasta el primer foro, sin importar si está
+ * suelto o adentro de una carpeta.
+ */
+function anchorForType(contents, type) {
+    const found = contents.find(c => c.type === type);
+    return found ? `content-anchor-${found.id}` : null;
+}
+
+/**
+ * Un renglón de la tarjeta "Información del curso": clickeable (baja hasta
+ * targetId con scroll suave) solo cuando efectivamente hay algo a dónde
+ * bajar — si targetId viene null (ej. 0 archivos) se muestra como texto
+ * plano, igual que antes.
+ */
+function renderCourseInfoLink(icon, count, label, targetId) {
+    if (!targetId) {
+        return `<li><i class="fas ${icon} mr-2 text-gray-400"></i>${count} ${label}</li>`;
+    }
+    return `
+        <li>
+            <button onclick="scrollToElement('${targetId}')" class="text-left hover:text-cenat-green hover:underline transition">
+                <i class="fas ${icon} mr-2 text-gray-400"></i>${count} ${label}
+            </button>
+        </li>
+    `;
+}
 
 function renderContentRow(content, isActiveVideo, canTrackProgress, type, hasAccess) {
     const icon = type === 'video' ? 'fa-play-circle' : getFileIcon(content.url || '');
@@ -454,7 +487,11 @@ function renderCourseFolderCard(folder, allContents, hasAccess, canTrackProgress
                 <span id="folder-badge-${folder.id}" class="flex-shrink-0">${renderFolderBadgeContent(canTrackProgress, trackableItems.length, completedItems, allCompleted)}</span>
             </summary>
             <div class="px-4 pb-4 space-y-2 border-t border-gray-100 pt-3">
-                ${items.length > 0 ? items.map(item => renderContentItemByType(item, canTrackProgress, hasAccess, submissionsByTask[item.id])).join('') : `
+                ${items.length > 0 ? items.map(item => `
+                    <div id="content-anchor-${item.id}" class="scroll-mt-4">
+                        ${renderContentItemByType(item, canTrackProgress, hasAccess, submissionsByTask[item.id])}
+                    </div>
+                `).join('') : `
                     <p class="text-gray-500 text-sm text-center py-2">Esta carpeta todavía no tiene contenido</p>
                 `}
             </div>

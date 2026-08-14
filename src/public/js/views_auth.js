@@ -96,6 +96,25 @@ window.renderLogin = async function(params) {
                             </a>
                         </p>
                     </div>
+
+                    <!-- Separador -->
+                    <div class="relative py-2">
+                        <div class="absolute inset-0 flex items-center">
+                            <div class="w-full border-t border-gray-200"></div>
+                        </div>
+                        <div class="relative flex justify-center text-xs">
+                            <span class="bg-white px-3 text-gray-400">o</span>
+                        </div>
+                    </div>
+
+                    <!-- Acceder como invitado -->
+                    <button type="button" onclick="navigateTo('/')" class="w-full py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition">
+                        <i class="fas fa-eye mr-2"></i>
+                        Acceder como invitado
+                    </button>
+                    <p class="text-xs text-gray-400 text-center">
+                        Como invitado solo podés explorar el catálogo de cursos
+                    </p>
                 </form>
             </div>
         </div>

@@ -28,7 +28,7 @@ function renderCourseContentManagerHTML(course, contents) {
 
     return `
         <div class="space-y-6">
-            <!-- Sección Carpetas -->
+            <!-- Crear carpeta -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-lg font-bold text-gray-900">
@@ -41,42 +41,48 @@ function renderCourseContentManagerHTML(course, contents) {
                 <div id="add-folder-form-container"></div>
                 ${folders.length === 0 ? `
                     <p class="text-gray-500 text-sm text-center py-4">No hay carpetas creadas aún. Crea una para agrupar contenido del curso (ej. varios archivos de un mismo tema).</p>
-                ` : ''}
+                ` : `
+                    <p class="text-gray-400 text-xs">Las carpetas creadas aparecen mezcladas en "Contenido" abajo — arrástralas para ubicarlas donde quieras, incluso antes que un video.</p>
+                `}
             </div>
 
-            ${folders.map(folder => renderFolderCard(course.id, contents, folder)).join('')}
-
-            <div class="space-y-6">
-                ${folders.length > 0 ? `
-                    <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2 pt-2">
-                        <i class="fas fa-inbox text-gray-400"></i> Contenido sin carpeta
-                    </h2>
-                ` : ''}
-                ${renderContentTypeSections(course.id, contents, null, false)}
-            </div>
+            ${renderContentTypeSections(course.id, contents, null, false)}
         </div>
     `;
 }
 
-function renderFolderCard(courseId, contents, folder) {
+/**
+ * Una carpeta se dibuja como un ítem arrastrable más dentro de la lista
+ * "Contenido" (ver mixedSection en renderContentTypeSections), no como
+ * sección aparte — así se puede reordenar respecto a una tarea o un foro,
+ * o incluso subirla por encima de Videos. Por dentro sigue siendo un
+ * <details> con sus propias secciones de contenido (renderContentTypeSections
+ * recursivo, folderId = el id de esta carpeta).
+ */
+function renderDraggableFolderItem(courseId, contents, folder) {
     const itemCount = contents.filter(c => c.folder_id === folder.id).length;
     return `
-        <details class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" open>
-            <summary class="cursor-pointer list-none p-6 flex items-center justify-between">
-                <div class="flex items-center gap-2 min-w-0">
-                    <i class="fas fa-chevron-right text-gray-400 text-xs folder-chevron transition-transform"></i>
-                    <i class="fas fa-folder-open text-cenat-green"></i>
-                    <span class="font-bold text-gray-900 truncate">${escapeHtml(folder.title)}</span>
-                    <span class="text-xs text-gray-400 whitespace-nowrap">(${itemCount} ${itemCount === 1 ? 'elemento' : 'elementos'})</span>
+        <div class="draggable-item flex items-stretch gap-1" draggable="true" data-content-id="${folder.id}">
+            <span class="drag-handle flex items-center px-1 text-gray-300 hover:text-gray-500 cursor-grab flex-shrink-0" title="Arrastrar para reordenar">
+                <i class="fas fa-grip-vertical"></i>
+            </span>
+            <details class="flex-1 min-w-0 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" open>
+                <summary class="cursor-pointer list-none p-4 flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <i class="fas fa-chevron-right text-gray-400 text-xs folder-chevron transition-transform"></i>
+                        <i class="fas fa-folder-open text-cenat-green"></i>
+                        <span class="font-bold text-gray-900 truncate">${escapeHtml(folder.title)}</span>
+                        <span class="text-xs text-gray-400 whitespace-nowrap">(${itemCount} ${itemCount === 1 ? 'elemento' : 'elementos'})</span>
+                    </div>
+                    <button onclick="event.preventDefault(); deleteContentHandler(${folder.id}, 'folder')" class="text-red-500 hover:text-red-700 px-2 flex-shrink-0" title="Borrar carpeta">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </summary>
+                <div class="px-4 pb-4 space-y-4 border-t border-gray-100 pt-4">
+                    ${renderContentTypeSections(courseId, contents, folder.id, true)}
                 </div>
-                <button onclick="event.preventDefault(); deleteContentHandler(${folder.id}, 'folder')" class="text-red-500 hover:text-red-700 px-2 flex-shrink-0" title="Borrar carpeta">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </summary>
-            <div class="px-6 pb-6 space-y-4 border-t border-gray-100 pt-4">
-                ${renderContentTypeSections(courseId, contents, folder.id, true)}
-            </div>
-        </details>
+            </details>
+        </div>
     `;
 }
 
@@ -96,7 +102,11 @@ function renderFolderCard(courseId, contents, folder) {
 function renderContentTypeSections(courseId, contents, folderId, nested) {
     const inScope = c => (c.folder_id || null) === folderId;
     const videos = contents.filter(c => c.type === 'video' && inScope(c));
-    const mixedItems = contents.filter(c => c.type !== 'video' && c.type !== 'folder' && inScope(c));
+    // Una carpeta siempre tiene folder_id null (no hay subcarpetas), así
+    // que solo puede aparecer en la lista de nivel superior (folderId ===
+    // null) — la llamada recursiva para dibujar el contenido DENTRO de una
+    // carpeta nunca la vuelve a incluir, sin necesidad de excluirla a mano.
+    const mixedItems = contents.filter(c => c.type !== 'video' && inScope(c));
 
     const folderArg = folderId === null ? 'null' : folderId;
     const wrap = nested ? '' : 'bg-white rounded-xl shadow-sm border border-gray-100 p-6';
@@ -150,7 +160,10 @@ function renderContentTypeSections(courseId, contents, folderId, nested) {
                 <p class="text-xs text-gray-400 mb-2"><i class="fas fa-arrows-alt-v mr-1"></i> Arrastra para cambiar el orden</p>
             ` : ''}
             <div id="${scopeId('content-list', folderId)}" class="space-y-2 sortable-list" data-course-id="${courseId}">
-                ${mixedItems.length > 0 ? mixedItems.map(renderDraggableItem).join('') : `
+                ${mixedItems.length > 0 ? mixedItems.map(item => item.type === 'folder'
+                    ? renderDraggableFolderItem(courseId, contents, item)
+                    : renderDraggableItem(item)
+                ).join('') : `
                     <p class="text-gray-500 text-sm text-center py-4">No hay contenido agregado aún</p>
                 `}
             </div>
@@ -243,7 +256,12 @@ document.addEventListener('drop', async (e) => {
 });
 
 function getDragAfterElement(container, y) {
-    const items = [...container.querySelectorAll('.draggable-item:not(.opacity-40)')];
+    // ":scope >" limita a los hijos DIRECTOS de esta lista — necesario
+    // ahora que una carpeta puede contener su propia lista arrastrable
+    // anidada (ver renderDraggableFolderItem); sin el ":scope >", un
+    // querySelectorAll normal también trae los ítems de DENTRO de una
+    // carpeta expandida y rompe el cálculo de posición.
+    const items = [...container.querySelectorAll(':scope > .draggable-item:not(.opacity-40)')];
     return items.reduce((closest, child) => {
         const box = child.getBoundingClientRect();
         const offset = y - box.top - box.height / 2;
@@ -262,7 +280,10 @@ function getDragAfterElement(container, y) {
  */
 async function persistContentOrder(container) {
     const courseId = container.dataset.courseId;
-    const ids = [...container.querySelectorAll('.draggable-item')].map(el => Number(el.dataset.contentId));
+    // Mismo motivo que en getDragAfterElement: solo los hijos directos son
+    // los que pertenecen a ESTA lista/carpeta — los de una carpeta anidada
+    // expandida adentro se reordenan con su propio POST /reorder aparte.
+    const ids = [...container.querySelectorAll(':scope > .draggable-item')].map(el => Number(el.dataset.contentId));
 
     try {
         await contentsAPI.reorder(courseId, ids);
