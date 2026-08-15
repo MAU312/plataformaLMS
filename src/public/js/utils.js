@@ -62,6 +62,16 @@ function formatDate(dateString) {
     return new Date(dateString).toLocaleDateString('es-ES', options);
 }
 
+/**
+ * Igual que formatDate pero agregando la hora — para casos donde saber
+ * solo el día no alcanza (ej. a qué hora entregó una tarea un estudiante).
+ */
+function formatDateTime(dateString) {
+    if (!dateString) return '';
+    const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+    return new Date(dateString).toLocaleString('es-ES', options);
+}
+
 function formatFileSize(bytes) {
     if (!bytes || bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -358,6 +368,7 @@ window.showToast = showToast;
 window.hideToast = hideToast;
 window.showLoading = showLoading;
 window.formatDate = formatDate;
+window.formatDateTime = formatDateTime;
 window.formatFileSize = formatFileSize;
 window.formatDuration = formatDuration;
 window.isValidEmail = isValidEmail;

@@ -77,7 +77,7 @@ function renderSubmissionRow(s) {
                 ${escapeHtml(s.student_name)}<br>
                 <span class="text-xs text-gray-400 font-normal">${escapeHtml(s.student_email)}</span>
             </td>
-            <td class="py-3 px-4 text-gray-500">${formatDate(s.submitted_at)}</td>
+            <td class="py-3 px-4 text-gray-500">${formatDateTime(s.submitted_at)}</td>
             <td class="py-3 px-4">
                 <span class="badge ${reviewed ? 'badge-active' : 'badge-inactive'}">${reviewed ? 'Revisada' : 'Pendiente'}</span>
             </td>

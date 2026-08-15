@@ -572,7 +572,7 @@ function renderTaskCard(task, submission, hasAccess) {
                                     <i class="fas fa-check-circle mr-1"></i>
                                     ${isReviewed ? 'Entrega revisada' : 'Entregado — pendiente de revisión'}
                                 </p>
-                                <p class="text-xs text-gray-500 mt-1">Entregado el ${formatDate(submission.submitted_at)}</p>
+                                <p class="text-xs text-gray-500 mt-1">Entregado el ${formatDateTime(submission.submitted_at)}</p>
                                 ${isReviewed && submission.feedback ? `
                                     <p class="text-sm text-gray-700 mt-2"><strong>Comentario del profesor:</strong> ${escapeHtml(submission.feedback)}</p>
                                 ` : ''}
