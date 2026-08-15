@@ -49,6 +49,15 @@ window.renderCourseDetail = async function(params) {
         // renderContentItemByType) — el mismo patrón que ya usa cada
         // carpeta para su propio contenido.
         const videos = contents.filter(c => c.type === 'video' && isTopLevel(c));
+        // El reproductor grande debe existir si hay CUALQUIER video en el
+        // curso, esté o no dentro de una carpeta — si no, un curso cuyos
+        // videos están todos agrupados en una carpeta no tenía dónde
+        // reproducirlos (el click en la fila del video de la carpeta no
+        // hacía nada porque #main-video ni existía). Se prioriza un video
+        // de nivel superior como el que carga primero; si no hay ninguno,
+        // se usa el primer video que aparezca (de alguna carpeta).
+        const allVideos = contents.filter(c => c.type === 'video');
+        const initialVideo = videos[0] || allVideos[0];
         // Una carpeta (folder_id siempre null, sin subcarpetas) se mezcla
         // en la misma lista que URL/Archivo/Texto/Tarea/Foro, en el orden
         // exacto que definió el profesor — así puede aparecer antes o
@@ -135,11 +144,11 @@ window.renderCourseDetail = async function(params) {
                             Videos del curso
                         </h2>
 
-                        ${videos.length > 0 ? `
+                        ${allVideos.length > 0 ? `
                             <div class="video-player-container mb-4" id="main-video-container">
                                 ${hasAccess ? `
                                 <video id="main-video" controls>
-                                    <source src="${videos[0].url}" type="video/mp4">
+                                    <source src="${initialVideo.url}" type="video/mp4">
                                     Tu navegador no soporta la reproducción de video.
                                 </video>
                                 ` : `
@@ -149,12 +158,16 @@ window.renderCourseDetail = async function(params) {
                                 </div>
                                 `}
                             </div>
-                            <h3 id="current-video-title" class="text-lg font-semibold text-gray-800">${escapeHtml(videos[0].title)}</h3>
-                            <p class="text-gray-600 text-sm mb-4">${escapeHtml(videos[0].description || '')}</p>
+                            <h3 id="current-video-title" class="text-lg font-semibold text-gray-800">${escapeHtml(initialVideo.title)}</h3>
+                            <p class="text-gray-600 text-sm mb-4">${escapeHtml(initialVideo.description || '')}</p>
 
-                            <div class="space-y-2">
-                                ${videos.map((video, index) => renderContentRow(video, index === 0, isLoggedIn && isEnrolled, 'video', hasAccess)).join('')}
-                            </div>
+                            ${videos.length > 0 ? `
+                                <div class="space-y-2">
+                                    ${videos.map((video, index) => renderContentRow(video, index === 0, isLoggedIn && isEnrolled, 'video', hasAccess)).join('')}
+                                </div>
+                            ` : `
+                                <p class="text-sm text-gray-400">Los videos de este curso están agrupados en una carpeta — bajá hasta "Contenido" para verlos y elegir cuál reproducir.</p>
+                            `}
                         ` : `
                             <div class="empty-state bg-white rounded-xl border border-gray-100">
                                 <i class="fas fa-video-slash"></i>
@@ -217,10 +230,11 @@ window.renderCourseDetail = async function(params) {
                 if (e.target.closest('.content-checkbox')) return;
 
                 // Un video dentro de una carpeta también tiene esta clase
-                // (ver renderContentItemByType), pero si el curso no tiene
-                // NINGÚN video a nivel superior no existe el reproductor
-                // grande de arriba — sin este chequeo, hacer click en un
-                // video de carpeta rompía con un error de consola.
+                // (ver renderContentItemByType) y ahora comparte el mismo
+                // reproductor grande de arriba (ver allVideos/initialVideo
+                // más arriba) — este chequeo solo protege el caso de un
+                // curso sin ningún video (ni sin acceso), donde #main-video
+                // ni se dibuja.
                 const mainVideo = document.getElementById('main-video');
                 if (!mainVideo) return;
 
