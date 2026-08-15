@@ -4,6 +4,8 @@ import fs from 'fs';
 import * as courseController from '../../src/controllers/course.controller.js';
 import Course from '../../src/models/Course.js';
 import User from '../../src/models/User.js';
+import Content from '../../src/models/Content.js';
+import TaskSubmission from '../../src/models/TaskSubmission.js';
 import certificateGenerator from '../../src/utils/certificate.js';
 import { mockReq, mockRes } from '../helpers/http.js';
 
@@ -369,4 +371,81 @@ test('getCourseStudents: devuelve el curso y la lista de estudiantes con su prog
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.data.students.length, 2);
   assert.equal(res.body.data.course.title, 'Curso');
+});
+
+// =================================
+// deleteCourse
+// =================================
+
+test('deleteCourse: 404 si el curso no existe', async (t) => {
+  t.mock.method(Course, 'findById', async () => undefined);
+  const req = mockReq({ params: { id: 1 } });
+  const res = mockRes();
+  await courseController.deleteCourse(req, res);
+  assert.equal(res.statusCode, 404);
+});
+
+test('deleteCourse: borra la miniatura del curso y el archivo de cada contenido (menos type=url)', async (t) => {
+  t.mock.method(Course, 'findById', async () => ({ id: 1, thumbnail: '/uploads/thumbnails/x.jpg' }));
+  t.mock.method(Content, 'findByCourse', async () => ([
+    { id: 10, type: 'video', url: '/uploads/videos/a.mp4' },
+    { id: 11, type: 'file', url: '/uploads/files/b.pdf' },
+    { id: 12, type: 'url', url: 'https://youtube.com/watch?v=x' },
+    { id: 13, type: 'text', url: null }
+  ]));
+  t.mock.method(TaskSubmission, 'findAllByContent', async () => ([]));
+  t.mock.method(Course, 'delete', async () => true);
+  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
+  t.mock.method(fs, 'existsSync', () => true);
+
+  const req = mockReq({ params: { id: 1 } });
+  const res = mockRes();
+  await courseController.deleteCourse(req, res);
+
+  assert.equal(res.statusCode, 200);
+  // 1 miniatura + video + file = 3 (la url externa y el texto sin archivo no cuentan)
+  assert.equal(unlinkCall.mock.calls.length, 3);
+});
+
+test('deleteCourse: borra el archivo de cada entrega de cada tarea del curso (si no, quedan huérfanas)', async (t) => {
+  t.mock.method(Course, 'findById', async () => ({ id: 1, thumbnail: null }));
+  t.mock.method(Content, 'findByCourse', async () => ([
+    { id: 20, type: 'task', url: '/uploads/files/instrucciones.pdf' },
+    { id: 21, type: 'task', url: null }
+  ]));
+  const findSubmissionsCall = t.mock.method(TaskSubmission, 'findAllByContent', async (contentId) => {
+    if (contentId === 20) {
+      return [
+        { id: 1, file_url: '/uploads/submissions/a.pdf' },
+        { id: 2, file_url: '/uploads/submissions/b.docx' }
+      ];
+    }
+    return [];
+  });
+  t.mock.method(Course, 'delete', async () => true);
+  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
+  t.mock.method(fs, 'existsSync', () => true);
+
+  const req = mockReq({ params: { id: 1 } });
+  const res = mockRes();
+  await courseController.deleteCourse(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(findSubmissionsCall.mock.calls.length, 2, 'debe consultar entregas para cada tarea del curso');
+  // 1 instrucciones de la tarea 20 + 2 entregas de la tarea 20 = 3
+  assert.equal(unlinkCall.mock.calls.length, 3);
+});
+
+test('deleteCourse: un curso sin contenido no intenta borrar ningún archivo de contenido', async (t) => {
+  t.mock.method(Course, 'findById', async () => ({ id: 1, thumbnail: null }));
+  t.mock.method(Content, 'findByCourse', async () => ([]));
+  t.mock.method(Course, 'delete', async () => true);
+  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
+
+  const req = mockReq({ params: { id: 1 } });
+  const res = mockRes();
+  await courseController.deleteCourse(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(unlinkCall.mock.calls.length, 0);
 });

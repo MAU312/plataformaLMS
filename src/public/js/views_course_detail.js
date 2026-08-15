@@ -615,9 +615,22 @@ function setupTaskSubmitForms(courseId) {
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
-                await contentsAPI.submit(taskId, formData);
+                const response = await contentsAPI.submit(taskId, formData);
                 showToast('Tarea entregada exitosamente', 'success');
-                renderCourseDetail({ id: courseId });
+                await renderCourseDetail({ id: courseId });
+
+                // Igual que al tildar un checkbox (ver toggleContentCompleted):
+                // si esta entrega era lo último que faltaba para el 100%, debe
+                // salir la misma celebración. El backend ya devuelve el
+                // progreso recalculado en la respuesta de /submit (ver
+                // submission.controller.js), pero acá se estaba ignorando —
+                // por eso completar el curso entregando una tarea (en vez de
+                // tildar un checkbox) se quedaba sin el anuncio, aunque la
+                // barra de progreso y el botón de certificado sí se
+                // actualizaban bien.
+                if (response.data.progress === 100) {
+                    showCourseCompletionModal(courseId);
+                }
 
             } catch (error) {
                 showToast(error.message || 'Error al entregar la tarea', 'error');

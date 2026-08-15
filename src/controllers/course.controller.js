@@ -1,6 +1,7 @@
 import Course from '../models/Course.js';
 import User from '../models/User.js';
 import Content from '../models/Content.js';
+import TaskSubmission from '../models/TaskSubmission.js';
 import { deleteFile } from '../middlewares/upload.middleware.js';
 import certificateGenerator from '../utils/certificate.js';
 
@@ -251,6 +252,24 @@ export const deleteCourse = async (req, res) => {
     // Eliminar miniatura si existe
     if (course.thumbnail) {
       deleteFile(course.thumbnail);
+    }
+
+    // Borrar TODO el resto de archivos del curso antes de borrarlo: las
+    // filas de contents/task_submissions se van solas en cascada (FK ON
+    // DELETE CASCADE en course_id/content_id), pero eso nunca toca el
+    // disco — sin esto, cada video/archivo/instrucciones de tarea del
+    // curso, y cada entrega de cada estudiante, quedaba huérfano en
+    // /uploads. Mismo criterio que deleteContent (content.controller.js)
+    // para un solo contenido, aplicado a todos los contenidos del curso.
+    const contents = await Content.findByCourse(id);
+    for (const content of contents) {
+      if (content.url && content.type !== 'url') {
+        deleteFile(content.url);
+      }
+      if (content.type === 'task') {
+        const submissions = await TaskSubmission.findAllByContent(content.id);
+        submissions.forEach(submission => deleteFile(submission.file_url));
+      }
     }
 
     const deleted = await Course.delete(id);
