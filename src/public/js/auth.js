@@ -161,8 +161,6 @@ function updateUIForAuthenticatedUser() {
     if (userMenuContainerMobile) userMenuContainerMobile.style.display = '';
     if (guestActions) guestActions.style.display = 'none';
     if (guestActionsMobile) guestActionsMobile.style.display = 'none';
-    if (myCoursesLink) myCoursesLink.style.display = '';
-    if (myCoursesLinkMobile) myCoursesLinkMobile.style.display = '';
 
     // Actualizar nombre de usuario
     if (userName && currentUser) {
@@ -178,13 +176,19 @@ function updateUIForAuthenticatedUser() {
         if (adminLinkMobile) adminLinkMobile.style.display = 'none';
     }
 
-    // Mostrar link de "Mis Cursos (Profesor)" si es profesor
+    // Mostrar link de "Mis Cursos (Profesor)" si es profesor — y en ese
+    // caso ocultar "Mis Cursos" (esa es la vista de inscripciones como
+    // estudiante, que a un profesor no le aplica).
     if (currentUser && currentUser.role === 'teacher') {
         if (teacherLink) teacherLink.style.display = 'block';
         if (teacherLinkMobile) teacherLinkMobile.style.display = 'block';
+        if (myCoursesLink) myCoursesLink.style.display = 'none';
+        if (myCoursesLinkMobile) myCoursesLinkMobile.style.display = 'none';
     } else {
         if (teacherLink) teacherLink.style.display = 'none';
         if (teacherLinkMobile) teacherLinkMobile.style.display = 'none';
+        if (myCoursesLink) myCoursesLink.style.display = '';
+        if (myCoursesLinkMobile) myCoursesLinkMobile.style.display = '';
     }
 
     // Agregar event listeners para logout

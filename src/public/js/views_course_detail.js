@@ -569,7 +569,7 @@ function renderCourseFolderCard(folder, allContents, hasAccess, canTrackProgress
     const allCompleted = canTrackProgress && trackableItems.length > 0 && completedItems === trackableItems.length;
 
     return `
-        <details id="folder-details-${folder.id}" data-folder-id="${folder.id}" class="bg-white rounded-xl border ${allCompleted ? 'border-green-200' : 'border-gray-100'} overflow-hidden" open>
+        <details id="folder-details-${folder.id}" data-folder-id="${folder.id}" class="bg-white rounded-xl border ${allCompleted ? 'border-green-200' : 'border-gray-100'} overflow-hidden">
             <summary class="cursor-pointer list-none p-4 flex items-center gap-3">
                 <i id="folder-icon-${folder.id}" class="fas ${allCompleted ? 'fa-folder text-green-500' : 'fa-folder-open text-cenat-green'} text-xl"></i>
                 <div class="flex-1 min-w-0">
