@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'fs';
 import * as userController from '../../src/controllers/user.controller.js';
 import User from '../../src/models/User.js';
 import { mockReq, mockRes } from '../helpers/http.js';
@@ -144,4 +145,79 @@ test('getAllUsers: pasa page/limit/search al modelo con los mismos defaults que 
   await userController.getAllUsers(req, res);
 
   assert.deepEqual(findAllCall.mock.calls[0].arguments[0], { page: 1, limit: 10, search: '' });
+});
+
+// =================================
+// updateMyAvatar / removeMyAvatar
+// =================================
+
+test('updateMyAvatar: 400 si no se sube ningún archivo', async (t) => {
+  const updateCall = t.mock.method(User, 'updateAvatar', async () => true);
+  const req = mockReq({ session: { user: { id: 5, avatar_url: null } } });
+  const res = mockRes();
+
+  await userController.updateMyAvatar(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(updateCall.mock.calls.length, 0);
+});
+
+test('updateMyAvatar: borra la foto anterior SOLO después de confirmar el UPDATE en BD', async (t) => {
+  t.mock.method(User, 'updateAvatar', async () => true);
+  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
+  t.mock.method(fs, 'existsSync', () => true);
+  const req = mockReq({
+    session: { user: { id: 5, avatar_url: '/uploads/avatars/viejo.jpg' } },
+    file: { filename: 'nuevo.jpg' }
+  });
+  const res = mockRes();
+
+  await userController.updateMyAvatar(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.data.avatar_url, '/uploads/avatars/nuevo.jpg');
+  assert.equal(unlinkCall.mock.calls.length, 1, 'debe borrar la foto anterior tras confirmar el UPDATE');
+  assert.equal(req.session.user.avatar_url, '/uploads/avatars/nuevo.jpg', 'la sesión debe reflejar la foto nueva de inmediato');
+});
+
+test('updateMyAvatar: si el UPDATE no afecta ninguna fila, borra la foto RECIÉN subida (no la anterior)', async (t) => {
+  t.mock.method(User, 'updateAvatar', async () => false);
+  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
+  t.mock.method(fs, 'existsSync', () => true);
+  const req = mockReq({
+    session: { user: { id: 5, avatar_url: '/uploads/avatars/viejo.jpg' } },
+    file: { filename: 'nuevo.jpg' }
+  });
+  const res = mockRes();
+
+  await userController.updateMyAvatar(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(unlinkCall.mock.calls.length, 1, 'borra la recién subida, no dos veces ni la anterior');
+});
+
+test('removeMyAvatar: 400 si el usuario no tiene foto de perfil puesta', async (t) => {
+  const updateCall = t.mock.method(User, 'updateAvatar', async () => true);
+  const req = mockReq({ session: { user: { id: 5, avatar_url: null } } });
+  const res = mockRes();
+
+  await userController.removeMyAvatar(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(updateCall.mock.calls.length, 0);
+});
+
+test('removeMyAvatar: borra el archivo, limpia avatar_url en BD y en la sesión', async (t) => {
+  const updateCall = t.mock.method(User, 'updateAvatar', async () => true);
+  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
+  t.mock.method(fs, 'existsSync', () => true);
+  const req = mockReq({ session: { user: { id: 5, avatar_url: '/uploads/avatars/viejo.jpg' } } });
+  const res = mockRes();
+
+  await userController.removeMyAvatar(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(updateCall.mock.calls[0].arguments, [5, null]);
+  assert.equal(unlinkCall.mock.calls.length, 1);
+  assert.equal(req.session.user.avatar_url, null);
 });

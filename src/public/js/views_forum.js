@@ -224,7 +224,7 @@ async function submitForumReply(topicId, parentId, body, submitBtn) {
 }
 
 async function deleteForumPost(postId) {
-    if (!confirmAction('¿Estás seguro de borrar esta respuesta? Esta acción no se puede deshacer.')) {
+    if (!(await confirmAction('¿Estás seguro de borrar esta respuesta? Esta acción no se puede deshacer.'))) {
         return;
     }
     try {

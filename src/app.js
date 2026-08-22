@@ -103,6 +103,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads/videos', express.static(path.join(__dirname, '../uploads/videos')));
 app.use('/uploads/thumbnails', express.static(path.join(__dirname, '../uploads/thumbnails')));
 app.use('/uploads/content-images', express.static(path.join(__dirname, '../uploads/content-images')));
+app.use('/uploads/avatars', express.static(path.join(__dirname, '../uploads/avatars')));
 
 // =============================================
 // API Routes

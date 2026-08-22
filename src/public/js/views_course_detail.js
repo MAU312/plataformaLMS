@@ -941,7 +941,7 @@ function setupEnrollButton(courseId) {
 
     if (unenrollBtn) {
         unenrollBtn.addEventListener('click', async () => {
-            if (confirmAction('¿Estás seguro de que deseas desinscribirte de este curso?')) {
+            if (await confirmAction('¿Estás seguro de que deseas desinscribirte de este curso?')) {
                 try {
                     await coursesAPI.unenroll(courseId);
                     showToast('Te has desinscrito del curso', 'info');

@@ -211,8 +211,49 @@ function updateProgressBar(elementId, progress) {
 // Confirmation Dialog
 // =================================
 
-function confirmAction(message) {
-    return confirm(message);
+/**
+ * Modal de confirmación propio, en vez del confirm() nativo del navegador
+ * (el feo "localhost:3000 dice..." que no se puede estilizar). Se usa
+ * igual que antes en cada punto donde ya se llamaba — la única diferencia
+ * es que ahora hay que esperarlo: `if (await confirmAction('¿Seguro?'))`.
+ * `danger: false` es para confirmaciones que no son destructivas (hoy
+ * todas las que existen sí lo son, pero queda listo por si hace falta).
+ */
+function confirmAction(message, { confirmLabel = 'Confirmar', cancelLabel = 'Cancelar', danger = true } = {}) {
+    return new Promise((resolve) => {
+        const existing = document.getElementById('confirm-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'confirm-modal';
+        modal.className = 'fixed inset-0 z-50 flex items-center justify-center px-4';
+        modal.innerHTML = `
+            <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" data-confirm-backdrop></div>
+            <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-w-sm w-full fade-in">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${danger ? 'bg-red-100 dark:bg-red-900/40 text-red-500' : 'bg-green-100 dark:bg-green-900/40 text-cenat-green'}">
+                        <i class="fas ${danger ? 'fa-exclamation-triangle' : 'fa-question-circle'}"></i>
+                    </div>
+                    <p class="text-gray-700 dark:text-slate-200 mt-1.5 leading-snug">${escapeHtml(message)}</p>
+                </div>
+                <div class="flex gap-3 justify-end mt-6">
+                    <button type="button" data-confirm-cancel class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition">${escapeHtml(cancelLabel)}</button>
+                    <button type="button" data-confirm-ok class="px-4 py-2 rounded-lg text-sm font-semibold text-white transition ${danger ? 'bg-red-500 hover:bg-red-600' : 'btn-cenat'}">${escapeHtml(confirmLabel)}</button>
+                </div>
+            </div>
+        `;
+
+        const close = (result) => {
+            modal.remove();
+            resolve(result);
+        };
+
+        modal.querySelector('[data-confirm-cancel]').addEventListener('click', () => close(false));
+        modal.querySelector('[data-confirm-ok]').addEventListener('click', () => close(true));
+        modal.querySelector('[data-confirm-backdrop]').addEventListener('click', () => close(false));
+
+        document.body.appendChild(modal);
+    });
 }
 
 // =================================

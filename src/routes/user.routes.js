@@ -2,8 +2,15 @@ import express from 'express';
 import * as userController from '../controllers/user.controller.js';
 import { isAuthenticated, isAdmin } from '../middlewares/auth.middleware.js';
 import { userCreateLimiter } from '../middlewares/rateLimit.middleware.js';
+import { uploadAvatar } from '../middlewares/upload.middleware.js';
+import { verifyFileSignature } from '../middlewares/fileSignature.middleware.js';
 
 const router = express.Router();
+
+// Rutas específicas primero (antes de /:id) — cualquier usuario logueado
+// sobre su PROPIA foto de perfil, sin requerir isAdmin.
+router.put('/me/avatar', isAuthenticated, uploadAvatar.single('avatar'), verifyFileSignature('image'), userController.updateMyAvatar);
+router.delete('/me/avatar', isAuthenticated, userController.removeMyAvatar);
 
 router.post('/', isAuthenticated, isAdmin, userCreateLimiter, userController.createUser);
 router.get('/', isAuthenticated, isAdmin, userController.getAllUsers);

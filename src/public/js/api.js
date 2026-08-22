@@ -155,7 +155,15 @@ const usersAPI = {
     toggleActive: async (id) => apiRequest(`/users/${id}/toggle-active`, { method: 'PUT' }),
     delete: async (id) => apiRequest(`/users/${id}`, { method: 'DELETE' }),
     getStats: async () => apiRequest('/users/stats/count'),
-    getByRole: async (role) => apiRequest(`/users/by-role/${role}`)
+    getByRole: async (role) => apiRequest(`/users/by-role/${role}`),
+    uploadAvatar: async (formData) => {
+        const response = await fetch(`${API_URL}/users/me/avatar`, { method: 'PUT', body: formData, credentials: 'include' });
+        const data = await response.json();
+        if (response.status === 401) { showToast('Tu sesión ha expirado.', 'warning'); setTimeout(() => { window.location.hash = '#/login'; window.location.reload(); }, 1500); throw new Error('Sesión expirada'); }
+        if (!response.ok) throw new Error(data.message || 'Error al actualizar la foto de perfil');
+        return data;
+    },
+    removeAvatar: async () => apiRequest('/users/me/avatar', { method: 'DELETE' })
 };
 
 // =================================

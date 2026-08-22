@@ -117,6 +117,18 @@ function getCurrentUser() {
     return currentUser;
 }
 
+/**
+ * Actualiza en caché la foto de perfil del usuario logueado (o la quita
+ * con null) después de subirla/borrarla, y refresca el navbar — sin esto,
+ * el ícono de arriba se quedaba con el estado viejo hasta el próximo
+ * login o recarga completa de la página.
+ */
+function updateCurrentUserAvatar(avatarUrl) {
+    if (!currentUser) return;
+    currentUser.avatar_url = avatarUrl;
+    updateUIForAuthenticatedUser();
+}
+
 function isAuthenticated() {
     return currentUser !== null;
 }
@@ -165,6 +177,14 @@ function updateUIForAuthenticatedUser() {
     // Actualizar nombre de usuario
     if (userName && currentUser) {
         userName.textContent = currentUser.name;
+    }
+
+    // Foto de perfil en el navbar (o el ícono genérico si no tiene una)
+    const userNavAvatar = document.getElementById('user-nav-avatar');
+    if (userNavAvatar && currentUser) {
+        userNavAvatar.innerHTML = currentUser.avatar_url
+            ? `<img src="${currentUser.avatar_url}" alt="" class="w-6 h-6 rounded-full object-cover">`
+            : '<i class="fas fa-user-circle text-2xl"></i>';
     }
 
     // Mostrar link de admin si es administrador
@@ -278,6 +298,7 @@ window.login = login;
 window.register = register;
 window.logout = logout;
 window.getCurrentUser = getCurrentUser;
+window.updateCurrentUserAvatar = updateCurrentUserAvatar;
 window.isAuthenticated = isAuthenticated;
 window.isAdmin = isAdmin;
 window.isStudent = isStudent;

@@ -1210,7 +1210,7 @@ const CONTENT_TYPE_LABELS = {
 
 async function deleteContentHandler(id, type) {
     const label = CONTENT_TYPE_LABELS[type] || 'el contenido';
-    if (!confirmAction(`¿Estás seguro de eliminar ${label}? Esta acción no se puede deshacer.`)) {
+    if (!(await confirmAction(`¿Estás seguro de eliminar ${label}? Esta acción no se puede deshacer.`))) {
         return;
     }
 

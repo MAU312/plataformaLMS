@@ -32,8 +32,9 @@ export const isAuthenticated = async (req, res, next) => {
     }
 
     // Sincroniza la sesión con la BD (ej. si un admin cambió el rol o el
-    // nombre de este usuario después de que inició sesión).
-    req.session.user = { id: user.id, name: user.name, email: user.email, role: user.role };
+    // nombre de este usuario después de que inició sesión, o si el propio
+    // usuario cambió su foto de perfil).
+    req.session.user = { id: user.id, name: user.name, email: user.email, role: user.role, avatar_url: user.avatar_url };
     next();
   } catch (error) {
     next(error);

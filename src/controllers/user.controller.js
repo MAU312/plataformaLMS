@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
+import { deleteFile } from '../middlewares/upload.middleware.js';
 
 const VALID_ROLES = ['admin', 'student', 'teacher'];
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -229,5 +230,70 @@ export const getUserStats = async (req, res) => {
     res.json({ success: true, data: stats });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error al obtener estadísticas' });
+  }
+};
+
+/**
+ * PUT /api/users/me/avatar
+ * Cualquier usuario logueado sube/reemplaza SU PROPIA foto de perfil (no
+ * hay endpoint para que un admin le suba una foto a otro usuario). El
+ * archivo anterior se borra recién después de confirmar el UPDATE en BD
+ * — mismo motivo que en Content.updateContent: si se borrara antes y el
+ * UPDATE fallara, la BD quedaría apuntando a un archivo que ya no existe.
+ */
+export const updateMyAvatar = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'La imagen es requerida' });
+    }
+
+    const userId = req.session.user.id;
+    const previousAvatarUrl = req.session.user.avatar_url;
+    const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+
+    const updated = await User.updateAvatar(userId, avatarUrl);
+
+    if (!updated) {
+      deleteFile(avatarUrl);
+      return res.status(400).json({ success: false, message: 'No se pudo actualizar la foto de perfil' });
+    }
+
+    if (previousAvatarUrl) {
+      deleteFile(previousAvatarUrl);
+    }
+
+    req.session.user.avatar_url = avatarUrl;
+
+    res.json({ success: true, message: 'Foto de perfil actualizada exitosamente', data: { avatar_url: avatarUrl } });
+  } catch (error) {
+    console.error('Error al actualizar la foto de perfil:', error);
+    if (req.file) {
+      deleteFile(`/uploads/avatars/${req.file.filename}`);
+    }
+    res.status(500).json({ success: false, message: 'Error al actualizar la foto de perfil' });
+  }
+};
+
+/**
+ * DELETE /api/users/me/avatar
+ * Quita la foto de perfil propia (vuelve al círculo con la inicial).
+ */
+export const removeMyAvatar = async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const previousAvatarUrl = req.session.user.avatar_url;
+
+    if (!previousAvatarUrl) {
+      return res.status(400).json({ success: false, message: 'No tenés una foto de perfil para quitar' });
+    }
+
+    await User.updateAvatar(userId, null);
+    deleteFile(previousAvatarUrl);
+    req.session.user.avatar_url = null;
+
+    res.json({ success: true, message: 'Foto de perfil eliminada exitosamente' });
+  } catch (error) {
+    console.error('Error al quitar la foto de perfil:', error);
+    res.status(500).json({ success: false, message: 'Error al quitar la foto de perfil' });
   }
 };

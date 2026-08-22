@@ -116,13 +116,14 @@ export const login = async (req, res) => {
       id: user.id,
       name: user.name,
       email: user.email,
-      role: user.role
+      role: user.role,
+      avatar_url: user.avatar_url
     };
 
     res.json({
       success: true,
       message: 'Inicio de sesión exitoso',
-      data: { user: { id: user.id, name: user.name, email: user.email, role: user.role } }
+      data: { user: { id: user.id, name: user.name, email: user.email, role: user.role, avatar_url: user.avatar_url } }
     });
 
   } catch (error) {
@@ -147,7 +148,7 @@ export const getCurrentUser = async (req, res) => {
     const user = await User.findById(req.session.user.id);
     if (!user) return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
 
-    res.json({ success: true, data: { user: { id: user.id, name: user.name, email: user.email, role: user.role } } });
+    res.json({ success: true, data: { user: { id: user.id, name: user.name, email: user.email, role: user.role, avatar_url: user.avatar_url } } });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error al obtener información del usuario' });
   }

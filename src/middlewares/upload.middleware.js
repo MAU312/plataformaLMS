@@ -13,8 +13,9 @@ const filesDir = path.join(uploadsDir, 'files');
 const thumbnailsDir = path.join(uploadsDir, 'thumbnails');
 const submissionsDir = path.join(uploadsDir, 'submissions');
 const contentImagesDir = path.join(uploadsDir, 'content-images');
+const avatarsDir = path.join(uploadsDir, 'avatars');
 
-[uploadsDir, videosDir, filesDir, thumbnailsDir, submissionsDir, contentImagesDir].forEach(dir => {
+[uploadsDir, videosDir, filesDir, thumbnailsDir, submissionsDir, contentImagesDir, avatarsDir].forEach(dir => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -186,6 +187,31 @@ const contentImageStorage = multer.diskStorage({
 
 export const uploadContentImage = multer({
   storage: contentImageStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB máximo
+  },
+  fileFilter: imageFilter
+});
+
+// =============================================
+// Configuración de almacenamiento para FOTO DE PERFIL
+// (mismo filtro/límite que las otras imágenes — cualquier usuario logueado
+// sube la suya propia, ver PUT /api/users/me/avatar)
+// =============================================
+
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, avatarsDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, `avatar-${req.session.user.id}-${uniqueSuffix}${ext}`);
+  }
+});
+
+export const uploadAvatar = multer({
+  storage: avatarStorage,
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB máximo
   },

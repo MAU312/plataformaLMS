@@ -37,7 +37,7 @@ class User {
 
   static async findById(id) {
     const [rows] = await pool.query(
-      'SELECT id, name, username, email, role, is_active, created_at, last_login FROM users WHERE id = ?',
+      'SELECT id, name, username, email, role, avatar_url, is_active, created_at, last_login FROM users WHERE id = ?',
       [id]
     );
     return rows[0];
@@ -75,6 +75,19 @@ class User {
     const [result] = await pool.query(
       'UPDATE users SET name = ?, email = ?, role = ? WHERE id = ?',
       [name, email, role, id]
+    );
+    return result.affectedRows > 0;
+  }
+
+  /**
+   * Foto de perfil del propio usuario (o null para quitarla). Separado de
+   * update() porque este lo llama cualquier usuario sobre sí mismo (ver
+   * PUT/DELETE /api/users/me/avatar), no solo un admin sobre otro usuario.
+   */
+  static async updateAvatar(id, avatarUrl) {
+    const [result] = await pool.query(
+      'UPDATE users SET avatar_url = ? WHERE id = ?',
+      [avatarUrl, id]
     );
     return result.affectedRows > 0;
   }
