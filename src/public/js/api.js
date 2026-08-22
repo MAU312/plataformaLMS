@@ -126,11 +126,24 @@ const contentsAPI = {
     submit: async (id, formData) => apiRequestFormData(`/contents/${id}/submit`, formData),
     getMySubmission: async (id) => apiRequest(`/contents/${id}/submission`),
     getSubmissions: async (id) => apiRequest(`/contents/${id}/submissions`),
-    update: async (id, formData) => {
-        const response = await fetch(`${API_URL}/contents/${id}`, { method: 'PUT', body: formData, credentials: 'include' });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Error al actualizar contenido');
-        return data;
+    // `data` es un FormData cuando se reemplaza el archivo (video/imagen/
+    // archivo/tarea) — ahí el body va tal cual, sin Content-Type manual
+    // (el navegador le pone el boundary correcto). Si es un objeto plano
+    // (solo título/descripción/url, sin archivo nuevo), se manda como JSON:
+    // la ruta PUT /:id no corre multer para texto/url/foro/carpeta/
+    // cuestionario/encuesta, así que un FormData ahí llegaría con
+    // req.body vacío.
+    update: async (id, data) => {
+        const isFormData = data instanceof FormData;
+        const response = await fetch(`${API_URL}/contents/${id}`, {
+            method: 'PUT',
+            body: isFormData ? data : JSON.stringify(data),
+            headers: isFormData ? undefined : { 'Content-Type': 'application/json' },
+            credentials: 'include'
+        });
+        const responseData = await response.json();
+        if (!response.ok) throw new Error(responseData.message || 'Error al actualizar contenido');
+        return responseData;
     },
     delete: async (id) => apiRequest(`/contents/${id}`, { method: 'DELETE' }),
     reorder: async (courseId, contentIds) => apiRequest(`/contents/course/${courseId}/reorder`, { method: 'PUT', body: JSON.stringify({ contentIds }) }),

@@ -62,26 +62,36 @@ function renderCourseContentManagerHTML(course, contents) {
 function renderDraggableFolderItem(courseId, contents, folder) {
     const itemCount = contents.filter(c => c.folder_id === folder.id).length;
     return `
-        <div class="draggable-item flex items-stretch gap-1" draggable="true" data-content-id="${folder.id}">
+        <div class="draggable-item flex items-stretch gap-1" draggable="true" data-content-id="${folder.id}" data-content-json="${encodeDataAttr(folder)}">
             <span class="drag-handle flex items-center px-1 text-gray-300 hover:text-gray-500 cursor-grab flex-shrink-0" title="Arrastrar para reordenar">
                 <i class="fas fa-grip-vertical"></i>
             </span>
-            <details class="flex-1 min-w-0 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" open>
-                <summary class="cursor-pointer list-none p-4 flex items-center justify-between gap-2">
-                    <div class="flex items-center gap-2 min-w-0">
-                        <i class="fas fa-chevron-right text-gray-400 text-xs folder-chevron transition-transform"></i>
-                        <i class="fas fa-folder-open text-cenat-green"></i>
-                        <span class="font-bold text-gray-900 truncate">${escapeHtml(folder.title)}</span>
-                        <span class="text-xs text-gray-400 whitespace-nowrap">(${itemCount} ${itemCount === 1 ? 'elemento' : 'elementos'})</span>
-                    </div>
-                    <button onclick="event.preventDefault(); deleteContentHandler(${folder.id}, 'folder')" class="text-red-500 hover:text-red-700 px-2 flex-shrink-0" title="Borrar carpeta">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </summary>
-                <div class="px-4 pb-4 space-y-4 border-t border-gray-100 pt-4">
-                    ${renderContentTypeSections(courseId, contents, folder.id, true)}
+            <div class="flex-1 min-w-0">
+                <div id="content-display-${folder.id}">
+                    <details class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" open>
+                        <summary class="cursor-pointer list-none p-4 flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <i class="fas fa-chevron-right text-gray-400 text-xs folder-chevron transition-transform"></i>
+                                <i class="fas fa-folder-open text-cenat-green"></i>
+                                <span class="font-bold text-gray-900 truncate">${escapeHtml(folder.title)}</span>
+                                <span class="text-xs text-gray-400 whitespace-nowrap">(${itemCount} ${itemCount === 1 ? 'elemento' : 'elementos'})</span>
+                            </div>
+                            <div class="flex items-center gap-1 flex-shrink-0">
+                                <button onclick="event.preventDefault(); editContentHandler(${folder.id})" class="text-gray-400 hover:text-cenat-green px-2" title="Editar carpeta">
+                                    <i class="fas fa-pencil-alt"></i>
+                                </button>
+                                <button onclick="event.preventDefault(); deleteContentHandler(${folder.id}, 'folder')" class="text-red-500 hover:text-red-700 px-2" title="Borrar carpeta">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </summary>
+                        <div class="px-4 pb-4 space-y-4 border-t border-gray-100 pt-4">
+                            ${renderContentTypeSections(courseId, contents, folder.id, true)}
+                        </div>
+                    </details>
                 </div>
-            </details>
+                <div id="content-edit-${folder.id}"></div>
+            </div>
         </div>
     `;
 }
@@ -199,19 +209,37 @@ function renderManagerContentItem(content) {
 }
 
 /**
+ * Mete un objeto como JSON dentro de un atributo HTML de forma segura —
+ * usado para guardar el contenido completo (título/descripción/url/tipo)
+ * en cada fila, así editContentHandler no necesita volver a pedirlo al
+ * servidor. escapeHtml() no alcanza acá: está pensado para texto DENTRO
+ * de un tag, no escapa comillas — y un JSON.stringify está lleno de `"`.
+ */
+function encodeDataAttr(obj) {
+    return JSON.stringify(obj).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
+/**
  * Envuelve una fila de contenido con lo necesario para arrastrarla:
  * `draggable="true"`, un mango visual (decorativo — arrastrar desde
  * cualquier parte de la fila funciona igual, salvo desde un botón/link,
- * que el navegador no deja iniciar un drag ahí por default) y
- * `data-content-id` para leer el nuevo orden al soltar.
+ * que el navegador no deja iniciar un drag ahí por default), y
+ * `data-content-id`/`data-content-json` para leer el nuevo orden al
+ * soltar y los datos del contenido al editar. `content-display-{id}` /
+ * `content-edit-{id}` son el par que usa editContentHandler para mostrar
+ * el formulario de edición en el lugar de la fila, sin tener que
+ * reordenar el resto del markup por tipo.
  */
 function renderDraggableItem(content) {
     return `
-        <div class="draggable-item flex items-stretch gap-1" draggable="true" data-content-id="${content.id}">
+        <div class="draggable-item flex items-stretch gap-1" draggable="true" data-content-id="${content.id}" data-content-json="${encodeDataAttr(content)}">
             <span class="drag-handle flex items-center px-1 text-gray-300 hover:text-gray-500 cursor-grab flex-shrink-0" title="Arrastrar para reordenar">
                 <i class="fas fa-grip-vertical"></i>
             </span>
-            <div class="flex-1 min-w-0">${renderManagerContentItem(content)}</div>
+            <div class="flex-1 min-w-0">
+                <div id="content-display-${content.id}">${renderManagerContentItem(content)}</div>
+                <div id="content-edit-${content.id}"></div>
+            </div>
         </div>
     `;
 }
@@ -331,6 +359,9 @@ function renderContentItem(content, type) {
                 ${content.file_size ? `<p class="text-xs text-gray-500">${formatFileSize(content.file_size)}</p>` : ''}
                 ${type === 'url' ? `<p class="text-xs text-gray-500 truncate">${escapeHtml(content.url)}</p>` : ''}
             </div>
+            <button onclick="editContentHandler(${content.id})" class="text-gray-400 hover:text-cenat-green px-2" title="Editar">
+                <i class="fas fa-pencil-alt"></i>
+            </button>
             <button onclick="deleteContentHandler(${content.id}, '${type}')" class="text-red-500 hover:text-red-700 px-2">
                 <i class="fas fa-trash"></i>
             </button>
@@ -349,6 +380,9 @@ function renderTaskItem(content) {
             <a href="#/contents/${content.id}/submissions" class="text-cenat-green hover:text-cenat-green-hover text-sm whitespace-nowrap" title="Ver entregas">
                 <i class="fas fa-inbox mr-1"></i> Entregas
             </a>
+            <button onclick="editContentHandler(${content.id})" class="text-gray-400 hover:text-cenat-green px-2" title="Editar">
+                <i class="fas fa-pencil-alt"></i>
+            </button>
             <button onclick="deleteContentHandler(${content.id}, 'task')" class="text-red-500 hover:text-red-700 px-2">
                 <i class="fas fa-trash"></i>
             </button>
@@ -374,6 +408,9 @@ function renderQuizManagerItem(content) {
             <a href="#/contents/${content.id}/results" class="text-cenat-green hover:text-cenat-green-hover text-sm whitespace-nowrap" title="Ver resultados">
                 <i class="fas fa-chart-bar mr-1"></i> Resultados
             </a>
+            <button onclick="editContentHandler(${content.id})" class="text-gray-400 hover:text-cenat-green px-2" title="Editar">
+                <i class="fas fa-pencil-alt"></i>
+            </button>
             <button onclick="deleteContentHandler(${content.id}, '${content.type}')" class="text-red-500 hover:text-red-700 px-2">
                 <i class="fas fa-trash"></i>
             </button>
@@ -392,6 +429,9 @@ function renderForumItem(content) {
             <a href="#/forum/${content.id}" class="text-cenat-green hover:text-cenat-green-hover text-sm whitespace-nowrap" title="Ver foro">
                 <i class="fas fa-comment-dots mr-1"></i> Ver foro
             </a>
+            <button onclick="editContentHandler(${content.id})" class="text-gray-400 hover:text-cenat-green px-2" title="Editar">
+                <i class="fas fa-pencil-alt"></i>
+            </button>
             <button onclick="deleteContentHandler(${content.id}, 'forum')" class="text-red-500 hover:text-red-700 px-2">
                 <i class="fas fa-trash"></i>
             </button>
@@ -1195,6 +1235,188 @@ function showAddSurveyForm(courseId, folderId) {
     showAddQuestionForm(courseId, folderId, 'survey');
 }
 
+// =================================
+// Editar contenido existente (sin borrar y recrear)
+// =================================
+// Mismo par content-display-{id}/content-edit-{id} para cualquier tipo
+// (ver renderDraggableItem/renderDraggableFolderItem): editar oculta la
+// fila normal y muestra el formulario en su lugar; cancelar o guardar la
+// vuelve a mostrar (guardar además dispara un re-render completo del
+// panel vía contentManagerRerender, que ya refresca todo).
+
+/**
+ * Los datos del contenido salen del propio DOM (data-content-json en el
+ * .draggable-item, ver encodeDataAttr) — no hace falta pedirlos de nuevo
+ * al servidor, ya llegaron con el resto del contenido del curso.
+ */
+function editContentHandler(id) {
+    const row = document.querySelector(`.draggable-item[data-content-id="${id}"]`);
+    if (!row) return;
+    const content = JSON.parse(row.dataset.contentJson);
+
+    const display = document.getElementById(`content-display-${id}`);
+    const editContainer = document.getElementById(`content-edit-${id}`);
+    if (!display || !editContainer) return;
+
+    display.classList.add('hidden');
+    editContainer.innerHTML = renderEditForm(content);
+
+    const form = editContainer.querySelector('.edit-content-form');
+    form.addEventListener('submit', (e) => submitEditContent(e, content));
+    form.querySelector('.cancel-edit-btn').addEventListener('click', () => cancelEditContent(id));
+}
+
+function cancelEditContent(id) {
+    const editContainer = document.getElementById(`content-edit-${id}`);
+    if (editContainer) editContainer.innerHTML = '';
+    const display = document.getElementById(`content-display-${id}`);
+    if (display) display.classList.remove('hidden');
+}
+
+/**
+ * Campos según el tipo — todos comparten título; el resto varía porque
+ * cada tipo guarda su "contenido real" en un lugar distinto (texto/foro en
+ * description, url en url, video/imagen/archivo/tarea en un archivo que
+ * se puede reemplazar opcionalmente). Un cuestionario/encuesta solo deja
+ * editar título/descripción acá — cambiar las preguntas requiere borrar y
+ * crear de nuevo, es un formulario mucho más grande (ver showAddQuestionForm).
+ */
+function renderEditForm(content) {
+    const titleField = `
+        <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Título *</label>
+            <input type="text" class="edit-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required value="${escapeHtml(content.title)}">
+        </div>
+    `;
+
+    const descriptionField = (label, required = false, rows = null) => `
+        <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">${label}</label>
+            ${rows
+                ? `<textarea class="edit-description w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" rows="${rows}" ${required ? 'required' : ''}>${escapeHtml(content.description || '')}</textarea>`
+                : `<input type="text" class="edit-description w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" ${required ? 'required' : ''} value="${escapeHtml(content.description || '')}">`
+            }
+        </div>
+    `;
+
+    const fileField = (label, accept, hint) => `
+        <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">${label}</label>
+            <input type="file" class="edit-file w-full text-sm" accept="${accept}">
+            <p class="text-xs text-gray-500 mt-1">${hint} — deja vacío para no cambiarlo</p>
+        </div>
+    `;
+
+    let body = '';
+    switch (content.type) {
+        case 'folder':
+            body = '';
+            break;
+        case 'text':
+            body = descriptionField('Contenido *', true, 5);
+            break;
+        case 'forum':
+            body = descriptionField('Texto principal *', true, 4);
+            break;
+        case 'task':
+            body = descriptionField('Instrucciones (opcional)', false, 3)
+                + fileField('Reemplazar archivo de plantilla/instrucciones (opcional)', '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip,.rar', 'PDF, DOCX, PPT, XLS, TXT, ZIP, RAR (máx. 50MB)');
+            break;
+        case 'url':
+            body = descriptionField('Descripción (opcional)')
+                + `<div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">URL del video *</label>
+                    <input type="url" class="edit-url w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required value="${escapeHtml(content.url || '')}">
+                </div>`;
+            break;
+        case 'quiz':
+        case 'survey':
+            body = descriptionField('Descripción (opcional)')
+                + `<p class="text-xs text-gray-400">Para cambiar las preguntas hay que borrar ${content.type === 'quiz' ? 'el cuestionario' : 'la encuesta'} y crear ${content.type === 'quiz' ? 'uno' : 'una'} nuev${content.type === 'quiz' ? 'o' : 'a'}.</p>`;
+            break;
+        case 'video':
+            body = descriptionField('Descripción (opcional)')
+                + fileField('Reemplazar video (opcional)', 'video/*', 'MP4, AVI, MOV, WEBM (máx. 2GB)');
+            break;
+        case 'image':
+            body = descriptionField('Descripción (opcional)')
+                + fileField('Reemplazar imagen (opcional)', 'image/*', 'JPG, PNG, GIF, WEBP (máx. 5MB)');
+            break;
+        case 'file':
+            body = descriptionField('Descripción (opcional)')
+                + fileField('Reemplazar archivo (opcional)', '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip,.rar', 'PDF, DOCX, PPT, XLS, TXT, ZIP, RAR (máx. 50MB)');
+            break;
+    }
+
+    return `
+        <form class="edit-content-form bg-green-50 rounded-lg p-4 space-y-3 mt-2">
+            ${titleField}
+            ${body}
+            <div class="flex gap-2">
+                <button type="submit" class="submit-edit-btn bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
+                    <i class="fas fa-check mr-1"></i> Guardar
+                </button>
+                <button type="button" class="cancel-edit-btn text-gray-600 px-4 py-2 text-sm">Cancelar</button>
+            </div>
+        </form>
+    `;
+}
+
+async function submitEditContent(e, content) {
+    e.preventDefault();
+    const form = e.target;
+    const submitBtn = form.querySelector('.submit-edit-btn');
+
+    const title = form.querySelector('.edit-title').value.trim();
+    if (!title) {
+        showToast('El título es requerido', 'error');
+        return;
+    }
+
+    const descriptionInput = form.querySelector('.edit-description');
+    const description = descriptionInput ? descriptionInput.value.trim() : undefined;
+    if (descriptionInput && descriptionInput.required && !description) {
+        showToast('Este campo es requerido', 'error');
+        return;
+    }
+
+    const urlInput = form.querySelector('.edit-url');
+    if (urlInput && !urlInput.value.trim()) {
+        showToast('La URL es requerida', 'error');
+        return;
+    }
+
+    const fileInput = form.querySelector('.edit-file');
+    const file = fileInput ? fileInput.files[0] : null;
+
+    let payload;
+    if (file) {
+        payload = new FormData();
+        payload.append('title', title);
+        if (descriptionInput) payload.append('description', description);
+        if (content.type === 'video') payload.append('video', file);
+        else if (content.type === 'image') payload.append('image', file);
+        else payload.append('file', file);
+    } else {
+        payload = { title };
+        if (descriptionInput) payload.description = description;
+        if (urlInput) payload.url = urlInput.value.trim();
+    }
+
+    try {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Guardando...';
+
+        await contentsAPI.update(content.id, payload);
+        showToast('Contenido actualizado exitosamente', 'success');
+        contentManagerRerender();
+    } catch (error) {
+        showToast(error.message || 'Error al actualizar el contenido', 'error');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-check mr-1"></i> Guardar';
+    }
+}
+
 const CONTENT_TYPE_LABELS = {
     video: 'el video',
     file: 'el archivo',
@@ -1239,3 +1461,5 @@ window.showAddQuizForm = showAddQuizForm;
 window.showAddSurveyForm = showAddSurveyForm;
 window.showAddForumForm = showAddForumForm;
 window.deleteContentHandler = deleteContentHandler;
+window.editContentHandler = editContentHandler;
+window.cancelEditContent = cancelEditContent;
