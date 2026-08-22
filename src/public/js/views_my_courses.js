@@ -21,21 +21,23 @@ window.renderMyCourses = async function(params) {
                 </div>
             </div>
 
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-                ${courses.length > 0 ? `
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        ${courses.map(course => renderEnrolledCourseCard(course)).join('')}
-                    </div>
-                ` : `
-                    <div class="empty-state">
-                        <i class="fas fa-book-open"></i>
-                        <p class="text-xl text-gray-600 font-medium">Aún no estás inscrito en ningún curso</p>
-                        <p class="text-gray-500 mb-4">Explora el catálogo y comienza a aprender</p>
-                        <a href="#/" class="btn-cenat">
-                            <i class="fas fa-search mr-2"></i> Explorar cursos
-                        </a>
-                    </div>
-                `}
+            <div class="courses-bg">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                    ${courses.length > 0 ? `
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            ${courses.map(course => renderEnrolledCourseCard(course)).join('')}
+                        </div>
+                    ` : `
+                        <div class="empty-state">
+                            <i class="fas fa-book-open"></i>
+                            <p class="text-xl text-gray-600 font-medium">Aún no estás inscrito en ningún curso</p>
+                            <p class="text-gray-500 mb-4">Explora el catálogo y comienza a aprender</p>
+                            <a href="#/" class="btn-cenat">
+                                <i class="fas fa-search mr-2"></i> Explorar cursos
+                            </a>
+                        </div>
+                    `}
+                </div>
             </div>
         `;
 

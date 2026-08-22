@@ -68,9 +68,12 @@ window.renderCourseDetail = async function(params) {
         // incluyendo lo que está dentro de una carpeta.
         const allVideosCount = contents.filter(c => c.type === 'video').length;
         const allFilesCount = contents.filter(c => c.type === 'file').length;
+        const allImagesCount = contents.filter(c => c.type === 'image').length;
         const allUrlsCount = contents.filter(c => c.type === 'url').length;
         const allTextsCount = contents.filter(c => c.type === 'text').length;
         const allTasksCount = contents.filter(c => c.type === 'task').length;
+        const allQuizzesCount = contents.filter(c => c.type === 'quiz').length;
+        const allSurveysCount = contents.filter(c => c.type === 'survey').length;
         const allForumsCount = contents.filter(c => c.type === 'forum').length;
 
         // El foro y una carpeta no cuentan para el progreso del curso (una
@@ -94,6 +97,15 @@ window.renderCourseDetail = async function(params) {
         if (isLoggedIn && isEnrolled && allTasks.length > 0) {
             const submissionResponses = await Promise.all(allTasks.map(t => contentsAPI.getMySubmission(t.id)));
             allTasks.forEach((t, i) => { submissionsByTask[t.id] = submissionResponses[i].data; });
+        }
+
+        // Igual que arriba con las tareas: si ya respondió, se necesita
+        // saber para no mostrarle el formulario de nuevo (un solo intento).
+        const allQuizzes = contents.filter(c => c.type === 'quiz' || c.type === 'survey');
+        let quizStatusById = {};
+        if (isLoggedIn && isEnrolled && allQuizzes.length > 0) {
+            const quizResponses = await Promise.all(allQuizzes.map(q => contentsAPI.getQuestions(q.id)));
+            allQuizzes.forEach((q, i) => { quizStatusById[q.id] = quizResponses[i].data; });
         }
 
         app.innerHTML = `
@@ -135,6 +147,7 @@ window.renderCourseDetail = async function(params) {
                 </div>
             </div>
 
+            <div class="courses-bg">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <!-- Columna principal: Videos -->
@@ -184,8 +197,8 @@ window.renderCourseDetail = async function(params) {
                                 ${mixedItems.map(item => `
                                     <div id="content-anchor-${item.id}" class="scroll-mt-4">
                                         ${item.type === 'folder'
-                                            ? renderCourseFolderCard(item, contents, hasAccess, isLoggedIn && isEnrolled, submissionsByTask)
-                                            : renderContentItemByType(item, isLoggedIn && isEnrolled, hasAccess, submissionsByTask[item.id])
+                                            ? renderCourseFolderCard(item, contents, hasAccess, isLoggedIn && isEnrolled, submissionsByTask, quizStatusById)
+                                            : renderContentItemByType(item, isLoggedIn && isEnrolled, hasAccess, submissionsByTask[item.id], quizStatusById[item.id])
                                         }
                                     </div>
                                 `).join('')}
@@ -204,9 +217,12 @@ window.renderCourseDetail = async function(params) {
                             <ul class="text-sm text-gray-600 space-y-1">
                                 ${renderCourseInfoLink('fa-video', allVideosCount, 'videos', 'videos-section')}
                                 ${renderCourseInfoLink('fa-file', allFilesCount, 'archivos', anchorForType(contents, 'file'))}
+                                ${allImagesCount > 0 ? renderCourseInfoLink('fa-image', allImagesCount, 'imágenes', anchorForType(contents, 'image')) : ''}
                                 ${allUrlsCount > 0 ? renderCourseInfoLink('fa-link', allUrlsCount, 'videos externos', anchorForType(contents, 'url')) : ''}
                                 ${allTextsCount > 0 ? renderCourseInfoLink('fa-align-left', allTextsCount, 'lecturas', anchorForType(contents, 'text')) : ''}
                                 ${allTasksCount > 0 ? renderCourseInfoLink('fa-tasks', allTasksCount, 'tareas', anchorForType(contents, 'task')) : ''}
+                                ${allQuizzesCount > 0 ? renderCourseInfoLink('fa-question-circle', allQuizzesCount, 'cuestionarios', anchorForType(contents, 'quiz')) : ''}
+                                ${allSurveysCount > 0 ? renderCourseInfoLink('fa-poll', allSurveysCount, 'encuestas', anchorForType(contents, 'survey')) : ''}
                                 ${allForumsCount > 0 ? renderCourseInfoLink('fa-comments', allForumsCount, 'foros', anchorForType(contents, 'forum')) : ''}
                                 ${folders.length > 0 ? renderCourseInfoLink('fa-folder', folders.length, 'carpetas', anchorForType(contents, 'folder')) : ''}
                                 <li><i class="fas fa-users mr-2 text-gray-400"></i>${course.enrolled_count || 0} inscritos</li>
@@ -220,6 +236,7 @@ window.renderCourseDetail = async function(params) {
                         ` : ''}
                     </div>
                 </div>
+            </div>
             </div>
         `;
 
@@ -274,6 +291,9 @@ window.renderCourseDetail = async function(params) {
 
         // Formularios de entrega de tareas
         setupTaskSubmitForms(course.id);
+
+        // Reproductores de video externo (YouTube) con detección de error
+        initYoutubeEmbeds();
 
     } catch (error) {
         console.error('Error loading course:', error);
@@ -359,6 +379,16 @@ function renderContentRow(content, isActiveVideo, canTrackProgress, type, hasAcc
 
 function renderUrlContentRow(content, canTrackProgress, hasAccess) {
     const completed = content.completed || false;
+    // Si es un link de YouTube/Vimeo reconocible, se embebe directo en la
+    // tarjeta en vez de solo dejar un link que abre en pestaña nueva. Si el
+    // proveedor no se reconoce, se mantiene el comportamiento de antes.
+    // YouTube usa la API oficial (ver initYoutubeEmbeds en utils.js) para
+    // poder detectar cuándo un video no se puede reproducir ahí (el dueño
+    // restringió la incrustación, o fue borrado) y mostrar un mensaje
+    // propio en vez del cartel de error de YouTube. Vimeo se deja como
+    // iframe plano — no se reportó el mismo problema ahí.
+    const youtubeId = hasAccess ? getYoutubeVideoId(content.url) : null;
+    const vimeoUrl = hasAccess && !youtubeId ? getVimeoEmbedUrl(content.url) : null;
     return `
         <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 transition">
             ${canTrackProgress ? `
@@ -382,6 +412,21 @@ function renderUrlContentRow(content, canTrackProgress, hasAccess) {
                 </span>
             `}
         </div>
+        ${youtubeId ? `
+            <div data-embed-wrapper>
+                <div class="video-player-container mt-2 mb-1">
+                    <div id="yt-embed-${content.id}" data-yt-embed="${youtubeId}"></div>
+                </div>
+                <div data-embed-fallback class="hidden text-sm text-gray-500 bg-gray-50 rounded-lg p-3 mt-2 mb-1">
+                    <i class="fas fa-triangle-exclamation text-yellow-500 mr-1"></i>
+                    Este video no se puede reproducir aquí — usá el botón de arriba para verlo directamente en YouTube.
+                </div>
+            </div>
+        ` : vimeoUrl ? `
+            <div class="video-player-container mt-2 mb-1">
+                <iframe src="${vimeoUrl}" title="${escapeHtml(content.title)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+        ` : ''}
     `;
 }
 
@@ -402,6 +447,41 @@ function renderTextContentCard(content, canTrackProgress, hasAccess) {
                         ? `<p class="text-sm text-gray-600 mt-2 whitespace-pre-line">${escapeHtml(content.description || '')}</p>`
                         : `<p class="text-sm text-gray-400 mt-2"><i class="fas fa-lock mr-1"></i> Inscríbete en este curso para ver esta lectura</p>`
                     }
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderImageContentCard(content, canTrackProgress, hasAccess) {
+    if (!hasAccess) {
+        return `
+            <div class="bg-white rounded-xl border border-gray-100 p-4">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-lock text-xl text-gray-400"></i>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium text-gray-900">${escapeHtml(content.title)}</p>
+                        <p class="text-sm text-gray-400 mt-1">Inscríbete en este curso para ver esta imagen</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    const completed = content.completed || false;
+    return `
+        <div class="bg-white rounded-xl border border-gray-100 p-4">
+            <div class="flex items-start gap-3">
+                ${canTrackProgress ? `
+                    <button class="content-checkbox flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition mt-1 ${completed ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-cenat-green'}"
+                        data-content-id="${content.id}" data-completed="${completed == 1 || completed === true ? 'true' : 'false'}" title="${completed ? 'Marcar como pendiente' : 'Marcar como completado'}">
+                        ${completed ? '<i class="fas fa-check text-white text-xs"></i>' : ''}
+                    </button>
+                ` : ''}
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-gray-900 ${completed ? 'line-through text-gray-400' : ''}">${escapeHtml(content.title)}</p>
+                    ${content.description ? `<p class="text-sm text-gray-600 mt-1 whitespace-pre-line">${escapeHtml(content.description)}</p>` : ''}
+                    <img src="${content.url}" alt="${escapeHtml(content.title)}" class="w-full rounded-lg mt-3" loading="lazy">
                 </div>
             </div>
         </div>
@@ -447,18 +527,23 @@ function renderForumCard(forum, hasAccess) {
  * funcionan solos porque se enganchan por clase/atributo en todo el
  * documento, no por contenedor.
  */
-function renderContentItemByType(content, canTrackProgress, hasAccess, submission) {
+function renderContentItemByType(content, canTrackProgress, hasAccess, submission, quizStatus) {
     switch (content.type) {
         case 'video':
             return renderContentRow(content, false, canTrackProgress, 'video', hasAccess);
         case 'file':
             return renderContentRow(content, false, canTrackProgress, 'file', hasAccess);
+        case 'image':
+            return renderImageContentCard(content, canTrackProgress, hasAccess);
         case 'url':
             return renderUrlContentRow(content, canTrackProgress, hasAccess);
         case 'text':
             return renderTextContentCard(content, canTrackProgress, hasAccess);
         case 'task':
             return renderTaskCard(content, submission, hasAccess);
+        case 'quiz':
+        case 'survey':
+            return renderQuizCard(content, quizStatus, hasAccess);
         case 'forum':
             return renderForumCard(content, hasAccess);
         default:
@@ -466,7 +551,7 @@ function renderContentItemByType(content, canTrackProgress, hasAccess, submissio
     }
 }
 
-function renderCourseFolderCard(folder, allContents, hasAccess, canTrackProgress, submissionsByTask) {
+function renderCourseFolderCard(folder, allContents, hasAccess, canTrackProgress, submissionsByTask, quizStatusById) {
     if (!hasAccess) {
         return `
             <div class="bg-white rounded-xl border border-gray-100 p-4">
@@ -503,7 +588,7 @@ function renderCourseFolderCard(folder, allContents, hasAccess, canTrackProgress
             <div class="px-4 pb-4 space-y-2 border-t border-gray-100 pt-3">
                 ${items.length > 0 ? items.map(item => `
                     <div id="content-anchor-${item.id}" class="scroll-mt-4">
-                        ${renderContentItemByType(item, canTrackProgress, hasAccess, submissionsByTask[item.id])}
+                        ${renderContentItemByType(item, canTrackProgress, hasAccess, submissionsByTask[item.id], quizStatusById[item.id])}
                     </div>
                 `).join('') : `
                     <p class="text-gray-500 text-sm text-center py-2">Esta carpeta todavía no tiene contenido</p>
@@ -587,6 +672,79 @@ function renderTaskCard(task, submission, hasAccess) {
                             <p class="text-xs text-gray-400 mt-1">Solo puedes entregar una vez — revisa el archivo antes de subirlo.</p>
                         `}
                     </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * `quizStatus` es lo que devuelve GET /:id/questions (ver
+ * contentsAPI.getQuestions, precargado en quizStatusById más arriba):
+ * `{ already_answered, questions, my_answers? }`. Cuestionario y encuesta
+ * comparten esta misma tarjeta — la única diferencia es si se muestra un
+ * puntaje (cuestionario) o solo un agradecimiento (encuesta), ya que una
+ * encuesta no tiene respuesta correcta.
+ */
+function renderQuizCard(content, quizStatus, hasAccess) {
+    const isQuiz = content.type === 'quiz';
+    const icon = isQuiz ? 'fa-question-circle' : 'fa-poll';
+
+    if (!hasAccess) {
+        return `
+            <div class="bg-white rounded-xl border border-gray-100 p-4">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-lock text-xl text-gray-400"></i>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium text-gray-900">${escapeHtml(content.title)}</p>
+                        <p class="text-sm text-gray-400 mt-1">Inscríbete en este curso para responder ${isQuiz ? 'este cuestionario' : 'esta encuesta'}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    const alreadyAnswered = quizStatus?.already_answered || false;
+
+    let statusHTML;
+    if (alreadyAnswered) {
+        if (isQuiz) {
+            const myAnswers = quizStatus.my_answers || [];
+            const total = myAnswers.length;
+            const correct = myAnswers.filter(a => a.is_correct == 1).length;
+            const pending = myAnswers.filter(a => a.is_correct === null).length;
+            statusHTML = `
+                <div class="bg-green-50 rounded-lg p-3">
+                    <p class="text-sm text-green-700 font-medium"><i class="fas fa-check-circle mr-1"></i> Ya respondiste este cuestionario</p>
+                    <p class="text-xs text-gray-500 mt-1">
+                        ${correct}/${total} correctas${pending > 0 ? ` — ${pending} pendiente${pending === 1 ? '' : 's'} de revisión` : ''}
+                    </p>
+                </div>
+            `;
+        } else {
+            statusHTML = `
+                <div class="bg-green-50 rounded-lg p-3">
+                    <p class="text-sm text-green-700 font-medium"><i class="fas fa-check-circle mr-1"></i> ¡Gracias por responder esta encuesta!</p>
+                </div>
+            `;
+        }
+    } else {
+        statusHTML = `
+            <a href="#/contents/${content.id}/take" class="inline-block bg-cenat-green text-white px-3 py-1.5 rounded-lg text-sm font-semibold">
+                <i class="fas fa-pen mr-1"></i> ${isQuiz ? 'Responder cuestionario' : 'Responder encuesta'}
+            </a>
+            <p class="text-xs text-gray-400 mt-1">Solo puedes responder una vez.</p>
+        `;
+    }
+
+    return `
+        <div class="bg-white rounded-xl border border-gray-100 p-4">
+            <div class="flex items-start gap-3">
+                <i class="fas ${icon} text-xl text-cenat-green mt-1"></i>
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-gray-900">${escapeHtml(content.title)}</p>
+                    ${content.description ? `<p class="text-sm text-gray-600 mt-1 whitespace-pre-line">${escapeHtml(content.description)}</p>` : ''}
+                    <div class="mt-3">${statusHTML}</div>
                 </div>
             </div>
         </div>

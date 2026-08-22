@@ -14,6 +14,14 @@
             (localStorage.getItem('darkMode') === null && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
         }
+
+        // Igual que el dark mode: aplicar el tamaño de letra guardado
+        // ANTES de pintar la página, para no arrancar chico y saltar de
+        // tamaño un instante después.
+        const savedTextSizeLevel = parseInt(localStorage.getItem('textSizeLevel'), 10);
+        if (savedTextSizeLevel > 0) {
+            document.documentElement.classList.add(`text-boost-${Math.min(savedTextSizeLevel, 2)}`);
+        }
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -41,7 +49,7 @@
     </script>
 </head>
 
-<body class="bg-gray-50 dark:bg-slate-900 min-h-screen transition-colors duration-300">
+<body class="bg-gray-100 dark:bg-slate-800 min-h-screen transition-colors duration-300">
 
     <!-- Navbar -->
     <nav id="navbar" class="bg-white dark:bg-slate-800 shadow-md hidden transition-colors duration-300">
@@ -86,6 +94,12 @@
                         </a>
                     </div>
 
+                    <!-- Tamaño de letra -->
+                    <div class="flex items-center gap-0.5" title="Tamaño de letra">
+                        <button class="text-size-btn text-size-decrease-btn" onclick="decreaseTextSize()" title="Reducir tamaño de letra" aria-label="Reducir tamaño de letra">A-</button>
+                        <button class="text-size-btn text-size-increase-btn" onclick="increaseTextSize()" title="Aumentar tamaño de letra" aria-label="Aumentar tamaño de letra">A+</button>
+                    </div>
+
                     <!-- Dark mode toggle -->
                     <button id="dark-mode-toggle" onclick="toggleDarkMode()" title="Cambiar modo oscuro/claro">
                         <i class="fas fa-moon text-gray-600 dark:text-yellow-400"></i>
@@ -117,6 +131,10 @@
 
                 <!-- Mobile menu button -->
                 <div class="md:hidden flex items-center gap-3">
+                    <div class="flex items-center gap-0.5" title="Tamaño de letra">
+                        <button class="text-size-btn text-size-decrease-btn" onclick="decreaseTextSize()" title="Reducir tamaño de letra" aria-label="Reducir tamaño de letra">A-</button>
+                        <button class="text-size-btn text-size-increase-btn" onclick="increaseTextSize()" title="Aumentar tamaño de letra" aria-label="Aumentar tamaño de letra">A+</button>
+                    </div>
                     <button id="dark-mode-toggle-mobile" onclick="toggleDarkMode()"
                         class="text-gray-600 dark:text-yellow-400">
                         <i class="fas fa-moon"></i>
@@ -183,7 +201,7 @@
         class="bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 mt-auto transition-colors duration-300">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div class="text-center text-gray-600 dark:text-slate-400 text-sm">
-                <p>&copy; 2024 LANBA - Centro Nacional de Alta Tecnología (CeNAT)</p>
+                <p>&copy; 2026 LANBA - Centro Nacional de Alta Tecnología (CeNAT)</p>
                 <p class="mt-1">Desarrollado por Mauricio Hidalgo Garzón - TCU UFIDE</p>
             </div>
         </div>
@@ -205,6 +223,7 @@
 
     <!-- Scripts -->
     <script src="/js/darkmode.js"></script>
+    <script src="/js/textsize.js"></script>
     <script src="/js/utils.js"></script>
     <script src="/js/api.js"></script>
     <script src="/js/auth.js"></script>
@@ -217,6 +236,7 @@
     <script src="/js/views_admin_courses.js"></script>
     <script src="/js/views_admin_course_students.js"></script>
     <script src="/js/views_content_manager.js"></script>
+    <script src="/js/views_quiz.js"></script>
     <script src="/js/views_admin_create_course.js"></script>
     <script src="/js/views_admin_edit_course.js"></script>
     <script src="/js/views_teacher_courses.js"></script>
@@ -229,6 +249,7 @@
 
     <script>
         initDarkMode();
+        initTextSize();
     </script>
 </body>
 

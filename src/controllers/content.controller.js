@@ -28,6 +28,7 @@ const __dirname = path.dirname(__filename);
  */
 function uncompletableReason(type) {
   if (type === 'task') return 'El progreso de una tarea se actualiza automáticamente al entregarla';
+  if (type === 'quiz' || type === 'survey') return 'El progreso se actualiza automáticamente al responder';
   if (type === 'forum') return 'El foro no cuenta para el progreso del curso';
   if (type === 'folder') return 'Una carpeta no cuenta para el progreso del curso';
   return null;
@@ -227,6 +228,65 @@ export const createFileContent = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error al agregar archivo'
+    });
+  }
+};
+
+/**
+ * Crear nuevo contenido de tipo IMAGE: una imagen más en la lista de
+ * contenido del curso (no una portada), para decorar/ilustrar. Mismo
+ * patrón que video/file: archivo obligatorio.
+ */
+export const createImageContent = async (req, res) => {
+  try {
+    const { course_id, title, description, folder_id } = req.body;
+
+    if (!course_id || !title) {
+      return res.status(400).json({
+        success: false,
+        message: 'El ID del curso y el título son requeridos'
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'La imagen es requerida'
+      });
+    }
+
+    const folderCheck = await resolveFolderId(folder_id, course_id);
+    if (!folderCheck.ok) {
+      deleteFile(`/uploads/content-images/${req.file.filename}`);
+      return res.status(400).json({ success: false, message: 'La carpeta indicada no existe en este curso' });
+    }
+
+    const url = `/uploads/content-images/${req.file.filename}`;
+    const file_size = req.file.size;
+
+    const contentId = await Content.create({
+      course_id,
+      type: 'image',
+      title,
+      description,
+      url,
+      file_size,
+      folder_id: folderCheck.folderId
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Imagen agregada exitosamente',
+      data: { id: contentId }
+    });
+  } catch (error) {
+    console.error('Error al crear contenido de imagen:', error);
+    if (req.file) {
+      deleteFile(`/uploads/content-images/${req.file.filename}`);
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Error al agregar la imagen'
     });
   }
 };
@@ -539,6 +599,8 @@ export const updateContent = async (req, res) => {
       // Actualizar URL según el tipo
       if (content.type === 'video') {
         updateData.url = `/uploads/videos/${req.file.filename}`;
+      } else if (content.type === 'image') {
+        updateData.url = `/uploads/content-images/${req.file.filename}`;
       } else {
         updateData.url = `/uploads/files/${req.file.filename}`;
       }

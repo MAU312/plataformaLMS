@@ -12,8 +12,9 @@ const videosDir = path.join(uploadsDir, 'videos');
 const filesDir = path.join(uploadsDir, 'files');
 const thumbnailsDir = path.join(uploadsDir, 'thumbnails');
 const submissionsDir = path.join(uploadsDir, 'submissions');
+const contentImagesDir = path.join(uploadsDir, 'content-images');
 
-[uploadsDir, videosDir, filesDir, thumbnailsDir, submissionsDir].forEach(dir => {
+[uploadsDir, videosDir, filesDir, thumbnailsDir, submissionsDir, contentImagesDir].forEach(dir => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -159,6 +160,32 @@ const imageFilter = (req, file, cb) => {
 
 export const uploadThumbnail = multer({
   storage: thumbnailStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB máximo
+  },
+  fileFilter: imageFilter
+});
+
+// =============================================
+// Configuración de almacenamiento para IMÁGENES DE CONTENIDO
+// (una imagen más en la lista de contenido del curso, distinta de las
+// miniaturas de portada — mismo filtro/límite que uploadThumbnail)
+// =============================================
+
+const contentImageStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, contentImagesDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    const name = path.basename(file.originalname, ext).replace(/\s+/g, '-');
+    cb(null, `${name}-${uniqueSuffix}${ext}`);
+  }
+});
+
+export const uploadContentImage = multer({
+  storage: contentImageStorage,
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB máximo
   },

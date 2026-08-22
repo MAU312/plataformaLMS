@@ -43,6 +43,20 @@ html {
     border-bottom: 1px solid #c7cdd6;
 }
 
+/* En modo claro, el fondo de página (bg-gray-100) y las tarjetas blancas
+   (bg-white) quedaban demasiado parecidas entre sí — con el borde
+   oscurecido de arriba ya se notaba el límite, pero apenas. Una sombra
+   sutil despega la tarjeta del fondo sin necesidad de tocar cada template
+   que usa "bg-white rounded-xl" (~15 lugares distintos). En modo oscuro no
+   hace falta: ahí el contraste ya viene de los colores, no de sombras. */
+.bg-white.rounded-xl {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+.dark .bg-white.rounded-xl {
+    box-shadow: none !important;
+}
+
 /* =================================
    FONDO DE PANTALLAS DE AUTENTICACIÓN
    (login, registro, olvidé/restablecer contraseña)
@@ -68,19 +82,75 @@ html {
 }
 
 /* =================================
+   FONDO DETRÁS DE LA GRILLA DE CURSOS
+   (catálogo, "Mis Cursos", y el detalle de un curso) — prueba visual con
+   imagenambiente.png.
+   Mismo mecanismo que .auth-bg: imagen de fondo + velo semitransparente
+   para que las tarjetas y el texto sigan siendo legibles encima. El velo
+   es blanco en modo claro y del mismo tono que el fondo oscuro normal en
+   modo oscuro, para no romper el contraste ya ajustado de las tarjetas.
+   ================================= */
+
+.courses-bg {
+    position: relative;
+    /* #app tiene min-h-screen (fuerza que la página mida al menos el alto
+       de la pantalla), pero este contenedor solo medía lo que ocupa su
+       propio contenido (encabezado + grilla) — si hay pocos cursos, queda
+       más corto que la pantalla y el resto se ve con el color plano de
+       fondo (la "franja" reportada). min-height: 100vh hace que la imagen
+       siempre llegue hasta el final, sin importar cuántos cursos haya. */
+    min-height: 100vh;
+    background-image: url('/images/imagenambiente.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+.courses-bg::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: rgba(243, 244, 246, 0.88);
+}
+
+.dark .courses-bg::before {
+    background: rgba(30, 41, 59, 0.9);
+}
+
+/* =================================
    DARK MODE
    ================================= */
 
-/* Body y fondo general */
+/* Body y fondo general.
+   Toda la escala neutra oscura se desplazó un paso hacia arriba (900->800,
+   800->700, etc.) respecto a la versión anterior: antes el fondo de página
+   (#0f172a) quedaba casi idéntico a fondos secundarios (bg-gray-50) y muy
+   poco diferenciado de las tarjetas, además de ser un negro demasiado
+   oscuro para las horas de lectura larga. Moviendo toda la escala junto se
+   preservan las mismas relaciones relativas entre capas, solo más claras. */
 .dark body {
-    background-color: #0f172a;
     color: #e2e8f0;
+}
+
+/* El <body> lleva literalmente la clase "bg-gray-100" (ver index.html),
+   así que la regla genérica ".dark .bg-gray-100" (2 clases, !important) de
+   más abajo le gana en especificidad a un simple ".dark body" (1 clase +
+   1 elemento) aunque también tenga !important — eso hacía que el fondo de
+   página terminara mostrando el color de TARJETA (#334155) en vez del
+   fondo de página (#1e293b), justo el problema de contraste que se quería
+   arreglar. "body.bg-gray-100" agrega una clase más a la selección
+   (2 clases + 1 elemento) para ganarle a la regla genérica sin tocar el
+   valor que usan los demás elementos que comparten esa misma clase
+   (botones secundarios, cajas de placeholder). */
+.dark body.bg-gray-100 {
+    background-color: #1e293b !important;
 }
 
 /* Navbar */
 .dark #navbar {
-    background-color: #1e293b;
-    border-bottom: 1px solid #334155;
+    background-color: #334155;
+    border-bottom: 1px solid #475569;
 }
 
 .dark #navbar a,
@@ -100,8 +170,8 @@ html {
 
 /* Footer */
 .dark footer {
-    background-color: #1e293b;
-    border-top-color: #334155;
+    background-color: #334155;
+    border-top-color: #475569;
 }
 
 .dark footer p {
@@ -110,7 +180,7 @@ html {
 
 /* Tarjetas blancas */
 .dark .bg-white {
-    background-color: #1e293b !important;
+    background-color: #334155 !important;
     color: #e2e8f0;
 }
 
@@ -123,47 +193,52 @@ html {
 .dark .text-gray-400 { color: #475569 !important; }
 
 /* Bordes */
-.dark .border-gray-100 { border-color: #334155 !important; }
-.dark .border-gray-200 { border-color: #334155 !important; }
-.dark .border-gray-300 { border-color: #475569 !important; }
-.dark .border-t { border-top-color: #334155 !important; }
-.dark .border-b { border-bottom-color: #334155 !important; }
+.dark .border-gray-100 { border-color: #475569 !important; }
+.dark .border-gray-200 { border-color: #475569 !important; }
+.dark .border-gray-300 { border-color: #64748b !important; }
+.dark .border-t { border-top-color: #475569 !important; }
+.dark .border-b { border-bottom-color: #475569 !important; }
+
+/* Card de "Información del curso" (bg-green-50 border-green-100): el borde
+   no tenía override en modo oscuro y quedaba con el verde clarísimo por
+   defecto de Tailwind, casi invisible contra el fondo verde oscuro. */
+.dark .border-green-100 { border-color: #2f6b4a !important; }
 
 /* Fondos secundarios */
-.dark .bg-gray-50  { background-color: #0f172a !important; }
-.dark .bg-gray-100 { background-color: #1e293b !important; }
+.dark .bg-gray-50  { background-color: #1e293b !important; }
+.dark .bg-gray-100 { background-color: #334155 !important; }
 .dark .bg-green-50 { background-color: #14432a !important; }
 
 /* Inputs y textareas */
 .dark input,
 .dark textarea,
 .dark select {
-    background-color: #0f172a !important;
-    border-color: #475569 !important;
+    background-color: #1e293b !important;
+    border-color: #64748b !important;
     color: #e2e8f0 !important;
 }
 
 .dark input::placeholder,
 .dark textarea::placeholder {
-    color: #64748b !important;
+    color: #94a3b8 !important;
 }
 
 /* Tablas */
 .dark thead,
-.dark .bg-gray-50 { background-color: #0f172a !important; }
+.dark .bg-gray-50 { background-color: #1e293b !important; }
 .dark tr:hover   { background-color: #14432a !important; }
 .dark th         { color: #94a3b8 !important; }
 
 /* Sidebar admin */
 .dark aside {
-    background-color: #1e293b !important;
-    border-right-color: #334155 !important;
+    background-color: #334155 !important;
+    border-right-color: #475569 !important;
 }
 
 /* Dropdown user menu */
 .dark #user-dropdown {
-    background-color: #1e293b !important;
-    border: 1px solid #334155;
+    background-color: #334155 !important;
+    border: 1px solid #475569;
 }
 
 .dark #user-dropdown a,
@@ -173,7 +248,7 @@ html {
 
 .dark #user-dropdown a:hover,
 .dark #user-dropdown button:hover {
-    background-color: #0f172a !important;
+    background-color: #1e293b !important;
 }
 
 /* Cards de estadísticas */
@@ -181,8 +256,8 @@ html {
 
 /* Zona de drop de archivos */
 .dark .file-drop-zone {
-    border-color: #475569;
-    background-color: #0f172a;
+    border-color: #64748b;
+    background-color: #1e293b;
     color: #94a3b8;
 }
 
@@ -287,10 +362,12 @@ html {
     overflow: hidden;
 }
 
-.video-player-container video {
+.video-player-container video,
+.video-player-container iframe {
     position: absolute;
     top: 0; left: 0;
     width: 100%; height: 100%;
+    border: none;
 }
 
 /* =================================
@@ -324,7 +401,7 @@ html {
     overflow: hidden;
 }
 
-.dark .progress-bar { background: #334155; }
+.dark .progress-bar { background: #475569; }
 
 .progress-fill {
     height: 100%;
@@ -345,7 +422,7 @@ html {
     animation: spin 1s linear infinite;
 }
 
-.dark .spinner { border-color: #334155; border-top-color: #22c55e; }
+.dark .spinner { border-color: #475569; border-top-color: #22c55e; }
 
 @keyframes spin {
     0%   { transform: rotate(0deg); }
@@ -377,7 +454,7 @@ html {
     display: block;
 }
 
-.dark .empty-state i { color: #334155; }
+.dark .empty-state i { color: #475569; }
 
 /* =================================
    FILE DROP ZONE
@@ -420,7 +497,7 @@ html {
 }
 
 .dark #dark-mode-toggle:hover {
-    background: #334155;
+    background: #475569;
 }
 
 /* =================================
@@ -461,3 +538,58 @@ html {
 #completion-modal .backdrop-blur-sm {
     backdrop-filter: blur(4px);
 }
+
+/* =================================
+   TEXTO MÁS GRANDE (ACCESIBILIDAD)
+   Control +/- para el usuario (botones "A-"/"A+" en la barra de
+   navegación, ver textsize.js): 2 niveles de aumento, aplicados como
+   clase en <html> (mismo mecanismo que el modo oscuro) — así cubre TODO
+   el sitio automáticamente, no solo login/curso como en la primera
+   versión de este control. Las clases text-* de Tailwind usan rem, que
+   se calcula contra el font-size del <html> raíz, no del ancestro más
+   cercano — por eso hace falta sobreescribir cada clase text-* en vez de
+   solo cambiar el font-size de <html> (eso además escalaría paddings y
+   márgenes, que también usan rem, y rompería el layout).
+   ================================= */
+
+.text-boost-1 .text-xs  { font-size: 0.85rem !important; }
+.text-boost-1 .text-sm  { font-size: 0.95rem !important; }
+.text-boost-1 .text-base { font-size: 1.1rem !important; }
+.text-boost-1 .text-lg  { font-size: 1.25rem !important; }
+.text-boost-1 .text-xl  { font-size: 1.4rem !important; }
+.text-boost-1 .text-2xl { font-size: 1.65rem !important; }
+.text-boost-1 .text-3xl { font-size: 2rem !important; }
+.text-boost-1 p, .text-boost-1 label, .text-boost-1 li { font-size: 1.05rem; }
+.text-boost-1 input, .text-boost-1 textarea { font-size: 1.05rem; }
+
+.text-boost-2 .text-xs  { font-size: 0.95rem !important; }
+.text-boost-2 .text-sm  { font-size: 1.05rem !important; }
+.text-boost-2 .text-base { font-size: 1.2rem !important; }
+.text-boost-2 .text-lg  { font-size: 1.4rem !important; }
+.text-boost-2 .text-xl  { font-size: 1.6rem !important; }
+.text-boost-2 .text-2xl { font-size: 1.9rem !important; }
+.text-boost-2 .text-3xl { font-size: 2.3rem !important; }
+.text-boost-2 p, .text-boost-2 label, .text-boost-2 li { font-size: 1.15rem; }
+.text-boost-2 input, .text-boost-2 textarea { font-size: 1.15rem; }
+
+/* Botones "A-"/"A+" — mismo tamaño/estilo que #dark-mode-toggle. */
+.text-size-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    font-weight: 700;
+    font-size: 0.7rem;
+    color: #4b5563;
+    transition: background 0.2s;
+}
+
+.text-size-btn:hover:not(:disabled) { background: #f1f5f9; }
+.dark .text-size-btn { color: #cbd5e1; }
+.dark .text-size-btn:hover:not(:disabled) { background: #475569; }
+.text-size-btn:disabled { opacity: 0.35; cursor: not-allowed; }

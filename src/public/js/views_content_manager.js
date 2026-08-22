@@ -134,8 +134,11 @@ function renderContentTypeSections(courseId, contents, folderId, nested) {
     const addButtons = [
         ['showAddUrlForm', 'fa-link', 'URL'],
         ['showAddFileForm', 'fa-file', 'Archivo'],
+        ['showAddImageForm', 'fa-image', 'Imagen'],
         ['showAddTextForm', 'fa-align-left', 'Texto'],
         ['showAddTaskForm', 'fa-tasks', 'Tarea'],
+        ['showAddQuizForm', 'fa-question-circle', 'Cuestionario'],
+        ['showAddSurveyForm', 'fa-poll', 'Encuesta'],
         ['showAddForumForm', 'fa-comments', 'Foro']
     ].map(([fn, icon, label]) => `
         <button onclick="${fn}(${courseId}, ${folderArg})" class="text-xs bg-green-50 text-cenat-green px-3 py-1.5 rounded-lg hover:bg-green-100 transition whitespace-nowrap">
@@ -153,8 +156,11 @@ function renderContentTypeSections(courseId, contents, folderId, nested) {
             </div>
             <div id="${scopeId('add-url-form-container', folderId)}"></div>
             <div id="${scopeId('add-file-form-container', folderId)}"></div>
+            <div id="${scopeId('add-image-form-container', folderId)}"></div>
             <div id="${scopeId('add-text-form-container', folderId)}"></div>
             <div id="${scopeId('add-task-form-container', folderId)}"></div>
+            <div id="${scopeId('add-quiz-form-container', folderId)}"></div>
+            <div id="${scopeId('add-survey-form-container', folderId)}"></div>
             <div id="${scopeId('add-forum-form-container', folderId)}"></div>
             ${mixedItems.length > 1 ? `
                 <p class="text-xs text-gray-400 mb-2"><i class="fas fa-arrows-alt-v mr-1"></i> Arrastra para cambiar el orden</p>
@@ -182,8 +188,11 @@ function renderManagerContentItem(content) {
         case 'video': return renderContentItem(content, 'video');
         case 'url': return renderContentItem(content, 'url');
         case 'file': return renderContentItem(content, 'file');
+        case 'image': return renderContentItem(content, 'image');
         case 'text': return renderContentItem(content, 'text');
         case 'task': return renderTaskItem(content);
+        case 'quiz': return renderQuizManagerItem(content);
+        case 'survey': return renderQuizManagerItem(content);
         case 'forum': return renderForumItem(content);
         default: return '';
     }
@@ -309,11 +318,14 @@ async function persistContentOrder(container) {
 }
 
 function renderContentItem(content, type) {
-    const icons = { video: 'fa-play-circle', url: 'fa-link', text: 'fa-align-left', task: 'fa-tasks' };
+    const icons = { video: 'fa-play-circle', url: 'fa-link', text: 'fa-align-left', task: 'fa-tasks', image: 'fa-image' };
     const icon = icons[type] || getFileIcon(content.url);
     return `
         <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition">
-            <i class="fas ${icon} text-xl text-cenat-green"></i>
+            ${type === 'image'
+                ? `<img src="${content.url}" alt="" class="w-10 h-10 rounded object-cover flex-shrink-0">`
+                : `<i class="fas ${icon} text-xl text-cenat-green"></i>`
+            }
             <div class="flex-1 min-w-0">
                 <p class="font-medium text-gray-900 truncate">${escapeHtml(content.title)}</p>
                 ${content.file_size ? `<p class="text-xs text-gray-500">${formatFileSize(content.file_size)}</p>` : ''}
@@ -338,6 +350,31 @@ function renderTaskItem(content) {
                 <i class="fas fa-inbox mr-1"></i> Entregas
             </a>
             <button onclick="deleteContentHandler(${content.id}, 'task')" class="text-red-500 hover:text-red-700 px-2">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    `;
+}
+
+const QUESTION_TYPE_LABELS = {
+    short_answer: 'Respuesta corta',
+    multiple_choice: 'Opción múltiple',
+    true_false: 'Verdadero o falso'
+};
+
+function renderQuizManagerItem(content) {
+    const isQuiz = content.type === 'quiz';
+    return `
+        <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition">
+            <i class="fas ${isQuiz ? 'fa-question-circle' : 'fa-poll'} text-xl text-cenat-green"></i>
+            <div class="flex-1 min-w-0">
+                <p class="font-medium text-gray-900 truncate">${escapeHtml(content.title)}</p>
+                <p class="text-xs text-gray-500">${QUESTION_TYPE_LABELS[content.question_type] || ''}</p>
+            </div>
+            <a href="#/contents/${content.id}/results" class="text-cenat-green hover:text-cenat-green-hover text-sm whitespace-nowrap" title="Ver resultados">
+                <i class="fas fa-chart-bar mr-1"></i> Resultados
+            </a>
+            <button onclick="deleteContentHandler(${content.id}, '${content.type}')" class="text-red-500 hover:text-red-700 px-2">
                 <i class="fas fa-trash"></i>
             </button>
         </div>
@@ -552,6 +589,75 @@ function showAddFileForm(courseId, folderId) {
 }
 
 // =================================
+// Formulario para agregar IMAGEN
+// =================================
+
+function showAddImageForm(courseId, folderId) {
+    const container = document.getElementById(scopeId('add-image-form-container', folderId));
+
+    container.innerHTML = `
+        <form class="add-image-form bg-green-50 rounded-lg p-4 mb-4 space-y-3">
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Título de la imagen *</label>
+                <input type="text" class="image-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="Ej: Diagrama del proceso">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Descripción (opcional)</label>
+                <input type="text" class="image-description w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Imagen *</label>
+                <input type="file" class="image-file w-full text-sm" accept="image/*" required>
+                <p class="text-xs text-gray-500 mt-1">JPG, PNG, GIF, WEBP (máx. 5MB)</p>
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" class="submit-image-btn bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
+                    <i class="fas fa-upload mr-1"></i> Subir Imagen
+                </button>
+                <button type="button" onclick="document.getElementById('${scopeId('add-image-form-container', folderId)}').innerHTML = ''" class="text-gray-600 px-4 py-2 text-sm">
+                    Cancelar
+                </button>
+            </div>
+        </form>
+    `;
+
+    container.querySelector('.add-image-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const title = e.target.querySelector('.image-title').value.trim();
+        const description = e.target.querySelector('.image-description').value.trim();
+        const imageFile = e.target.querySelector('.image-file').files[0];
+        const submitBtn = e.target.querySelector('.submit-image-btn');
+
+        if (!title || !imageFile) {
+            showToast('Título e imagen son requeridos', 'error');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('course_id', courseId);
+        formData.append('title', title);
+        formData.append('description', description);
+        formData.append('image', imageFile);
+        if (folderId) formData.append('folder_id', folderId);
+
+        try {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Subiendo...';
+
+            await contentsAPI.createImage(formData);
+            showToast('Imagen agregada exitosamente', 'success');
+            contentManagerRerender();
+
+        } catch (error) {
+            showToast(error.message || 'Error al subir la imagen', 'error');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-upload mr-1"></i> Subir Imagen';
+        }
+    });
+}
+
+// =================================
 // Formulario para agregar TEXTO
 // =================================
 
@@ -627,8 +733,9 @@ function showAddUrlForm(courseId, folderId) {
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">URL del video *</label>
                 <input type="url" class="url-value w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="https://www.youtube.com/watch?v=...">
-                <p class="text-xs text-gray-500 mt-1">Debe empezar con http:// o https://</p>
+                <p class="text-xs text-gray-500 mt-1">Debe empezar con http:// o https://. Se puede previsualizar video de YouTube o Vimeo.</p>
             </div>
+            <div class="url-preview-container"></div>
             <div class="flex gap-2">
                 <button type="submit" class="submit-url-btn bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
                     <i class="fas fa-check mr-1"></i> Guardar URL
@@ -639,6 +746,44 @@ function showAddUrlForm(courseId, folderId) {
             </div>
         </form>
     `;
+
+    // Previsualización en vivo: al pegar/escribir la URL, si se reconoce
+    // como YouTube/Vimeo se embebe ahí mismo para que el profesor confirme
+    // que es el video correcto antes de guardar. YouTube usa la misma API
+    // oficial que la vista del estudiante (ver createYoutubeEmbed en
+    // utils.js) — un <iframe src="..."> simple resultó fallar en algunos
+    // navegadores/redes (cookies de terceros bloqueadas), mientras que el
+    // embed armado por la API sí funciona ahí.
+    const previewContainer = container.querySelector('.url-preview-container');
+    const previewEmbedId = scopeId('url-preview-embed', folderId);
+    container.querySelector('.url-value').addEventListener('input', debounce((e) => {
+        const url = e.target.value.trim();
+        const youtubeId = getYoutubeVideoId(url);
+        const vimeoUrl = !youtubeId ? getVimeoEmbedUrl(url) : null;
+
+        if (youtubeId) {
+            previewContainer.innerHTML = `
+                <div data-embed-wrapper>
+                    <div class="video-player-container">
+                        <div id="${previewEmbedId}"></div>
+                    </div>
+                    <div data-embed-fallback class="hidden text-sm text-gray-500 bg-gray-50 rounded-lg p-3 mt-2">
+                        <i class="fas fa-triangle-exclamation text-yellow-500 mr-1"></i>
+                        Este video no se pudo previsualizar aquí — probá con otra URL.
+                    </div>
+                </div>
+            `;
+            createYoutubeEmbed(previewEmbedId, youtubeId);
+        } else if (vimeoUrl) {
+            previewContainer.innerHTML = `
+                <div class="video-player-container">
+                    <iframe src="${vimeoUrl}" frameborder="0" allowfullscreen></iframe>
+                </div>
+            `;
+        } else {
+            previewContainer.innerHTML = '';
+        }
+    }, 400));
 
     container.querySelector('.add-url-form').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -796,12 +941,269 @@ function showAddTaskForm(courseId, folderId) {
     });
 }
 
+// =================================
+// Formulario para agregar CUESTIONARIO o ENCUESTA
+// Comparten el mismo formulario dinámico: el tipo de pregunta se elige una
+// sola vez para todo el cuestionario/encuesta (no se mezcla por pregunta),
+// y la única diferencia visual es que una encuesta no muestra el radio de
+// "marcar como correcta" (no tiene sentido, no hay respuesta correcta).
+// =================================
+
+function showAddQuestionForm(courseId, folderId, kind) {
+    const isQuiz = kind === 'quiz';
+    const kindLabel = isQuiz ? 'Cuestionario' : 'Encuesta';
+    const apiCall = isQuiz ? contentsAPI.createQuiz : contentsAPI.createSurvey;
+    const container = document.getElementById(scopeId(`add-${kind}-form-container`, folderId));
+
+    // question_type aplica a TODAS las preguntas del cuestionario/encuesta
+    // (se elige una sola vez), por eso vive acá arriba y no por pregunta.
+    let questionType = 'multiple_choice';
+
+    function blankOptions() {
+        if (questionType === 'true_false') {
+            return [{ text: 'Verdadero', is_correct: true }, { text: 'Falso', is_correct: false }];
+        }
+        if (questionType === 'multiple_choice') {
+            return [{ text: '', is_correct: true }, { text: '', is_correct: false }];
+        }
+        return null; // short_answer no lleva opciones
+    }
+
+    let questions = [{ text: '', options: blankOptions() }];
+
+    // Lee el estado ACTUAL desde el DOM (no desde `questions`) antes de
+    // cualquier re-render estructural (agregar/quitar pregunta u opción,
+    // cambiar el tipo) — así no se pierde lo que el profesor ya escribió.
+    function readCurrentQuestions() {
+        return Array.from(listEl.querySelectorAll('.question-row')).map((row) => {
+            const text = row.querySelector('.question-text').value;
+            const optionRows = row.querySelectorAll('.option-row');
+            if (optionRows.length === 0) return { text, options: null };
+            const options = Array.from(optionRows).map((optRow) => {
+                const textInput = optRow.querySelector('.option-text');
+                const radio = optRow.querySelector('.option-correct-radio');
+                return {
+                    text: textInput ? textInput.value : optRow.dataset.fixedText,
+                    is_correct: radio ? radio.checked : false
+                };
+            });
+            return { text, options };
+        });
+    }
+
+    function optionRowHTML(opt, qIndex, oIndex, options) {
+        const isTrueFalse = questionType === 'true_false';
+        return `
+            <div class="option-row flex items-center gap-2" ${isTrueFalse ? `data-fixed-text="${escapeHtml(opt.text)}"` : ''}>
+                ${isQuiz ? `<input type="radio" name="correct-${qIndex}" class="option-correct-radio" ${opt.is_correct ? 'checked' : ''}>` : ''}
+                ${isTrueFalse
+                    ? `<span class="text-sm text-gray-700 flex-1">${escapeHtml(opt.text)}</span>`
+                    : `<input type="text" class="option-text flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Opción ${oIndex + 1}" value="${escapeHtml(opt.text)}">`
+                }
+                ${!isTrueFalse && options.length > 2 ? `
+                    <button type="button" class="remove-option-btn text-gray-400 hover:text-red-500 px-1" title="Quitar opción">
+                        <i class="fas fa-times"></i>
+                    </button>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    function questionRowHTML(q, qIndex) {
+        const showOptions = questionType !== 'short_answer';
+        return `
+            <div class="question-row border border-gray-200 rounded-lg p-3 space-y-2" data-q-index="${qIndex}">
+                <div class="flex items-start gap-2">
+                    <span class="text-sm font-semibold text-gray-500 mt-2">${qIndex + 1}.</span>
+                    <input type="text" class="question-text flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Escribe la pregunta..." value="${escapeHtml(q.text || '')}">
+                    <button type="button" class="remove-question-btn text-red-500 hover:text-red-700 px-2 mt-1" title="Quitar pregunta">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+                ${showOptions ? `
+                    <div class="pl-6 space-y-1">
+                        ${(q.options || []).map((opt, oIndex) => optionRowHTML(opt, qIndex, oIndex, q.options)).join('')}
+                        ${questionType === 'multiple_choice' ? `
+                            <button type="button" class="add-option-btn text-xs text-cenat-green hover:underline mt-1">
+                                <i class="fas fa-plus mr-1"></i> Agregar opción
+                            </button>
+                        ` : ''}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    function rerender() {
+        listEl.innerHTML = questions.map(questionRowHTML).join('');
+    }
+
+    container.innerHTML = `
+        <form class="add-${kind}-form bg-green-50 rounded-lg p-4 mb-4 space-y-3">
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Título ${isQuiz ? 'del cuestionario' : 'de la encuesta'} *</label>
+                <input type="text" class="quiz-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="Ej: ${isQuiz ? 'Quiz semana 1' : 'Encuesta de satisfacción'}">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Descripción (opcional)</label>
+                <input type="text" class="quiz-description w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Tipo de pregunta *</label>
+                <select class="quiz-question-type w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green">
+                    <option value="multiple_choice">Opción múltiple</option>
+                    <option value="true_false">Verdadero o falso</option>
+                    <option value="short_answer">Respuesta corta</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Todas las preguntas de ${isQuiz ? 'este cuestionario' : 'esta encuesta'} serán de este tipo.</p>
+            </div>
+            <div class="questions-list space-y-3"></div>
+            <button type="button" class="add-question-btn text-sm text-cenat-green hover:underline">
+                <i class="fas fa-plus mr-1"></i> Agregar pregunta
+            </button>
+            <div class="flex gap-2 pt-2 border-t border-green-100">
+                <button type="submit" class="submit-quiz-btn bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
+                    <i class="fas fa-check mr-1"></i> Guardar ${kindLabel}
+                </button>
+                <button type="button" class="cancel-quiz-btn text-gray-600 px-4 py-2 text-sm">Cancelar</button>
+            </div>
+        </form>
+    `;
+
+    const formEl = container.querySelector('form');
+    const listEl = formEl.querySelector('.questions-list');
+    const typeSelect = formEl.querySelector('.quiz-question-type');
+
+    rerender();
+
+    formEl.querySelector('.cancel-quiz-btn').addEventListener('click', () => { container.innerHTML = ''; });
+
+    typeSelect.addEventListener('change', () => {
+        const currentTexts = readCurrentQuestions().map((q) => q.text);
+        questionType = typeSelect.value;
+        questions = currentTexts.map((text) => ({ text, options: blankOptions() }));
+        rerender();
+    });
+
+    formEl.querySelector('.add-question-btn').addEventListener('click', () => {
+        questions = readCurrentQuestions();
+        questions.push({ text: '', options: blankOptions() });
+        rerender();
+    });
+
+    // Delegado en listEl (no en cada fila): sigue funcionando después de
+    // cada rerender() sin tener que re-enganchar listeners a mano.
+    listEl.addEventListener('click', (e) => {
+        const removeQBtn = e.target.closest('.remove-question-btn');
+        if (removeQBtn) {
+            questions = readCurrentQuestions();
+            if (questions.length <= 1) {
+                showToast('Debe haber al menos una pregunta', 'warning');
+                return;
+            }
+            const qIndex = Number(removeQBtn.closest('.question-row').dataset.qIndex);
+            questions.splice(qIndex, 1);
+            rerender();
+            return;
+        }
+
+        const addOptBtn = e.target.closest('.add-option-btn');
+        if (addOptBtn) {
+            questions = readCurrentQuestions();
+            const qIndex = Number(addOptBtn.closest('.question-row').dataset.qIndex);
+            questions[qIndex].options.push({ text: '', is_correct: false });
+            rerender();
+            return;
+        }
+
+        const removeOptBtn = e.target.closest('.remove-option-btn');
+        if (removeOptBtn) {
+            questions = readCurrentQuestions();
+            const row = removeOptBtn.closest('.question-row');
+            const qIndex = Number(row.dataset.qIndex);
+            const oIndex = Array.from(row.querySelectorAll('.option-row')).indexOf(removeOptBtn.closest('.option-row'));
+            questions[qIndex].options.splice(oIndex, 1);
+            if (isQuiz && !questions[qIndex].options.some((o) => o.is_correct)) {
+                questions[qIndex].options[0].is_correct = true;
+            }
+            rerender();
+        }
+    });
+
+    formEl.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const title = formEl.querySelector('.quiz-title').value.trim();
+        const description = formEl.querySelector('.quiz-description').value.trim();
+        const submitBtn = formEl.querySelector('.submit-quiz-btn');
+        const currentQuestions = readCurrentQuestions();
+
+        if (!title) {
+            showToast('El título es requerido', 'error');
+            return;
+        }
+        if (currentQuestions.some((q) => !q.text.trim())) {
+            showToast('Todas las preguntas necesitan un texto', 'error');
+            return;
+        }
+        if (questionType !== 'short_answer') {
+            if (currentQuestions.some((q) => (q.options || []).some((o) => !o.text.trim()))) {
+                showToast('Todas las opciones necesitan un texto', 'error');
+                return;
+            }
+            if (isQuiz && currentQuestions.some((q) => !(q.options || []).some((o) => o.is_correct))) {
+                showToast('Marca la opción correcta de cada pregunta', 'error');
+                return;
+            }
+        }
+
+        const payload = {
+            course_id: courseId,
+            title,
+            description,
+            question_type: questionType,
+            questions: currentQuestions.map((q) => ({
+                text: q.text.trim(),
+                options: questionType === 'short_answer'
+                    ? undefined
+                    : q.options.map((o) => ({ text: o.text.trim(), is_correct: !!o.is_correct }))
+            })),
+            folder_id: folderId || undefined
+        };
+
+        try {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Guardando...';
+
+            await apiCall(payload);
+            showToast(`${kindLabel} agregad${isQuiz ? 'o' : 'a'} exitosamente`, 'success');
+            contentManagerRerender();
+
+        } catch (error) {
+            showToast(error.message || `Error al guardar ${isQuiz ? 'el cuestionario' : 'la encuesta'}`, 'error');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `<i class="fas fa-check mr-1"></i> Guardar ${kindLabel}`;
+        }
+    });
+}
+
+function showAddQuizForm(courseId, folderId) {
+    showAddQuestionForm(courseId, folderId, 'quiz');
+}
+
+function showAddSurveyForm(courseId, folderId) {
+    showAddQuestionForm(courseId, folderId, 'survey');
+}
+
 const CONTENT_TYPE_LABELS = {
     video: 'el video',
     file: 'el archivo',
+    image: 'la imagen',
     text: 'el texto',
     url: 'la URL',
     task: 'la tarea',
+    quiz: 'el cuestionario (se borran también todas las respuestas)',
+    survey: 'la encuesta (se borran también todas las respuestas)',
     forum: 'el tema de foro (se borran también todas sus respuestas)',
     folder: 'la carpeta'
 };
@@ -829,8 +1231,11 @@ window.renderForumItem = renderForumItem;
 window.showAddFolderForm = showAddFolderForm;
 window.showAddVideoForm = showAddVideoForm;
 window.showAddFileForm = showAddFileForm;
+window.showAddImageForm = showAddImageForm;
 window.showAddTextForm = showAddTextForm;
 window.showAddUrlForm = showAddUrlForm;
 window.showAddTaskForm = showAddTaskForm;
+window.showAddQuizForm = showAddQuizForm;
+window.showAddSurveyForm = showAddSurveyForm;
 window.showAddForumForm = showAddForumForm;
 window.deleteContentHandler = deleteContentHandler;

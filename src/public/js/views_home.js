@@ -28,25 +28,27 @@ window.renderHome = async function(params) {
             </div>
         </div>
 
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <div class="flex items-center justify-between mb-8">
-                <h2 class="text-2xl font-bold text-gray-900">
-                    <i class="fas fa-th-large mr-2 text-cenat-green"></i>
-                    Cursos disponibles
-                </h2>
-                <div class="relative">
-                    <input
-                        type="text"
-                        id="search-courses"
-                        placeholder="Buscar curso..."
-                        class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition w-64"
-                    >
-                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+        <div class="courses-bg">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <div class="flex items-center justify-between mb-8">
+                    <h2 class="text-2xl font-bold text-gray-900">
+                        <i class="fas fa-th-large mr-2 text-cenat-green"></i>
+                        Cursos disponibles
+                    </h2>
+                    <div class="relative">
+                        <input
+                            type="text"
+                            id="search-courses"
+                            placeholder="Buscar curso..."
+                            class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition w-64"
+                        >
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    </div>
                 </div>
-            </div>
 
-            <div id="courses-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-            <div id="courses-pagination" class="mt-8"></div>
+                <div id="courses-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                <div id="courses-pagination" class="mt-8"></div>
+            </div>
         </div>
     `;
 
@@ -114,10 +116,15 @@ function renderCourseCard(course) {
                 ${!course.is_active ? '<span class="badge badge-inactive absolute top-3 right-3">Inactivo</span>' : ''}
             </div>
             <div class="p-5">
-                <h3 class="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
+                <h3 class="text-lg font-bold text-gray-900 mb-1 line-clamp-2">
                     ${escapeHtml(course.title)}
                 </h3>
-                <p class="text-gray-600 text-sm mb-4 line-clamp-2">
+                ${course.teacher_names ? `
+                    <p class="text-sm text-gray-500 mb-2 truncate">
+                        <i class="fas fa-user-tie mr-1"></i>${escapeHtml(course.teacher_names)}
+                    </p>
+                ` : ''}
+                <p class="text-gray-600 text-base mb-4 line-clamp-2">
                     ${escapeHtml(course.description || 'Sin descripción disponible')}
                 </p>
                 <div class="flex items-center justify-between text-sm text-gray-500 border-t pt-3">

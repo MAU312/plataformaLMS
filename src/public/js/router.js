@@ -105,6 +105,16 @@ const routes = {
         render: (params) => window.renderTaskSubmissions(params),
         requireAuth: true
     },
+    '/contents/:id/take': {
+        title: 'Responder',
+        render: (params) => window.renderTakeQuiz(params),
+        requireAuth: true
+    },
+    '/contents/:id/results': {
+        title: 'Resultados',
+        render: (params) => window.renderQuizResults(params),
+        requireAuth: true
+    },
     '/forum/:id': {
         title: 'Foro',
         render: (params) => window.renderForumThread(params),

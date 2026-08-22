@@ -102,6 +102,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // autenticación e inscripción al curso antes de entregar el archivo.
 app.use('/uploads/videos', express.static(path.join(__dirname, '../uploads/videos')));
 app.use('/uploads/thumbnails', express.static(path.join(__dirname, '../uploads/thumbnails')));
+app.use('/uploads/content-images', express.static(path.join(__dirname, '../uploads/content-images')));
 
 // =============================================
 // API Routes

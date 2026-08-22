@@ -90,7 +90,7 @@ class Content {
    * `<=>` es NULL-safe: `folder_id <=> NULL` si no hay carpeta, o
    * `folder_id <=> 5` si la hay, sin necesitar dos queries distintas.
    */
-  static async create({ course_id, type, title, description, url, file_size, order_index, folder_id }) {
+  static async create({ course_id, type, title, description, url, file_size, order_index, folder_id, question_type }) {
     const folderId = folder_id || null;
 
     if (order_index === undefined) {
@@ -102,9 +102,9 @@ class Content {
     }
 
     const [result] = await pool.query(
-      `INSERT INTO contents (course_id, type, title, description, url, file_size, order_index, folder_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [course_id, type, title, description || null, url, file_size || null, order_index, folderId]
+      `INSERT INTO contents (course_id, type, title, description, url, file_size, order_index, folder_id, question_type)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [course_id, type, title, description || null, url, file_size || null, order_index, folderId, question_type || null]
     );
     return result.insertId;
   }

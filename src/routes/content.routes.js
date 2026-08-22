@@ -2,10 +2,13 @@ import express from 'express';
 import * as contentController from '../controllers/content.controller.js';
 import * as submissionController from '../controllers/submission.controller.js';
 import * as forumController from '../controllers/forum.controller.js';
+import * as quizController from '../controllers/quiz.controller.js';
 import Content from '../models/Content.js';
 import Course from '../models/Course.js';
+import ContentQuestion from '../models/ContentQuestion.js';
+import ContentAnswer from '../models/ContentAnswer.js';
 import { isAuthenticated, requireCourseManager } from '../middlewares/auth.middleware.js';
-import { uploadVideo, uploadFile, uploadSubmission } from '../middlewares/upload.middleware.js';
+import { uploadVideo, uploadFile, uploadSubmission, uploadContentImage } from '../middlewares/upload.middleware.js';
 import { verifyFileSignature } from '../middlewares/fileSignature.middleware.js';
 import { submitTaskLimiter } from '../middlewares/rateLimit.middleware.js';
 
@@ -17,6 +20,19 @@ const router = express.Router();
  */
 async function courseIdFromContentParam(req) {
   const content = await Content.findById(req.params.id);
+  return content ? content.course_id : null;
+}
+
+/**
+ * Igual que courseIdFromContentParam, pero resolviendo desde el :answerId
+ * de PUT /answers/:answerId/grade (answer -> question -> content -> curso).
+ */
+async function courseIdFromAnswerParam(req) {
+  const answer = await ContentAnswer.findById(req.params.answerId);
+  if (!answer) return null;
+  const question = await ContentQuestion.findById(answer.question_id);
+  if (!question) return null;
+  const content = await Content.findById(question.content_id);
   return content ? content.course_id : null;
 }
 
@@ -71,6 +87,20 @@ router.post(
 );
 
 /**
+ * POST /api/contents/image
+ * Admin, o el profesor asignado al curso del body (ver nota de orden en
+ * POST /video).
+ */
+router.post(
+  '/image',
+  isAuthenticated,
+  uploadContentImage.single('image'),
+  requireCourseManager((req) => req.body.course_id),
+  verifyFileSignature('image'),
+  contentController.createImageContent
+);
+
+/**
  * POST /api/contents/text
  * Admin, o el profesor asignado al curso del body. Sin archivo (JSON
  * puro), así que aquí sí req.body.course_id ya está disponible antes de
@@ -93,6 +123,43 @@ router.post(
   isAuthenticated,
   requireCourseManager((req) => req.body.course_id),
   contentController.createUrlContent
+);
+
+/**
+ * POST /api/contents/quiz
+ * Admin, o el profesor asignado al curso del body. Sin archivo (JSON puro
+ * con las preguntas/opciones), igual que /text.
+ */
+router.post(
+  '/quiz',
+  isAuthenticated,
+  requireCourseManager((req) => req.body.course_id),
+  quizController.createQuizContent
+);
+
+/**
+ * POST /api/contents/survey
+ * Admin, o el profesor asignado al curso del body. Comparte controlador y
+ * validación con /quiz (ver quiz.controller.js) — solo cambia el tipo.
+ */
+router.post(
+  '/survey',
+  isAuthenticated,
+  requireCourseManager((req) => req.body.course_id),
+  quizController.createSurveyContent
+);
+
+/**
+ * PUT /api/contents/answers/:answerId/grade
+ * Calificación manual de una respuesta corta (multiple_choice/true_false
+ * ya se autocalifican al enviar). Admin, o el profesor asignado al curso
+ * dueño de la pregunta.
+ */
+router.put(
+  '/answers/:answerId/grade',
+  isAuthenticated,
+  requireCourseManager(courseIdFromAnswerParam),
+  quizController.gradeAnswer
 );
 
 /**
@@ -216,6 +283,62 @@ router.get(
 );
 
 /**
+ * GET /api/contents/:id/questions
+ * Preguntas de un cuestionario/encuesta para responder (o, si ya
+ * respondió, sus propias respuestas). El control de acceso fino
+ * (inscrito/profesor/admin) se hace dentro del controlador, igual que
+ * GET /:id/download.
+ */
+router.get('/:id/questions', isAuthenticated, quizController.getQuestions);
+
+/**
+ * POST /api/contents/:id/answers
+ * Envía todas las respuestas de un cuestionario/encuesta de una vez. Mismo
+ * patrón de pre-check inline que /:id/submit: valida que el content
+ * exista, sea quiz/survey, y que el usuario esté inscrito, antes de tocar
+ * la base de datos.
+ */
+router.post(
+  '/:id/answers',
+  isAuthenticated,
+  async (req, res, next) => {
+    try {
+      const content = await Content.findById(req.params.id);
+      if (!content) {
+        return res.status(404).json({ success: false, message: 'Contenido no encontrado' });
+      }
+      if (!['quiz', 'survey'].includes(content.type)) {
+        return res.status(400).json({ success: false, message: 'Este contenido no es un cuestionario ni una encuesta' });
+      }
+      const enrolled = await Course.isUserEnrolled(content.course_id, req.session.user.id);
+      if (!enrolled) {
+        return res.status(403).json({
+          success: false,
+          message: 'Debes estar inscrito en este curso para responder'
+        });
+      }
+      req.quizContent = content;
+      next();
+    } catch (error) {
+      next(error);
+    }
+  },
+  quizController.submitAnswers
+);
+
+/**
+ * GET /api/contents/:id/results
+ * Resultados de un cuestionario/encuesta. Admin, o el profesor asignado
+ * al curso.
+ */
+router.get(
+  '/:id/results',
+  isAuthenticated,
+  requireCourseManager(courseIdFromContentParam),
+  quizController.getResults
+);
+
+/**
  * GET /api/contents/:id/forum
  * Tema + respuestas de un foro. Admin, inscrito, o profesor asignado.
  */
@@ -256,12 +379,14 @@ router.put(
         // multer/verifyFileSignature (que esperan un req.file). Una
         // carpeta solo se actualiza para cambiarle el título o moverla
         // (folder_id no aplica a una carpeta, ver updateContent).
-        if (['text', 'url', 'forum', 'folder'].includes(content.type)) {
+        if (['text', 'url', 'forum', 'folder', 'quiz', 'survey'].includes(content.type)) {
           return next();
         }
 
         if (content.type === 'video') {
           return uploadVideo.single('video')(req, res, next);
+        } else if (content.type === 'image') {
+          return uploadContentImage.single('image')(req, res, next);
         } else {
           return uploadFile.single('file')(req, res, next);
         }
@@ -272,8 +397,9 @@ router.put(
     handleUpload(req, res, next);
   },
   (req, res, next) => {
-    if (['text', 'url', 'forum', 'folder'].includes(req.contentType)) return next();
-    verifyFileSignature(req.contentType === 'video' ? 'video' : 'file')(req, res, next);
+    if (['text', 'url', 'forum', 'folder', 'quiz', 'survey'].includes(req.contentType)) return next();
+    const signatureKind = req.contentType === 'video' ? 'video' : req.contentType === 'image' ? 'image' : 'file';
+    verifyFileSignature(signatureKind)(req, res, next);
   },
   contentController.updateContent
 );

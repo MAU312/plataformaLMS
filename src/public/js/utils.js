@@ -361,6 +361,139 @@ function getSelectedTeacherIds(containerId) {
 }
 
 // =================================
+// Embed de video externo (YouTube/Vimeo)
+// =================================
+
+/**
+ * Extrae el ID de un video de YouTube de cualquier formato de link común
+ * (watch?v=, youtu.be/, /shorts/, /embed/). `null` si la URL no es de
+ * YouTube o no se pudo extraer el ID.
+ */
+function getYoutubeVideoId(url) {
+    const match = String(url || '').match(
+        /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
+    );
+    return match ? match[1] : null;
+}
+
+/**
+ * URL de embed simple (iframe plano, sin la API de YouTube) — se usa
+ * únicamente en el preview del formulario del profesor: ahí SÍ conviene
+ * que se vea el error de YouTube tal cual si el video no se puede
+ * embeber, como pista de que probó una URL que no va a funcionar para
+ * los estudiantes.
+ */
+function getYoutubeEmbedUrl(url) {
+    const id = getYoutubeVideoId(url);
+    if (!id) return null;
+    // El parámetro "origin" es lo que recomienda YouTube para que el
+    // reproductor valide desde dónde se está embebiendo.
+    const origin = encodeURIComponent(window.location.origin);
+    return `https://www.youtube.com/embed/${id}?origin=${origin}`;
+}
+
+/**
+ * Igual que getYoutubeEmbedUrl pero para Vimeo (vimeo.com/{id}).
+ */
+function getVimeoEmbedUrl(url) {
+    const match = String(url || '').match(/vimeo\.com\/(\d+)/);
+    return match ? `https://player.vimeo.com/video/${match[1]}` : null;
+}
+
+/**
+ * Intenta YouTube primero, luego Vimeo. `null` si el proveedor no se
+ * reconoce — en ese caso el contenido de tipo 'url' se queda con el
+ * comportamiento de antes (solo un link para abrir en pestaña nueva).
+ */
+function getVideoEmbedUrl(url) {
+    return getYoutubeEmbedUrl(url) || getVimeoEmbedUrl(url) || null;
+}
+
+// =================================
+// Reproductor de YouTube con detección de error
+// =================================
+// Un <iframe src="youtube.com/embed/ID"> plano no avisa cuando el video
+// no se puede reproducir ahí (el dueño lo restringió, fue borrado, etc.)
+// — YouTube simplemente dibuja SU propio cartel de error DENTRO del
+// iframe, y no hay forma de detectarlo desde afuera. La única manera de
+// enterarse es con la API oficial de YouTube (que sí avisa por
+// postMessage), para poder ocultar el reproductor roto y mostrar en su
+// lugar el link de "ver en YouTube" que ya está arriba de la tarjeta.
+
+let ytApiReady = false;
+let ytApiLoading = false;
+const ytPendingEmbeds = [];
+
+function loadYoutubeApi() {
+    if (ytApiReady || ytApiLoading) return;
+    ytApiLoading = true;
+    window.onYouTubeIframeAPIReady = function () {
+        ytApiReady = true;
+        ytPendingEmbeds.forEach((fn) => fn());
+        ytPendingEmbeds.length = 0;
+    };
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+}
+
+/**
+ * Reemplaza el div `containerId` (vacío) por el reproductor real de
+ * YouTube. Si el video no se puede reproducir ahí (códigos 101/150: el
+ * dueño no permite incrustarlo en otros sitios; 100: no existe o es
+ * privado), oculta el reproductor y muestra el mensaje de
+ * `data-embed-fallback` que esté al lado, en vez de dejar ver el cartel
+ * de error de YouTube.
+ */
+function createYoutubeEmbed(containerId, videoId) {
+    const create = () => {
+        const el = document.getElementById(containerId);
+        // El elemento puede ya no existir si el usuario navegó a otra
+        // vista mientras se cargaba la API (es asíncrona).
+        if (!el || typeof YT === 'undefined') return;
+
+        // Hay que guardar esta referencia ANTES de crear el YT.Player:
+        // el constructor reemplaza `el` por el iframe real de YouTube de
+        // forma síncrona, así que buscar por containerId de nuevo DENTRO
+        // de onError (que se dispara después, de forma asíncrona) ya no
+        // encontraría nada.
+        const wrapper = el.closest('[data-embed-wrapper]');
+
+        new YT.Player(containerId, {
+            videoId,
+            playerVars: { origin: window.location.origin },
+            events: {
+                onError: () => {
+                    if (!wrapper) return;
+                    wrapper.querySelector('.video-player-container')?.remove();
+                    wrapper.querySelector('[data-embed-fallback]')?.classList.remove('hidden');
+                }
+            }
+        });
+    };
+
+    if (ytApiReady) {
+        create();
+    } else {
+        ytPendingEmbeds.push(create);
+        loadYoutubeApi();
+    }
+}
+
+/**
+ * Busca todos los `[data-yt-embed]` ya insertados en el DOM (ver
+ * renderUrlContentRow en views_course_detail.js) y crea su reproductor.
+ * Se llama una sola vez después de pintar la página — el checkbox de
+ * progreso y el reordenamiento no vuelven a tocar estos nodos, así que no
+ * hace falta re-inicializar en cada interacción.
+ */
+function initYoutubeEmbeds() {
+    document.querySelectorAll('[data-yt-embed]').forEach((el) => {
+        createYoutubeEmbed(el.id, el.dataset.ytEmbed);
+    });
+}
+
+// =================================
 // Export al objeto window
 // =================================
 
@@ -388,3 +521,8 @@ window.renderPagination = renderPagination;
 window.renderTeacherCheckboxesHTML = renderTeacherCheckboxesHTML;
 window.loadTeacherCheckboxes = loadTeacherCheckboxes;
 window.getSelectedTeacherIds = getSelectedTeacherIds;
+window.getYoutubeVideoId = getYoutubeVideoId;
+window.getYoutubeEmbedUrl = getYoutubeEmbedUrl;
+window.getVimeoEmbedUrl = getVimeoEmbedUrl;
+window.getVideoEmbedUrl = getVideoEmbedUrl;
+window.initYoutubeEmbeds = initYoutubeEmbeds;
