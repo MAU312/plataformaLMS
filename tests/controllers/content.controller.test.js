@@ -410,6 +410,26 @@ test('markContentCompleted: 400 si el contenido es una carpeta (no cuenta para e
   assert.equal(markCall.mock.calls.length, 0);
 });
 
+test('markContentCompleted: 400 si el contenido es una imagen (no cuenta para el progreso)', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 9, course_id: 1, type: 'image' }));
+  const markCall = t.mock.method(Content, 'markCompleted', async () => 10);
+  const req = mockReq({ params: { id: 9 }, session: { user: { id: 1, role: 'student' } } });
+  const res = mockRes();
+  await contentController.markContentCompleted(req, res);
+  assert.equal(res.statusCode, 400);
+  assert.equal(markCall.mock.calls.length, 0);
+});
+
+test('markContentIncomplete: 400 si el contenido es una imagen', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 9, course_id: 1, type: 'image' }));
+  const markCall = t.mock.method(Content, 'markIncomplete', async () => true);
+  const req = mockReq({ params: { id: 9 }, session: { user: { id: 1, role: 'student' } } });
+  const res = mockRes();
+  await contentController.markContentIncomplete(req, res);
+  assert.equal(res.statusCode, 400);
+  assert.equal(markCall.mock.calls.length, 0);
+});
+
 test('markContentIncomplete: éxito recalcula y devuelve el progreso', async (t) => {
   t.mock.method(Content, 'findById', async () => ({ id: 1, course_id: 1, type: 'video' }));
   t.mock.method(Course, 'isUserEnrolled', async () => true);
@@ -468,6 +488,34 @@ test('updateContent: en type=url, rechaza una url que no sea http/https', async 
 
   assert.equal(res.statusCode, 400);
   assert.equal(updateCall.mock.calls.length, 0);
+});
+
+test('updateContent: con archivo nuevo, borra el archivo anterior SOLO después de que el UPDATE confirma en BD', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'file', url: '/uploads/files/viejo.pdf' }));
+  const updateCall = t.mock.method(Content, 'update', async () => true);
+  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
+  t.mock.method(fs, 'existsSync', () => true);
+  const req = mockReq({ params: { id: 1 }, body: {}, file: { filename: 'nuevo.pdf' } });
+  const res = mockRes();
+
+  await contentController.updateContent(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(updateCall.mock.calls[0].arguments[1].url, '/uploads/files/nuevo.pdf');
+  assert.equal(unlinkCall.mock.calls.length, 1, 'debe borrar el archivo viejo tras confirmar el UPDATE');
+});
+
+test('updateContent: si el UPDATE no afecta ninguna fila, NO borra el archivo anterior (evita que la BD quede apuntando a un archivo borrado)', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'file', url: '/uploads/files/viejo.pdf' }));
+  t.mock.method(Content, 'update', async () => false);
+  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
+  const req = mockReq({ params: { id: 1 }, body: {}, file: { filename: 'nuevo.pdf' } });
+  const res = mockRes();
+
+  await contentController.updateContent(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(unlinkCall.mock.calls.length, 0, 'no debe borrar el archivo viejo si el UPDATE no confirmó en BD');
 });
 
 test('deleteContent: en type=url no intenta borrar ningún archivo del disco (la "url" es un link externo)', async (t) => {

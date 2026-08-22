@@ -21,16 +21,18 @@ const __dirname = path.dirname(__filename);
  */
 /**
  * Mensaje de por qué un tipo de contenido no se puede marcar
- * completado/pendiente manualmente, o null si sí se puede. Una tarea la
- * marca automáticamente submitTask al entregar; un foro y una carpeta no
- * tienen un estado "completado" real (son discusión abierta / agrupador),
- * así que ninguno de los tres debe contar para el progreso del curso.
+ * completado/pendiente manualmente, o null si sí se puede. Una tarea/
+ * cuestionario/encuesta se marca automáticamente al entregar/responder; un
+ * foro, una carpeta, y una imagen no tienen un estado "completado" real
+ * (discusión abierta / agrupador / decoración), así que ninguno de estos
+ * debe contar para el progreso del curso.
  */
 function uncompletableReason(type) {
   if (type === 'task') return 'El progreso de una tarea se actualiza automáticamente al entregarla';
   if (type === 'quiz' || type === 'survey') return 'El progreso se actualiza automáticamente al responder';
   if (type === 'forum') return 'El foro no cuenta para el progreso del curso';
   if (type === 'folder') return 'Una carpeta no cuenta para el progreso del curso';
+  if (type === 'image') return 'Una imagen no cuenta para el progreso del curso';
   return null;
 }
 
@@ -589,14 +591,15 @@ export const updateContent = async (req, res) => {
       updateData.url = String(url).trim();
     }
 
-    // Si se subió un nuevo archivo
+    // Si se subió un nuevo archivo, actualizar la URL según el tipo. El
+    // archivo anterior (guardado antes de tocar updateData) se borra recién
+    // después de confirmar el UPDATE en BD — si se borrara antes y el
+    // UPDATE fallara (o no afectara ninguna fila), la BD quedaría apuntando
+    // a un archivo que ya no existe en disco. Mismo bug que ya se había
+    // arreglado para la miniatura del curso (ver Course.updateCourse),
+    // pero nunca se replicó acá.
+    const previousUrl = req.file ? content.url : null;
     if (req.file) {
-      // Eliminar archivo anterior
-      if (content.url) {
-        deleteFile(content.url);
-      }
-
-      // Actualizar URL según el tipo
       if (content.type === 'video') {
         updateData.url = `/uploads/videos/${req.file.filename}`;
       } else if (content.type === 'image') {
@@ -607,6 +610,10 @@ export const updateContent = async (req, res) => {
     }
 
     const updated = await Content.update(id, updateData);
+
+    if (updated && previousUrl) {
+      deleteFile(previousUrl);
+    }
 
     if (updated) {
       res.json({

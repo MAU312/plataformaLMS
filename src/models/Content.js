@@ -268,11 +268,13 @@ class Content {
    */
   static async recalculateCourseProgress(courseId, userId) {
     // Contar total de contenidos del curso. Un foro queda fuera (discusión
-    // abierta, sin estado "completado") y una carpeta también (es solo un
-    // agrupador, no contenido en sí) — contarlos dejaría a los estudiantes
-    // sin poder llegar nunca al 100% ni sacar certificado.
+    // abierta, sin estado "completado"), una carpeta también (es solo un
+    // agrupador, no contenido en sí), y una imagen también (es solo
+    // decoración/ilustración, no algo que tenga sentido "completar") —
+    // contarlos dejaría a los estudiantes sin poder llegar nunca al 100%
+    // ni sacar certificado.
     const [totalRows] = await pool.query(
-      "SELECT COUNT(*) as total FROM contents WHERE course_id = ? AND type NOT IN ('forum', 'folder')",
+      "SELECT COUNT(*) as total FROM contents WHERE course_id = ? AND type NOT IN ('forum', 'folder', 'image')",
       [courseId]
     );
     const total = totalRows[0].total;
@@ -282,7 +284,7 @@ class Content {
       `SELECT COUNT(*) as completed
        FROM content_progress cp
        INNER JOIN contents co ON co.id = cp.content_id
-       WHERE co.course_id = ? AND cp.user_id = ? AND co.type NOT IN ('forum', 'folder')`,
+       WHERE co.course_id = ? AND cp.user_id = ? AND co.type NOT IN ('forum', 'folder', 'image')`,
       [courseId, userId]
     );
     const completed = completedRows[0].completed;

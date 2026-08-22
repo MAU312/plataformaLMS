@@ -76,13 +76,13 @@ window.renderCourseDetail = async function(params) {
         const allSurveysCount = contents.filter(c => c.type === 'survey').length;
         const allForumsCount = contents.filter(c => c.type === 'forum').length;
 
-        // El foro y una carpeta no cuentan para el progreso del curso (una
-        // discusión abierta y un simple agrupador no tienen estado
-        // "completado") — igual que en el servidor
+        // El foro, una carpeta y una imagen no cuentan para el progreso del
+        // curso (discusión abierta / agrupador / decoración, ninguno tiene
+        // estado "completado" real) — igual que en el servidor
         // (Content.recalculateCourseProgress), se excluyen del total para
         // que el % mostrado y la visibilidad del botón de certificado
         // coincidan con lo que realmente evalúa el backend.
-        const progressTrackableContents = contents.filter(c => c.type !== 'forum' && c.type !== 'folder');
+        const progressTrackableContents = contents.filter(c => c.type !== 'forum' && c.type !== 'folder' && c.type !== 'image');
         const completedCount = progressTrackableContents.filter(c => c.completed).length;
         const progressPercent = progressTrackableContents.length > 0
             ? Math.round((completedCount / progressTrackableContents.length) * 100)
@@ -453,7 +453,7 @@ function renderTextContentCard(content, canTrackProgress, hasAccess) {
     `;
 }
 
-function renderImageContentCard(content, canTrackProgress, hasAccess) {
+function renderImageContentCard(content, hasAccess) {
     if (!hasAccess) {
         return `
             <div class="bg-white rounded-xl border border-gray-100 p-4">
@@ -468,18 +468,11 @@ function renderImageContentCard(content, canTrackProgress, hasAccess) {
         `;
     }
 
-    const completed = content.completed || false;
     return `
         <div class="bg-white rounded-xl border border-gray-100 p-4">
             <div class="flex items-start gap-3">
-                ${canTrackProgress ? `
-                    <button class="content-checkbox flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition mt-1 ${completed ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-cenat-green'}"
-                        data-content-id="${content.id}" data-completed="${completed == 1 || completed === true ? 'true' : 'false'}" title="${completed ? 'Marcar como pendiente' : 'Marcar como completado'}">
-                        ${completed ? '<i class="fas fa-check text-white text-xs"></i>' : ''}
-                    </button>
-                ` : ''}
                 <div class="flex-1 min-w-0">
-                    <p class="font-medium text-gray-900 ${completed ? 'line-through text-gray-400' : ''}">${escapeHtml(content.title)}</p>
+                    <p class="font-medium text-gray-900">${escapeHtml(content.title)}</p>
                     ${content.description ? `<p class="text-sm text-gray-600 mt-1 whitespace-pre-line">${escapeHtml(content.description)}</p>` : ''}
                     <img src="${content.url}" alt="${escapeHtml(content.title)}" class="w-full rounded-lg mt-3" loading="lazy">
                 </div>
@@ -534,7 +527,7 @@ function renderContentItemByType(content, canTrackProgress, hasAccess, submissio
         case 'file':
             return renderContentRow(content, false, canTrackProgress, 'file', hasAccess);
         case 'image':
-            return renderImageContentCard(content, canTrackProgress, hasAccess);
+            return renderImageContentCard(content, hasAccess);
         case 'url':
             return renderUrlContentRow(content, canTrackProgress, hasAccess);
         case 'text':
@@ -567,11 +560,11 @@ function renderCourseFolderCard(folder, allContents, hasAccess, canTrackProgress
     }
 
     const items = allContents.filter(c => c.folder_id === folder.id);
-    // El foro no tiene estado "completado" (ver progressTrackableContents
-    // más arriba) — se deja fuera del conteo de la carpeta por la misma
-    // razón. Así el badge de "completada" es consistente con el % de
-    // progreso general del curso.
-    const trackableItems = items.filter(c => c.type !== 'forum');
+    // El foro y una imagen no tienen estado "completado" (ver
+    // progressTrackableContents más arriba) — se dejan fuera del conteo de
+    // la carpeta por la misma razón. Así el badge de "completada" es
+    // consistente con el % de progreso general del curso.
+    const trackableItems = items.filter(c => c.type !== 'forum' && c.type !== 'image');
     const completedItems = trackableItems.filter(c => c.completed).length;
     const allCompleted = canTrackProgress && trackableItems.length > 0 && completedItems === trackableItems.length;
 
@@ -874,7 +867,7 @@ async function refreshFolderBadge(folderId, courseId) {
         const contentsResponse = await contentsAPI.getByCourse(courseId);
         const contents = contentsResponse.data || [];
         const items = contents.filter(c => String(c.folder_id) === String(folderId));
-        const trackableItems = items.filter(c => c.type !== 'forum');
+        const trackableItems = items.filter(c => c.type !== 'forum' && c.type !== 'image');
         const completedItems = trackableItems.filter(c => c.completed).length;
         const allCompleted = trackableItems.length > 0 && completedItems === trackableItems.length;
 
