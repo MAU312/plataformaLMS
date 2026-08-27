@@ -129,6 +129,7 @@ function setupAvatarControls() {
         fileInput.addEventListener('change', async () => {
             const file = fileInput.files[0];
             if (!file) return;
+            if (!checkFileSize(file, 5 * 1024 * 1024, 'La foto de perfil')) return;
 
             const formData = new FormData();
             formData.append('avatar', file);

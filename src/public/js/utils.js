@@ -72,6 +72,21 @@ function formatDateTime(dateString) {
     return new Date(dateString).toLocaleString('es-ES', options);
 }
 
+/**
+ * Chequea el tamaño de un archivo ANTES de subirlo. Sin esto, un archivo
+ * que excede el límite del servidor (ver upload.middleware.js) empezaba a
+ * subirse igual — a veces varios minutos, si es un video grande en una
+ * red lenta — y recién fallaba al terminar, cuando Multer lo rechazaba.
+ * Devuelve true si está dentro del límite; si no, muestra un toast con el
+ * límite en un formato legible y devuelve false (el caller debe cancelar
+ * el envío).
+ */
+function checkFileSize(file, maxBytes, label = 'El archivo') {
+    if (file.size <= maxBytes) return true;
+    showToast(`${label} supera el máximo permitido (${formatFileSize(maxBytes)})`, 'error');
+    return false;
+}
+
 function formatFileSize(bytes) {
     if (!bytes || bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -586,6 +601,7 @@ window.showLoading = showLoading;
 window.formatDate = formatDate;
 window.formatDateTime = formatDateTime;
 window.formatFileSize = formatFileSize;
+window.checkFileSize = checkFileSize;
 window.formatDuration = formatDuration;
 window.isValidEmail = isValidEmail;
 window.validateForm = validateForm;

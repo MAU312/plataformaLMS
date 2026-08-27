@@ -13,6 +13,14 @@
  * identifica con scopeId(base, folderId).
  */
 
+// Mismos límites que sus contrapartes en src/middlewares/upload.middleware.js
+// — chequeados en el cliente (ver checkFileSize en utils.js) antes de
+// subir, para no esperar a que Multer rechace un archivo demasiado grande
+// recién al terminar la subida.
+const MAX_VIDEO_BYTES = 2 * 1024 * 1024 * 1024; // 2GB
+const MAX_DOC_BYTES = 50 * 1024 * 1024; // 50MB (archivo / instrucciones de tarea)
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB
+
 let contentManagerRerender = () => {};
 
 function initCourseContentManager(rerenderFn) {
@@ -535,6 +543,7 @@ function showAddVideoForm(courseId, folderId) {
             showToast('Título y archivo de video son requeridos', 'error');
             return;
         }
+        if (!checkFileSize(videoFile, MAX_VIDEO_BYTES, 'El video')) return;
 
         const formData = new FormData();
         formData.append('course_id', courseId);
@@ -604,6 +613,7 @@ function showAddFileForm(courseId, folderId) {
             showToast('Título y archivo son requeridos', 'error');
             return;
         }
+        if (!checkFileSize(file, MAX_DOC_BYTES, 'El archivo')) return;
 
         const formData = new FormData();
         formData.append('course_id', courseId);
@@ -673,6 +683,7 @@ function showAddImageForm(courseId, folderId) {
             showToast('Título e imagen son requeridos', 'error');
             return;
         }
+        if (!checkFileSize(imageFile, MAX_IMAGE_BYTES, 'La imagen')) return;
 
         const formData = new FormData();
         formData.append('course_id', courseId);
@@ -955,6 +966,10 @@ function showAddTaskForm(courseId, folderId) {
             showToast('El título es requerido', 'error');
             return;
         }
+        // El archivo de instrucciones es opcional en una tarea (a
+        // diferencia de video/archivo/imagen) — solo se chequea el
+        // tamaño si efectivamente se adjuntó uno.
+        if (file && !checkFileSize(file, MAX_DOC_BYTES, 'El archivo')) return;
 
         const formData = new FormData();
         formData.append('course_id', courseId);
@@ -1388,6 +1403,10 @@ async function submitEditContent(e, content) {
 
     const fileInput = form.querySelector('.edit-file');
     const file = fileInput ? fileInput.files[0] : null;
+    if (file) {
+        const maxBytes = content.type === 'video' ? MAX_VIDEO_BYTES : content.type === 'image' ? MAX_IMAGE_BYTES : MAX_DOC_BYTES;
+        if (!checkFileSize(file, maxBytes, 'El archivo')) return;
+    }
 
     let payload;
     if (file) {

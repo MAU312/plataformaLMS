@@ -79,6 +79,7 @@ window.renderAdminCreateCourse = async function(params) {
             showToast('El título es requerido', 'error');
             return;
         }
+        if (thumbnailFile && !checkFileSize(thumbnailFile, 5 * 1024 * 1024, 'La miniatura')) return;
 
         const formData = new FormData();
         formData.append('title', title);
