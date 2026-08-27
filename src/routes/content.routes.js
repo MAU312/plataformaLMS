@@ -36,6 +36,15 @@ async function courseIdFromAnswerParam(req) {
   return content ? content.course_id : null;
 }
 
+/**
+ * Guard compartido por las rutas de creación SIN archivo (text/url/quiz/
+ * survey/forum/folder): admin, o el profesor asignado al curso del body.
+ * Las que sí llevan archivo (video/file/image/task) no pueden reusar esto
+ * tal cual — ahí multer debe correr ANTES, porque course_id es un campo
+ * del multipart/form-data y no existe en req.body hasta que se parsea.
+ */
+const courseManagerFromBody = [isAuthenticated, requireCourseManager((req) => req.body.course_id)];
+
 // ==============================================
 // RUTAS ESPECÍFICAS PRIMERO (antes de /:id)
 // ==============================================
@@ -106,48 +115,28 @@ router.post(
  * puro), así que aquí sí req.body.course_id ya está disponible antes de
  * requireCourseManager sin necesitar multer.
  */
-router.post(
-  '/text',
-  isAuthenticated,
-  requireCourseManager((req) => req.body.course_id),
-  contentController.createTextContent
-);
+router.post('/text', ...courseManagerFromBody, contentController.createTextContent);
 
 /**
  * POST /api/contents/url
  * Admin, o el profesor asignado al curso del body. Igual que /text, sin
  * archivo.
  */
-router.post(
-  '/url',
-  isAuthenticated,
-  requireCourseManager((req) => req.body.course_id),
-  contentController.createUrlContent
-);
+router.post('/url', ...courseManagerFromBody, contentController.createUrlContent);
 
 /**
  * POST /api/contents/quiz
  * Admin, o el profesor asignado al curso del body. Sin archivo (JSON puro
  * con las preguntas/opciones), igual que /text.
  */
-router.post(
-  '/quiz',
-  isAuthenticated,
-  requireCourseManager((req) => req.body.course_id),
-  quizController.createQuizContent
-);
+router.post('/quiz', ...courseManagerFromBody, quizController.createQuizContent);
 
 /**
  * POST /api/contents/survey
  * Admin, o el profesor asignado al curso del body. Comparte controlador y
  * validación con /quiz (ver quiz.controller.js) — solo cambia el tipo.
  */
-router.post(
-  '/survey',
-  isAuthenticated,
-  requireCourseManager((req) => req.body.course_id),
-  quizController.createSurveyContent
-);
+router.post('/survey', ...courseManagerFromBody, quizController.createSurveyContent);
 
 /**
  * PUT /api/contents/answers/:answerId/grade
@@ -186,24 +175,14 @@ router.post(
  * Crea el tema (post principal) de un foro. Admin, o el profesor asignado
  * al curso del body. Igual que /text: sin archivo.
  */
-router.post(
-  '/forum',
-  isAuthenticated,
-  requireCourseManager((req) => req.body.course_id),
-  contentController.createForumContent
-);
+router.post('/forum', ...courseManagerFromBody, contentController.createForumContent);
 
 /**
  * POST /api/contents/folder
  * Crea una carpeta para agrupar otro contenido del curso. Admin, o el
  * profesor asignado al curso del body. Sin archivo.
  */
-router.post(
-  '/folder',
-  isAuthenticated,
-  requireCourseManager((req) => req.body.course_id),
-  contentController.createFolderContent
-);
+router.post('/folder', ...courseManagerFromBody, contentController.createFolderContent);
 
 // ==============================================
 // RUTAS CON PARÁMETRO /:id Y SUBRUTAS
