@@ -254,7 +254,7 @@ test('unenrollCourse: 400 si no estaba inscrito', async (t) => {
 
 test('getCourseById: oculta las URLs de contenido a un visitante no inscrito', async (t) => {
   t.mock.method(Course, 'findById', async () => ({ id: 5, title: 'Curso' }));
-  t.mock.method(Course, 'getContents', async () => ([
+  t.mock.method(Content, 'findByCourse', async () => ([
     { id: 1, title: 'Video 1', url: '/uploads/videos/secreto.mp4' }
   ]));
   t.mock.method(Course, 'isUserEnrolled', async () => false);
@@ -271,7 +271,7 @@ test('getCourseById: oculta las URLs de contenido a un visitante no inscrito', a
 
 test('getCourseById: expone las URLs reales a un estudiante inscrito', async (t) => {
   t.mock.method(Course, 'findById', async () => ({ id: 5, title: 'Curso' }));
-  t.mock.method(Course, 'getContents', async () => ([
+  t.mock.method(Content, 'findByCourse', async () => ([
     { id: 1, title: 'Video 1', url: '/uploads/videos/real.mp4' }
   ]));
   t.mock.method(Course, 'isUserEnrolled', async () => true);
@@ -286,7 +286,7 @@ test('getCourseById: expone las URLs reales a un estudiante inscrito', async (t)
 
 test('getCourseById: expone las URLs reales a un admin sin importar inscripción', async (t) => {
   t.mock.method(Course, 'findById', async () => ({ id: 5, title: 'Curso' }));
-  t.mock.method(Course, 'getContents', async () => ([
+  t.mock.method(Content, 'findByCourse', async () => ([
     { id: 1, title: 'Video 1', url: '/uploads/videos/real.mp4' }
   ]));
   t.mock.method(Course, 'isUserEnrolled', async () => false);
@@ -300,7 +300,7 @@ test('getCourseById: expone las URLs reales a un admin sin importar inscripción
 
 test('getCourseById: expone las URLs reales a un profesor asignado al curso, sin estar inscrito', async (t) => {
   t.mock.method(Course, 'findById', async () => ({ id: 5, title: 'Curso' }));
-  t.mock.method(Course, 'getContents', async () => ([
+  t.mock.method(Content, 'findByCourse', async () => ([
     { id: 1, title: 'Video 1', url: '/uploads/videos/real.mp4' }
   ]));
   t.mock.method(Course, 'isUserEnrolled', async () => false);
@@ -315,7 +315,7 @@ test('getCourseById: expone las URLs reales a un profesor asignado al curso, sin
 
 test('getCourseById: oculta las URLs a un visitante anónimo (sin sesión)', async (t) => {
   t.mock.method(Course, 'findById', async () => ({ id: 5, title: 'Curso' }));
-  t.mock.method(Course, 'getContents', async () => ([
+  t.mock.method(Content, 'findByCourse', async () => ([
     { id: 1, title: 'Video 1', url: '/uploads/videos/real.mp4' }
   ]));
 

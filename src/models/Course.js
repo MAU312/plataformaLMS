@@ -2,15 +2,21 @@ import pool from '../config/db.js';
 
 class Course {
   /**
-   * Obtener cursos activos, paginados y con búsqueda opcional por
-   * título/descripción. Devuelve también el total de cursos que
-   * cumplen el filtro (sin paginar), para que el cliente pueda
-   * calcular el número de páginas.
+   * Query compartida por findAll/findAllForAdmin — la única diferencia
+   * real entre ambas es si se filtra por is_active, así que se arma acá
+   * una sola vez en vez de mantener dos copias del mismo SELECT (con el
+   * riesgo de que alguna quede desactualizada si se agrega una columna).
    */
-  static async findAll({ page = 1, limit = 12, search = '' } = {}) {
+  static async _findPaginated({ page, limit, search, activeOnly }) {
     const offset = (page - 1) * limit;
-    const where = search ? 'WHERE c.is_active = TRUE AND (c.title LIKE ? OR c.description LIKE ?)' : 'WHERE c.is_active = TRUE';
-    const searchParams = search ? [`%${search}%`, `%${search}%`] : [];
+    const conditions = [];
+    const searchParams = [];
+    if (activeOnly) conditions.push('c.is_active = TRUE');
+    if (search) {
+      conditions.push('(c.title LIKE ? OR c.description LIKE ?)');
+      searchParams.push(`%${search}%`, `%${search}%`);
+    }
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const [rows] = await pool.query(
       `SELECT c.*,
@@ -33,31 +39,20 @@ class Course {
   }
 
   /**
+   * Obtener cursos activos, paginados y con búsqueda opcional por
+   * título/descripción. Devuelve también el total de cursos que
+   * cumplen el filtro (sin paginar), para que el cliente pueda
+   * calcular el número de páginas.
+   */
+  static async findAll({ page = 1, limit = 12, search = '' } = {}) {
+    return Course._findPaginated({ page, limit, search, activeOnly: true });
+  }
+
+  /**
    * Igual que findAll, pero incluyendo cursos inactivos - solo para admin.
    */
   static async findAllForAdmin({ page = 1, limit = 12, search = '' } = {}) {
-    const offset = (page - 1) * limit;
-    const where = search ? 'WHERE (c.title LIKE ? OR c.description LIKE ?)' : '';
-    const searchParams = search ? [`%${search}%`, `%${search}%`] : [];
-
-    const [rows] = await pool.query(
-      `SELECT c.*,
-       (SELECT GROUP_CONCAT(u.name SEPARATOR ', ') FROM course_teachers ct INNER JOIN users u ON u.id = ct.user_id WHERE ct.course_id = c.id) as teacher_names,
-       (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id) as enrolled_count,
-       (SELECT COUNT(*) FROM contents WHERE course_id = c.id) as content_count
-       FROM courses c
-       ${where}
-       ORDER BY c.created_at DESC
-       LIMIT ? OFFSET ?`,
-      [...searchParams, limit, offset]
-    );
-
-    const [countRows] = await pool.query(
-      `SELECT COUNT(*) as total FROM courses c ${where}`,
-      searchParams
-    );
-
-    return { rows, total: countRows[0].total };
+    return Course._findPaginated({ page, limit, search, activeOnly: false });
   }
 
   /**
@@ -126,17 +121,6 @@ class Course {
   static async delete(id) {
     const [result] = await pool.query('DELETE FROM courses WHERE id = ?', [id]);
     return result.affectedRows > 0;
-  }
-
-  /**
-   * Obtener contenidos de un curso
-   */
-  static async getContents(courseId) {
-    const [rows] = await pool.query(
-      'SELECT * FROM contents WHERE course_id = ? ORDER BY order_index ASC',
-      [courseId]
-    );
-    return rows;
   }
 
   /**

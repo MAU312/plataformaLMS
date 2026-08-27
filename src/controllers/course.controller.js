@@ -52,7 +52,7 @@ export const getCourseById = async (req, res) => {
     }
 
     // Obtener contenidos del curso
-    const rawContents = await Course.getContents(id);
+    const rawContents = await Content.findByCourse(id);
 
     // Verificar si el usuario está inscrito (si hay sesión activa)
     let isEnrolled = false;

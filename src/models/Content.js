@@ -18,19 +18,6 @@ class Content {
   }
 
   /**
-   * Obtener todos los contenidos
-   */
-  static async findAll() {
-    const [rows] = await pool.query(
-      `SELECT co.*, c.title as course_title 
-       FROM contents co 
-       INNER JOIN courses c ON co.course_id = c.id 
-       ORDER BY co.course_id, co.order_index`
-    );
-    return rows;
-  }
-
-  /**
    * Obtener contenido por ID
    */
   static async findById(id) {
@@ -56,9 +43,7 @@ class Content {
   }
 
   /**
-   * Obtener contenidos por curso INCLUYENDO si el usuario los completó
-   */
-  /**
+   * Obtener contenidos por curso INCLUYENDO si el usuario los completó.
    * `ts.*` viene de un LEFT JOIN contra task_submissions DEL PROPIO
    * usuario — así el detalle de curso puede saber de una sola vez qué
    * tareas ya entregó (y con qué feedback/estado de revisión) sin tener
@@ -88,17 +73,6 @@ class Content {
           : null
       };
     });
-  }
-
-  /**
-   * Obtener contenidos por tipo
-   */
-  static async findByType(courseId, type) {
-    const [rows] = await pool.query(
-      'SELECT * FROM contents WHERE course_id = ? AND type = ? ORDER BY order_index ASC',
-      [courseId, type]
-    );
-    return rows;
   }
 
   /**
@@ -219,28 +193,6 @@ class Content {
     return result.affectedRows > 0;
   }
 
-  /**
-   * Contar contenidos por tipo en un curso
-   */
-  static async countByType(courseId) {
-    const [rows] = await pool.query(
-      'SELECT type, COUNT(*) as count FROM contents WHERE course_id = ? GROUP BY type',
-      [courseId]
-    );
-    return rows;
-  }
-
-  /**
-   * Obtener el siguiente número de orden para un curso
-   */
-  static async getNextOrder(courseId) {
-    const [rows] = await pool.query(
-      'SELECT COALESCE(MAX(order_index), 0) + 1 as next_order FROM contents WHERE course_id = ?',
-      [courseId]
-    );
-    return rows[0].next_order;
-  }
-
   // =================================
   // Progreso por contenido
   // =================================
@@ -273,17 +225,6 @@ class Content {
       [contentId, userId]
     );
     return result.affectedRows > 0;
-  }
-
-  /**
-   * Verificar si un contenido fue completado por un usuario
-   */
-  static async isCompleted(contentId, userId) {
-    const [rows] = await pool.query(
-      'SELECT id FROM content_progress WHERE content_id = ? AND user_id = ?',
-      [contentId, userId]
-    );
-    return rows.length > 0;
   }
 
   /**

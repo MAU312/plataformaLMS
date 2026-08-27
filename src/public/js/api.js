@@ -88,7 +88,6 @@ const authAPI = {
     login: async (email, password) => apiRequest('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
     register: async (name, email, password, username, role = 'student') => apiRequest('/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password, username, role }) }),
     logout: async () => apiRequest('/auth/logout', { method: 'POST' }),
-    getCurrentUser: async () => apiRequest('/auth/me'),
     checkAuth: async () => apiRequest('/auth/check'),
     forgotPassword: async (email) => apiRequest('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
     resetPassword: async (token, password) => apiRequest('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) })
@@ -108,10 +107,8 @@ const coursesAPI = {
     getEnrolled: async () => apiRequest('/courses/enrolled'),
     create: async (formData) => apiRequestFormData('/courses', formData),
     update: async (id, formData) => apiRequestFormData(`/courses/${id}`, formData, { method: 'PUT' }),
-    delete: async (id) => apiRequest(`/courses/${id}`, { method: 'DELETE' }),
     enroll: async (id) => apiRequest(`/courses/${id}/enroll`, { method: 'POST' }),
     unenroll: async (id) => apiRequest(`/courses/${id}/enroll`, { method: 'DELETE' }),
-    getStats: async (id) => apiRequest(`/courses/${id}/stats`),
     getGlobalStats: async () => apiRequest('/courses/stats/summary'),
     downloadCertificate: async (id) => { window.open(`${API_URL}/courses/${id}/certificate`, '_blank'); },
     getStudents: async (id) => apiRequest(`/courses/${id}/students`),
@@ -143,7 +140,6 @@ const contentsAPI = {
     getForumThread: async (id) => apiRequest(`/contents/${id}/forum`),
     postForumReply: async (id, data) => apiRequest(`/contents/${id}/forum`, { method: 'POST', body: JSON.stringify(data) }),
     submit: async (id, formData) => apiRequestFormData(`/contents/${id}/submit`, formData),
-    getMySubmission: async (id) => apiRequest(`/contents/${id}/submission`),
     getSubmissions: async (id) => apiRequest(`/contents/${id}/submissions`),
     // `data` es un FormData cuando se reemplaza el archivo (video/imagen/
     // archivo/tarea) — ahí el body va tal cual, sin Content-Type manual
@@ -184,7 +180,6 @@ const usersAPI = {
     getById: async (id) => apiRequest(`/users/${id}`),
     update: async (id, data) => apiRequest(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     toggleActive: async (id) => apiRequest(`/users/${id}/toggle-active`, { method: 'PUT' }),
-    delete: async (id) => apiRequest(`/users/${id}`, { method: 'DELETE' }),
     getStats: async () => apiRequest('/users/stats/count'),
     getByRole: async (role) => apiRequest(`/users/by-role/${role}`),
     uploadAvatar: async (formData) => apiRequestFormData('/users/me/avatar', formData, { method: 'PUT' }),
