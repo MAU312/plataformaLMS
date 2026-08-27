@@ -90,12 +90,19 @@ class ContentAnswer {
   }
 
   /**
-   * Calificación manual de una respuesta corta (multiple_choice/true_false
-   * ya se autocalifican al enviar, esto solo aplica a short_answer).
+   * Calificación manual de una respuesta corta. multiple_choice/true_false
+   * ya se autocalifican al enviar y NO deben poder recalificarse a mano —
+   * el WHERE contra contents.question_type lo garantiza a nivel de datos
+   * (antes solo dependía de que el frontend no mostrara el botón para esos
+   * casos; un PUT directo a la ruta podía sobrescribir un puntaje
+   * autocalificado).
    */
   static async gradeAnswer(id, isCorrect) {
     const [result] = await pool.query(
-      'UPDATE content_answers SET is_correct = ?, graded_at = NOW() WHERE id = ?',
+      `UPDATE content_answers ca
+       INNER JOIN contents c ON c.id = ca.content_id
+       SET ca.is_correct = ?, ca.graded_at = NOW()
+       WHERE ca.id = ? AND c.question_type = 'short_answer'`,
       [isCorrect ? 1 : 0, id]
     );
     return result.affectedRows > 0;

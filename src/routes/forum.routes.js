@@ -1,6 +1,7 @@
 import express from 'express';
 import * as forumController from '../controllers/forum.controller.js';
 import { isAuthenticated } from '../middlewares/auth.middleware.js';
+import { forumPostLimiter } from '../middlewares/rateLimit.middleware.js';
 
 const router = express.Router();
 
@@ -10,7 +11,7 @@ const router = express.Router();
  * autorización fina resuelta dentro del controller (no es un simple
  * "admin o profesor de curso" como requireCourseManager).
  */
-router.put('/:id', isAuthenticated, forumController.updatePost);
+router.put('/:id', isAuthenticated, forumPostLimiter, forumController.updatePost);
 
 /**
  * DELETE /api/forum-posts/:id

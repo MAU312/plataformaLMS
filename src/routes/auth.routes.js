@@ -1,7 +1,7 @@
 import express from 'express';
 import * as authController from '../controllers/auth.controller.js';
 import { isAuthenticated } from '../middlewares/auth.middleware.js';
-import { loginLimiter, registerLimiter, forgotPasswordLimiter } from '../middlewares/rateLimit.middleware.js';
+import { loginLimiter, registerLimiter, forgotPasswordLimiter, resetPasswordLimiter } from '../middlewares/rateLimit.middleware.js';
 
 const router = express.Router();
 
@@ -45,6 +45,6 @@ router.post('/forgot-password', forgotPasswordLimiter, authController.forgotPass
  * POST /api/auth/reset-password
  * Restablecer contraseña con el token recibido por correo
  */
-router.post('/reset-password', forgotPasswordLimiter, authController.resetPassword);
+router.post('/reset-password', resetPasswordLimiter, authController.resetPassword);
 
 export default router;

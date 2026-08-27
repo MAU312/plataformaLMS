@@ -10,7 +10,7 @@ import ContentAnswer from '../models/ContentAnswer.js';
 import { isAuthenticated, requireCourseManager } from '../middlewares/auth.middleware.js';
 import { uploadVideo, uploadFile, uploadSubmission, uploadContentImage } from '../middlewares/upload.middleware.js';
 import { verifyFileSignature } from '../middlewares/fileSignature.middleware.js';
-import { submitTaskLimiter } from '../middlewares/rateLimit.middleware.js';
+import { submitTaskLimiter, forumPostLimiter } from '../middlewares/rateLimit.middleware.js';
 
 const router = express.Router();
 
@@ -350,7 +350,7 @@ router.get('/:id/forum', isAuthenticated, forumController.listPosts);
  * diferencia de crear el TEMA (POST /forum, solo admin/profesor), acá
  * cualquier admin/inscrito/profesor puede responder.
  */
-router.post('/:id/forum', isAuthenticated, forumController.createPost);
+router.post('/:id/forum', isAuthenticated, forumPostLimiter, forumController.createPost);
 
 /**
  * GET /api/contents/:id

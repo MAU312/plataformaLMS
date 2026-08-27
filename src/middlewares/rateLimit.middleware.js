@@ -73,6 +73,25 @@ export const forgotPasswordLimiter = rateLimit({
 });
 
 /**
+ * Limita intentos de CONSUMIR un token de recuperación: 10 cada 15
+ * minutos por IP. Deliberadamente separado de forgotPasswordLimiter (que
+ * limita "pedir" el correo) — son dos acciones distintas, y antes
+ * compartían el mismo contador: un usuario que pedía el correo varias
+ * veces (ej. reintentando porque no le llegaba) se quedaba sin poder
+ * completar el reset con el token que sí tenía en la mano, por 15 minutos.
+ */
+export const resetPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Demasiados intentos. Intenta de nuevo en unos minutos.'
+  }
+});
+
+/**
  * Limita la creación de cursos: 20 por hora por usuario admin.
  * Un admin legítimo no necesita crear más que eso en una hora; evita
  * creación masiva accidental (doble clic, script, etc.).
@@ -104,6 +123,24 @@ export const userCreateLimiter = rateLimit({
   message: {
     success: false,
     message: 'Demasiados usuarios creados en poco tiempo. Intenta de nuevo más tarde.'
+  }
+});
+
+/**
+ * Limita publicar/editar respuestas de foro: 30 cada 15 minutos por
+ * usuario. A diferencia de tareas/quizzes (una sola entrega), el foro no
+ * tiene ningún límite natural en la BD — sin esto, cualquier cuenta
+ * inscrita podría scriptear cientos de respuestas por minuto.
+ */
+export const forumPostLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: byUser,
+  message: {
+    success: false,
+    message: 'Demasiadas publicaciones en el foro. Intenta de nuevo en unos minutos.'
   }
 });
 
