@@ -4,6 +4,28 @@
 
 const API_URL = '/api';
 
+/**
+ * Aviso de sesión expirada + redirección a login. El toast se muestra
+ * recién en un setTimeout(0): como es una tarea (macrotask), se ejecuta
+ * DESPUÉS de que el catch del propio llamador (una promesa rechazada, o
+ * sea una microtask) ya mostró su propio toast de error genérico —
+ * siempre encima. Si se mostrara de forma síncrona acá, era al revés:
+ * este aviso se mostraba primero y el catch del llamador lo tapaba
+ * enseguida con su mensaje genérico, así que el usuario terminaba viendo
+ * "Error al ..." y de repente lo mandaban a login sin ninguna explicación.
+ */
+function handleSessionExpired() {
+    const currentHash = window.location.hash;
+    if (currentHash === '#/login' || currentHash === '#/register') return;
+    setTimeout(() => {
+        showToast('Tu sesión ha expirado. Por favor inicia sesión nuevamente.', 'warning');
+    }, 0);
+    setTimeout(() => {
+        window.location.hash = '#/login';
+        window.location.reload();
+    }, 1500);
+}
+
 async function apiRequest(endpoint, options = {}) {
     try {
         const response = await fetch(`${API_URL}${endpoint}`, {
@@ -15,11 +37,7 @@ async function apiRequest(endpoint, options = {}) {
         const data = await response.json();
 
         if (response.status === 401) {
-            const currentHash = window.location.hash;
-            if (currentHash !== '#/login' && currentHash !== '#/register') {
-                showToast('Tu sesión ha expirado. Por favor inicia sesión nuevamente.', 'warning');
-                setTimeout(() => { window.location.hash = '#/login'; window.location.reload(); }, 1500);
-            }
+            handleSessionExpired();
             throw new Error(data.message || 'Sesión expirada');
         }
 
@@ -31,10 +49,18 @@ async function apiRequest(endpoint, options = {}) {
     }
 }
 
-async function apiRequestFormData(endpoint, formData) {
+/**
+ * `method` por defecto POST (el caso más común: crear con archivo). Para
+ * un PUT con FormData (reemplazar un archivo existente) se pasa
+ * `{ method: 'PUT' }` — así coursesAPI.update, contentsAPI.update y
+ * usersAPI.uploadAvatar dejan de hand-rollear cada una su propio fetch +
+ * chequeo de 401 (contentsAPI.update era la única que ni siquiera lo
+ * tenía).
+ */
+async function apiRequestFormData(endpoint, formData, { method = 'POST' } = {}) {
     try {
         const response = await fetch(`${API_URL}${endpoint}`, {
-            method: 'POST',
+            method,
             body: formData,
             credentials: 'include'
         });
@@ -42,9 +68,8 @@ async function apiRequestFormData(endpoint, formData) {
         const data = await response.json();
 
         if (response.status === 401) {
-            showToast('Tu sesión ha expirado. Por favor inicia sesión nuevamente.', 'warning');
-            setTimeout(() => { window.location.hash = '#/login'; window.location.reload(); }, 1500);
-            throw new Error('Sesión expirada');
+            handleSessionExpired();
+            throw new Error(data.message || 'Sesión expirada');
         }
 
         if (!response.ok) throw new Error(data.message || 'Error en la petición');
@@ -82,13 +107,7 @@ const coursesAPI = {
     getById: async (id) => apiRequest(`/courses/${id}`),
     getEnrolled: async () => apiRequest('/courses/enrolled'),
     create: async (formData) => apiRequestFormData('/courses', formData),
-    update: async (id, formData) => {
-        const response = await fetch(`${API_URL}/courses/${id}`, { method: 'PUT', body: formData, credentials: 'include' });
-        const data = await response.json();
-        if (response.status === 401) { showToast('Tu sesión ha expirado.', 'warning'); setTimeout(() => { window.location.hash = '#/login'; window.location.reload(); }, 1500); throw new Error('Sesión expirada'); }
-        if (!response.ok) throw new Error(data.message || 'Error al actualizar curso');
-        return data;
-    },
+    update: async (id, formData) => apiRequestFormData(`/courses/${id}`, formData, { method: 'PUT' }),
     delete: async (id) => apiRequest(`/courses/${id}`, { method: 'DELETE' }),
     enroll: async (id) => apiRequest(`/courses/${id}/enroll`, { method: 'POST' }),
     unenroll: async (id) => apiRequest(`/courses/${id}/enroll`, { method: 'DELETE' }),
@@ -135,15 +154,14 @@ const contentsAPI = {
     // req.body vacío.
     update: async (id, data) => {
         const isFormData = data instanceof FormData;
-        const response = await fetch(`${API_URL}/contents/${id}`, {
-            method: 'PUT',
-            body: isFormData ? data : JSON.stringify(data),
-            headers: isFormData ? undefined : { 'Content-Type': 'application/json' },
-            credentials: 'include'
-        });
-        const responseData = await response.json();
-        if (!response.ok) throw new Error(responseData.message || 'Error al actualizar contenido');
-        return responseData;
+        // Delega en los dos helpers compartidos (antes hacía su propio
+        // fetch a mano y era el único de los tres que no revisaba 401 —
+        // una sesión expirada a mitad de una edición daba un error crudo
+        // en vez del aviso + redirección que sí tienen coursesAPI.update
+        // y usersAPI.uploadAvatar).
+        return isFormData
+            ? apiRequestFormData(`/contents/${id}`, data, { method: 'PUT' })
+            : apiRequest(`/contents/${id}`, { method: 'PUT', body: JSON.stringify(data) });
     },
     delete: async (id) => apiRequest(`/contents/${id}`, { method: 'DELETE' }),
     reorder: async (courseId, contentIds) => apiRequest(`/contents/course/${courseId}/reorder`, { method: 'PUT', body: JSON.stringify({ contentIds }) }),
@@ -169,13 +187,7 @@ const usersAPI = {
     delete: async (id) => apiRequest(`/users/${id}`, { method: 'DELETE' }),
     getStats: async () => apiRequest('/users/stats/count'),
     getByRole: async (role) => apiRequest(`/users/by-role/${role}`),
-    uploadAvatar: async (formData) => {
-        const response = await fetch(`${API_URL}/users/me/avatar`, { method: 'PUT', body: formData, credentials: 'include' });
-        const data = await response.json();
-        if (response.status === 401) { showToast('Tu sesión ha expirado.', 'warning'); setTimeout(() => { window.location.hash = '#/login'; window.location.reload(); }, 1500); throw new Error('Sesión expirada'); }
-        if (!response.ok) throw new Error(data.message || 'Error al actualizar la foto de perfil');
-        return data;
-    },
+    uploadAvatar: async (formData) => apiRequestFormData('/users/me/avatar', formData, { method: 'PUT' }),
     removeAvatar: async () => apiRequest('/users/me/avatar', { method: 'DELETE' })
 };
 
