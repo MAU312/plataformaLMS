@@ -177,6 +177,17 @@ function renderUsersTable(users, page, currentUserId, pagination) {
     const paginationContainer = document.getElementById('users-pagination');
     if (!container) return;
 
+    if (users.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-users"></i>
+                <p class="text-xl text-gray-600 dark:text-slate-400 font-medium">No se encontraron usuarios</p>
+                <p class="text-gray-500 dark:text-slate-500">Probá con otra búsqueda</p>
+            </div>`;
+        paginationContainer.innerHTML = '';
+        return;
+    }
+
     container.innerHTML = `
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
@@ -258,12 +269,21 @@ async function toggleUserActive(userId) {
 }
 
 async function changeUserRole(userId, newRole) {
+    // El backend exige name/email/role juntos en el PUT — se toman del
+    // usuario ya cargado en la página actual, sin una consulta extra a
+    // usersAPI.getById (esos mismos datos ya están en currentPageUsers,
+    // usados para dibujar la fila).
+    const user = currentPageUsers.find(u => u.id === userId);
+    if (!user) return;
+
     try {
-        const user = await usersAPI.getById(userId);
-        await usersAPI.update(userId, { name: user.data.name, email: user.data.email, role: newRole });
+        await usersAPI.update(userId, { name: user.name, email: user.email, role: newRole });
+        user.role = newRole;
         showToast('Rol actualizado exitosamente', 'success');
-        const u = currentPageUsers.find(u => u.id === userId);
-        if (u) u.role = newRole;
+        // Re-renderiza para que el color del badge del <select> refleje el
+        // nuevo rol — si no, quedaba con el color del rol anterior hasta
+        // la próxima carga completa de la tabla.
+        renderUsersTable(currentPageUsers, currentUserPage, getCurrentUser().id, currentUsersPagination);
     } catch (error) {
         showToast(error.message || 'Error al actualizar el rol', 'error');
         loadAdminUsers(currentUserPage);

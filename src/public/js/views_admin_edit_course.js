@@ -139,8 +139,11 @@ async function handleUpdateCourse(courseId) {
         await coursesAPI.update(courseId, formData);
         showToast('Curso actualizado exitosamente', 'success');
 
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i> Guardar Cambios';
+        // Re-renderiza la vista completa con los datos frescos del
+        // servidor — sin esto, la miniatura recién subida seguía
+        // mostrando la vieja (parecía que la subida había fallado en
+        // silencio) hasta salir y volver a entrar a esta página.
+        await renderAdminEditCourse({ id: courseId });
 
     } catch (error) {
         showToast(error.message || 'Error al actualizar el curso', 'error');
