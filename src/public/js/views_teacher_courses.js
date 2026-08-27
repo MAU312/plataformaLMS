@@ -51,26 +51,15 @@ window.renderTeacherCourses = async function(params) {
 };
 
 function renderTeacherCourseCard(course) {
-    const thumbnailUrl = course.thumbnail || null;
-
-    return `
-        <div class="course-card bg-white rounded-xl shadow-md overflow-hidden border border-gray-100" onclick="navigateTo('/teacher/courses/${course.id}/edit')">
-            <div class="h-40 bg-gradient-to-br from-cenat-green to-cenat-green-light flex items-center justify-center relative overflow-hidden">
-                ${thumbnailUrl
-                    ? `<img src="${escapeAttr(thumbnailUrl)}" alt="${escapeAttr(course.title)}" class="w-full h-full object-cover">`
-                    : `<i class="fas fa-flask text-5xl text-white opacity-80"></i>`
-                }
-                ${!course.is_active ? `<span class="absolute top-2 right-2 badge badge-inactive">Inactivo</span>` : ''}
-            </div>
-            <div class="p-5">
-                <h3 class="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
-                    ${escapeHtml(course.title)}
-                </h3>
-                <div class="flex justify-between text-sm text-gray-500">
-                    <span><i class="fas fa-users mr-1"></i> ${course.enrolled_count || 0} inscritos</span>
-                    <span><i class="fas fa-layer-group mr-1"></i> ${course.content_count || 0} contenidos</span>
-                </div>
-            </div>
+    const bodyHtml = `
+        <h3 class="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
+            ${escapeHtml(course.title)}
+        </h3>
+        <div class="flex justify-between text-sm text-gray-500">
+            <span><i class="fas fa-users mr-1"></i> ${course.enrolled_count || 0} inscritos</span>
+            <span><i class="fas fa-layer-group mr-1"></i> ${course.content_count || 0} contenidos</span>
         </div>
     `;
+
+    return renderCourseCardShell({ course, navigateToPath: `/teacher/courses/${course.id}/edit`, heightClass: 'h-40', showInactiveBadge: true, bodyHtml });
 }

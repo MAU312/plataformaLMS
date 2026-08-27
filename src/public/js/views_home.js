@@ -102,38 +102,28 @@ window.goToHomeCoursePage = function(page) {
 };
 
 function renderCourseCard(course) {
-    const thumbnailUrl = course.thumbnail || null;
     const contentCount = course.content_count || 0;
     const enrolledCount = course.enrolled_count || 0;
 
-    return `
-        <div class="course-card bg-white rounded-xl shadow-md overflow-hidden border border-gray-100" onclick="navigateTo('/course/${course.id}')">
-            <div class="h-44 bg-gradient-to-br from-cenat-green to-cenat-green-light flex items-center justify-center relative overflow-hidden">
-                ${thumbnailUrl 
-                    ? `<img src="${escapeAttr(thumbnailUrl)}" alt="${escapeAttr(course.title)}" class="w-full h-full object-cover">`
-                    : `<i class="fas fa-flask text-5xl text-white opacity-80"></i>`
-                }
-                ${!course.is_active ? '<span class="badge badge-inactive absolute top-3 right-3">Inactivo</span>' : ''}
-            </div>
-            <div class="p-5">
-                <h3 class="text-lg font-bold text-gray-900 mb-1 line-clamp-2">
-                    ${escapeHtml(course.title)}
-                </h3>
-                ${course.teacher_names ? `
-                    <p class="text-sm text-gray-500 mb-2 truncate">
-                        <i class="fas fa-user-tie mr-1"></i>${escapeHtml(course.teacher_names)}
-                    </p>
-                ` : ''}
-                <p class="text-gray-600 text-base mb-4 line-clamp-2">
-                    ${escapeHtml(course.description || 'Sin descripción disponible')}
-                </p>
-                <div class="flex items-center justify-between text-sm text-gray-500 border-t pt-3">
-                    <span><i class="fas fa-play-circle mr-1 text-cenat-green"></i> ${contentCount} contenidos</span>
-                    <span><i class="fas fa-users mr-1 text-cenat-green"></i> ${enrolledCount} inscritos</span>
-                </div>
-            </div>
+    const bodyHtml = `
+        <h3 class="text-lg font-bold text-gray-900 mb-1 line-clamp-2">
+            ${escapeHtml(course.title)}
+        </h3>
+        ${course.teacher_names ? `
+            <p class="text-sm text-gray-500 mb-2 truncate">
+                <i class="fas fa-user-tie mr-1"></i>${escapeHtml(course.teacher_names)}
+            </p>
+        ` : ''}
+        <p class="text-gray-600 text-base mb-4 line-clamp-2">
+            ${escapeHtml(course.description || 'Sin descripción disponible')}
+        </p>
+        <div class="flex items-center justify-between text-sm text-gray-500 border-t pt-3">
+            <span><i class="fas fa-play-circle mr-1 text-cenat-green"></i> ${contentCount} contenidos</span>
+            <span><i class="fas fa-users mr-1 text-cenat-green"></i> ${enrolledCount} inscritos</span>
         </div>
     `;
+
+    return renderCourseCardShell({ course, navigateToPath: `/course/${course.id}`, heightClass: 'h-44', showInactiveBadge: true, bodyHtml });
 }
 
 function renderEmptyState(searchTerm) {

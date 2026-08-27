@@ -56,34 +56,25 @@ window.renderMyCourses = async function(params) {
 
 function renderEnrolledCourseCard(course) {
     const progress = course.progress || 0;
-    const thumbnailUrl = course.thumbnail || null;
 
-    return `
-        <div class="course-card bg-white rounded-xl shadow-md overflow-hidden border border-gray-100" onclick="navigateTo('/course/${course.id}')">
-            <div class="h-40 bg-gradient-to-br from-cenat-green to-cenat-green-light flex items-center justify-center relative overflow-hidden">
-                ${thumbnailUrl 
-                    ? `<img src="${escapeAttr(thumbnailUrl)}" alt="${escapeAttr(course.title)}" class="w-full h-full object-cover">`
-                    : `<i class="fas fa-flask text-5xl text-white opacity-80"></i>`
-                }
+    const bodyHtml = `
+        <h3 class="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
+            ${escapeHtml(course.title)}
+        </h3>
+        <div class="mb-2">
+            <div class="flex justify-between text-xs text-gray-500 mb-1">
+                <span>Progreso</span>
+                <span>${progress}%</span>
             </div>
-            <div class="p-5">
-                <h3 class="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
-                    ${escapeHtml(course.title)}
-                </h3>
-                <div class="mb-2">
-                    <div class="flex justify-between text-xs text-gray-500 mb-1">
-                        <span>Progreso</span>
-                        <span>${progress}%</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${progress}%"></div>
-                    </div>
-                </div>
-                <p class="text-xs text-gray-500 mt-3">
-                    <i class="fas fa-calendar-alt mr-1"></i>
-                    Inscrito el ${formatDate(course.enrolled_at)}
-                </p>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: ${progress}%"></div>
             </div>
         </div>
+        <p class="text-xs text-gray-500 mt-3">
+            <i class="fas fa-calendar-alt mr-1"></i>
+            Inscrito el ${formatDate(course.enrolled_at)}
+        </p>
     `;
+
+    return renderCourseCardShell({ course, navigateToPath: `/course/${course.id}`, heightClass: 'h-40', showInactiveBadge: false, bodyHtml });
 }

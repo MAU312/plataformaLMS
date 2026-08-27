@@ -381,6 +381,35 @@ function renderPagination(currentPage, totalPages, totalItems, perPage, callback
 }
 
 // =================================
+// Tarjeta de curso (home, mis-cursos, cursos del profesor)
+// =================================
+
+/**
+ * Cascarón compartido por las 3 tarjetas de curso de la app (catálogo,
+ * "mis cursos" del estudiante, "mis cursos" del profesor) — miniatura o
+ * ícono de respaldo, badge de inactivo opcional, y el cuerpo (título +
+ * lo que sea específico de cada vista: progreso, conteos, profesor...)
+ * que arma cada caller y pasa ya renderizado en `bodyHtml`.
+ */
+function renderCourseCardShell({ course, navigateToPath, heightClass = 'h-40', showInactiveBadge = false, bodyHtml }) {
+    const thumbnailUrl = course.thumbnail || null;
+    return `
+        <div class="course-card bg-white rounded-xl shadow-md overflow-hidden border border-gray-100" onclick="navigateTo('${navigateToPath}')">
+            <div class="${heightClass} bg-gradient-to-br from-cenat-green to-cenat-green-light flex items-center justify-center relative overflow-hidden">
+                ${thumbnailUrl
+                    ? `<img src="${escapeAttr(thumbnailUrl)}" alt="${escapeAttr(course.title)}" class="w-full h-full object-cover">`
+                    : `<i class="fas fa-flask text-5xl text-white opacity-80"></i>`
+                }
+                ${showInactiveBadge && !course.is_active ? '<span class="badge badge-inactive absolute top-3 right-3">Inactivo</span>' : ''}
+            </div>
+            <div class="p-5">
+                ${bodyHtml}
+            </div>
+        </div>
+    `;
+}
+
+// =================================
 // Selector de profesores (crear/editar curso)
 // =================================
 
