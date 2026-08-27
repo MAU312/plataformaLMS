@@ -27,17 +27,48 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Solo confiar en X-Forwarded-For/-Proto si el propio despliegue corre
+// detrás de un proxy real (nginx, IIS, un balanceador). Confiarlo a ciegas
+// permitiría a cualquier cliente falsificar su IP y saltarse el rate
+// limiting por IP; no configurarlo cuando SÍ hay un proxy real de por
+// medio hace que todos los usuarios reales compartan una sola IP (la del
+// proxy) a ojos de Express. Por eso queda apagado por defecto (mismo
+// comportamiento que ya había) y solo se activa si se declara
+// explícitamente en el .env de ese despliegue en particular.
+if (process.env.TRUST_PROXY) {
+  app.set('trust proxy', process.env.TRUST_PROXY);
+}
+
 // =============================================
 // Middlewares
 // =============================================
 
 // Cabeceras HTTP de seguridad (anti-clickjacking, anti-sniffing de MIME,
-// desactiva X-Powered-By, etc.). La CSP por defecto de Helmet se desactiva
-// porque el frontend carga Tailwind y Font Awesome desde CDN y usa
-// atributos onclick inline en el HTML; con la CSP activa por defecto
-// (script-src/style-src 'self') la interfaz dejaría de funcionar.
+// desactiva X-Powered-By, etc.). La CSP se arma a mano en vez de con los
+// defaults de Helmet (script-src/style-src 'self') porque el frontend
+// carga Tailwind y Font Awesome desde CDN, usa atributos onclick inline
+// en el HTML, e incrusta reproductores de YouTube/Vimeo — se permite
+// puntualmente cada uno de esos orígenes en vez de desactivar la CSP por
+// completo.
 app.use(helmet({
-  contentSecurityPolicy: false
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.tailwindcss.com', 'https://www.youtube.com'],
+      // Helmet desactiva esto por defecto (script-src-attr 'none'), pero
+      // el frontend depende en TODAS partes de atributos onclick="..."
+      // inline (no hay build step que los reemplace por addEventListener).
+      scriptSrcAttr: ["'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://cdnjs.cloudflare.com'],
+      fontSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'data:'],
+      imgSrc: ["'self'", 'data:'],
+      mediaSrc: ["'self'"],
+      connectSrc: ["'self'"],
+      frameSrc: ['https://www.youtube.com', 'https://player.vimeo.com'],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"]
+    }
+  }
 }));
 
 // Log de peticiones HTTP: formato compacto y coloreado en desarrollo,
@@ -109,12 +140,30 @@ app.use('/uploads/avatars', express.static(path.join(__dirname, '../uploads/avat
 // API Routes
 // =============================================
 
+/**
+ * GET /health — para que un balanceador/gestor de procesos (o simplemente
+ * curl) pueda saber si el proceso está vivo, sin depender de que algún
+ * endpoint de negocio responda 200.
+ */
+app.get('/health', (req, res) => {
+  res.json({ success: true, status: 'ok' });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/contents', contentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/forum-posts', forumRoutes);
+
+// Una ruta /api/* que no matcheó ningún router de arriba (typo, endpoint
+// viejo, etc.) debe responder 404 JSON — sin esto caía en el catch-all de
+// la SPA de abajo y devolvía el index.html con status 200, y el
+// `fetch(...).json()` del cliente fallaba con un confuso "Unexpected
+// token '<'" en vez de un 404 claro.
+app.use('/api', (req, res) => {
+  res.status(404).json({ success: false, message: 'Endpoint no encontrado' });
+});
 
 // =============================================
 // SPA - Todas las rutas devuelven index.html
@@ -206,7 +255,45 @@ const startServer = async () => {
   // puerta a conexiones colgadas indefinidamente (riesgo tipo slow-loris).
   server.requestTimeout = 60 * 60 * 1000; // 60 minutos
   server.headersTimeout = 65 * 1000; // los headers sí deben llegar rápido
+
+  setupGracefulShutdown(server);
 };
+
+// =============================================
+// Apagado controlado
+// =============================================
+
+/**
+ * Al recibir SIGTERM/SIGINT (ej. `docker stop`, un gestor de procesos
+ * reiniciando el servicio, o Ctrl+C), deja de aceptar conexiones nuevas y
+ * cierra el pool de MySQL recién después de que las conexiones en curso
+ * terminen — sin esto, un restart/deploy a mitad de una subida de 2GB
+ * (ver MAX_VIDEO_SIZE_BYTES) podía cortarla a la mitad y/o dejar
+ * conexiones de MySQL abandonadas en vez de liberadas ordenadamente.
+ */
+function setupGracefulShutdown(server) {
+  let shuttingDown = false;
+
+  const shutdown = (signal) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`\n🛑 ${signal} recibido, cerrando el servidor...`);
+
+    server.close(async () => {
+      try {
+        await pool.end();
+        console.log('✅ Servidor y pool de MySQL cerrados correctamente');
+        process.exit(0);
+      } catch (error) {
+        console.error('❌ Error al cerrar el pool de MySQL:', error);
+        process.exit(1);
+      }
+    });
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+}
 
 // =============================================
 // Errores no capturados a nivel de proceso
