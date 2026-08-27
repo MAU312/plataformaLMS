@@ -80,6 +80,7 @@ window.renderLogin = async function(params) {
                     <div>
                         <button
                             type="submit"
+                            id="login-submit-btn"
                             class="btn-cenat w-full py-3 text-lg"
                         >
                             <i class="fas fa-sign-in-alt mr-2"></i>
@@ -123,11 +124,24 @@ window.renderLogin = async function(params) {
     // Event listener para el formulario
     document.getElementById('login-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
-        
-        await login(email, password);
+
+        const submitBtn = document.getElementById('login-submit-btn');
+        const originalHtml = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Ingresando...';
+
+        const success = await login(email, password);
+
+        // En éxito, login() ya redirige (la página se re-renderiza) — no
+        // hace falta restaurar el botón. En error, el usuario se queda acá
+        // y sí necesita poder reintentar.
+        if (!success) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalHtml;
+        }
     });
 };
 
@@ -243,12 +257,37 @@ window.renderRegister = async function(params) {
                                 Mínimo 6 caracteres
                             </p>
                         </div>
+
+                        <!-- Confirmar contraseña -->
+                        <div>
+                            <label for="password-confirm" class="block text-sm font-medium text-gray-700 mb-1">
+                                Confirmar contraseña
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-lock text-gray-400"></i>
+                                </div>
+                                <input
+                                    id="password-confirm"
+                                    name="password-confirm"
+                                    type="password"
+                                    required
+                                    minlength="6"
+                                    class="appearance-none relative block w-full pl-10 pr-10 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
+                                    placeholder="••••••••"
+                                >
+                                <button type="button" class="toggle-password-btn absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition" data-target="password-confirm" aria-label="Mostrar contraseña">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Submit Button -->
                     <div>
-                        <button 
-                            type="submit" 
+                        <button
+                            type="submit"
+                            id="register-submit-btn"
                             class="btn-cenat w-full py-3 text-lg"
                         >
                             <i class="fas fa-user-plus mr-2"></i>
@@ -273,19 +312,34 @@ window.renderRegister = async function(params) {
     // Event listener para el formulario
     document.getElementById('register-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         const name = document.getElementById('name').value;
         const email = document.getElementById('email').value;
         const username = document.getElementById('username').value.trim();
         const password = document.getElementById('password').value;
+        const passwordConfirm = document.getElementById('password-confirm').value;
+
+        if (password !== passwordConfirm) {
+            showToast('Las contraseñas no coinciden', 'error');
+            return;
+        }
+
+        const submitBtn = document.getElementById('register-submit-btn');
+        const originalHtml = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Registrando...';
 
         const success = await register(name, email, password, username || undefined);
 
         if (success) {
-            // Redirigir al login después de 1 segundo
+            // Redirigir al login después de 1 segundo (el botón se queda
+            // deshabilitado mientras tanto, ya que la página va a cambiar).
             setTimeout(() => {
                 window.location.hash = '#/login';
             }, 1000);
+        } else {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalHtml;
         }
     });
 };

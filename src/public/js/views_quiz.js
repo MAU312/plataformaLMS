@@ -242,10 +242,10 @@ function renderShortAnswerRow(a, isQuiz) {
             <p class="text-sm text-gray-600 mt-1 whitespace-pre-line">${escapeHtml(a.answer_text || '')}</p>
             ${isQuiz && a.is_correct == null ? `
                 <div class="flex gap-2 mt-2">
-                    <button onclick="gradeAnswerHandler(${a.answer_id}, true)" class="text-xs bg-green-50 text-green-700 px-3 py-1 rounded-lg hover:bg-green-100">
+                    <button onclick="gradeAnswerHandler(${a.answer_id}, true, this)" class="text-xs bg-green-50 text-green-700 px-3 py-1 rounded-lg hover:bg-green-100">
                         <i class="fas fa-check mr-1"></i> Correcta
                     </button>
-                    <button onclick="gradeAnswerHandler(${a.answer_id}, false)" class="text-xs bg-red-50 text-red-700 px-3 py-1 rounded-lg hover:bg-red-100">
+                    <button onclick="gradeAnswerHandler(${a.answer_id}, false, this)" class="text-xs bg-red-50 text-red-700 px-3 py-1 rounded-lg hover:bg-red-100">
                         <i class="fas fa-times mr-1"></i> Incorrecta
                     </button>
                 </div>
@@ -254,13 +254,20 @@ function renderShortAnswerRow(a, isQuiz) {
     `;
 }
 
-async function gradeAnswerHandler(answerId, isCorrect) {
+async function gradeAnswerHandler(answerId, isCorrect, btn) {
+    // Deshabilita ambos botones (Correcta/Incorrecta) de esta fila mientras
+    // se espera la respuesta — sin esto, un doble clic rápido podía
+    // disparar dos calificaciones para la misma respuesta.
+    const buttons = btn?.parentElement ? btn.parentElement.querySelectorAll('button') : [];
+    buttons.forEach(b => { b.disabled = true; });
+
     try {
         await contentsAPI.gradeAnswer(answerId, { is_correct: isCorrect });
         showToast('Respuesta calificada exitosamente', 'success');
         renderQuizResults({ id: currentQuizContentId });
     } catch (error) {
         showToast(error.message || 'Error al calificar la respuesta', 'error');
+        buttons.forEach(b => { b.disabled = false; });
     }
 }
 
