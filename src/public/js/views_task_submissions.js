@@ -7,6 +7,7 @@
  */
 
 let currentTaskContentId = null;
+let currentSubmissions = [];
 
 window.renderTaskSubmissions = async function(params) {
     const app = document.getElementById('app');
@@ -16,6 +17,7 @@ window.renderTaskSubmissions = async function(params) {
     try {
         const response = await contentsAPI.getSubmissions(params.id);
         const { content, submissions } = response.data;
+        currentSubmissions = submissions;
 
         app.innerHTML = `
             <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -28,33 +30,10 @@ window.renderTaskSubmissions = async function(params) {
                 </h1>
                 <p class="text-gray-500 mb-6">${escapeHtml(content.title)}</p>
 
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    ${submissions.length > 0 ? `
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-sm">
-                                <thead class="bg-gray-50">
-                                    <tr class="text-left text-gray-500">
-                                        <th class="py-3 px-4">Estudiante</th>
-                                        <th class="py-3 px-4">Entregado</th>
-                                        <th class="py-3 px-4">Estado</th>
-                                        <th class="py-3 px-4">Comentario</th>
-                                        <th class="py-3 px-4 text-right">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${submissions.map(s => renderSubmissionRow(s)).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    ` : `
-                        <div class="empty-state">
-                            <i class="fas fa-inbox"></i>
-                            <p class="text-xl text-gray-600 font-medium">Nadie ha entregado esta tarea todavía</p>
-                        </div>
-                    `}
-                </div>
+                <div id="submissions-table-container" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"></div>
             </div>
         `;
+        renderSubmissionsTable();
 
     } catch (error) {
         console.error('Error loading submissions:', error);
@@ -68,6 +47,35 @@ window.renderTaskSubmissions = async function(params) {
         `;
     }
 };
+
+function renderSubmissionsTable() {
+    const container = document.getElementById('submissions-table-container');
+    if (!container) return;
+
+    container.innerHTML = currentSubmissions.length > 0 ? `
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50">
+                    <tr class="text-left text-gray-500">
+                        <th class="py-3 px-4">Estudiante</th>
+                        <th class="py-3 px-4">Entregado</th>
+                        <th class="py-3 px-4">Estado</th>
+                        <th class="py-3 px-4">Comentario</th>
+                        <th class="py-3 px-4 text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${currentSubmissions.map(s => renderSubmissionRow(s)).join('')}
+                </tbody>
+            </table>
+        </div>
+    ` : `
+        <div class="empty-state">
+            <i class="fas fa-inbox"></i>
+            <p class="text-xl text-gray-600 font-medium">Nadie ha entregado esta tarea todavía</p>
+        </div>
+    `;
+}
 
 function renderSubmissionRow(s) {
     const reviewed = !!s.reviewed_at;
@@ -122,7 +130,17 @@ async function submitReview(id) {
     try {
         await submissionsAPI.review(id, { feedback });
         showToast('Entrega marcada como revisada', 'success');
-        renderTaskSubmissions({ id: currentTaskContentId });
+
+        // Parchea el estado local en vez de volver a pedir la lista
+        // completa de entregas al servidor — el endpoint de revisión no
+        // devuelve la fila actualizada, pero acá ya sabemos qué cambió
+        // (el feedback recién guardado, y que reviewed_at pasa a "ahora").
+        const submission = currentSubmissions.find(s => s.id === id);
+        if (submission) {
+            submission.feedback = feedback;
+            submission.reviewed_at = new Date().toISOString();
+        }
+        renderSubmissionsTable();
     } catch (error) {
         showToast(error.message || 'Error al guardar la revisión', 'error');
     }

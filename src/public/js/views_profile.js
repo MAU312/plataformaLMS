@@ -38,7 +38,7 @@ window.renderProfile = async function(params) {
                             </button>
                             <input type="file" id="avatar-file-input" accept="image/*" class="hidden">
                         </div>
-                        <div>
+                        <div id="profile-user-info">
                             <h1 class="text-2xl font-bold text-gray-900">${escapeHtml(user.name)}</h1>
                             <p class="text-gray-600">${escapeHtml(user.email)}</p>
                             <span class="badge ${user.role === 'admin' ? 'badge-admin' : user.role === 'teacher' ? 'badge-teacher' : 'badge-student'} mt-2 inline-block">
@@ -122,7 +122,6 @@ window.renderProfile = async function(params) {
 function setupAvatarControls() {
     const editBtn = document.getElementById('edit-avatar-btn');
     const fileInput = document.getElementById('avatar-file-input');
-    const removeBtn = document.getElementById('remove-avatar-btn');
 
     if (editBtn && fileInput) {
         editBtn.addEventListener('click', () => fileInput.click());
@@ -138,27 +137,63 @@ function setupAvatarControls() {
                 editBtn.disabled = true;
                 const response = await usersAPI.uploadAvatar(formData);
                 updateCurrentUserAvatar(response.data.avatar_url);
+                updateProfileAvatarUI(response.data.avatar_url);
                 showToast('Foto de perfil actualizada exitosamente', 'success');
-                renderProfile();
             } catch (error) {
                 showToast(error.message || 'Error al actualizar la foto de perfil', 'error');
+            } finally {
                 editBtn.disabled = false;
             }
         });
     }
 
-    if (removeBtn) {
-        removeBtn.addEventListener('click', async () => {
-            if (!(await confirmAction('¿Estás seguro de que deseas quitar tu foto de perfil?'))) return;
+    setupRemoveAvatarButton();
+}
 
-            try {
-                await usersAPI.removeAvatar();
-                updateCurrentUserAvatar(null);
-                showToast('Foto de perfil eliminada exitosamente', 'success');
-                renderProfile();
-            } catch (error) {
-                showToast(error.message || 'Error al quitar la foto de perfil', 'error');
-            }
-        });
+async function handleRemoveAvatarClick() {
+    if (!(await confirmAction('¿Estás seguro de que deseas quitar tu foto de perfil?'))) return;
+
+    try {
+        await usersAPI.removeAvatar();
+        updateCurrentUserAvatar(null);
+        updateProfileAvatarUI(null);
+        showToast('Foto de perfil eliminada exitosamente', 'success');
+    } catch (error) {
+        showToast(error.message || 'Error al quitar la foto de perfil', 'error');
+    }
+}
+
+function setupRemoveAvatarButton() {
+    const removeBtn = document.getElementById('remove-avatar-btn');
+    if (removeBtn) removeBtn.addEventListener('click', handleRemoveAvatarClick);
+}
+
+/**
+ * Parchea solo el bloque de la foto de perfil (círculo + botón "Quitar
+ * foto") con el resultado de subir/quitar el avatar — antes se llamaba a
+ * renderProfile() completo, que vuelve a pedir coursesAPI.getEnrolled()/
+ * getTeaching() al servidor solo para reflejar una foto distinta.
+ */
+function updateProfileAvatarUI(avatarUrl) {
+    const user = getCurrentUser();
+    const avatarBox = document.getElementById('profile-avatar');
+    if (avatarBox) {
+        avatarBox.innerHTML = avatarUrl
+            ? `<img src="${escapeAttr(avatarUrl)}" alt="${escapeAttr(user.name)}" class="w-full h-full object-cover">`
+            : user.name.charAt(0).toUpperCase();
+    }
+
+    const existingRemoveBtn = document.getElementById('remove-avatar-btn');
+    if (avatarUrl && !existingRemoveBtn) {
+        const nameContainer = document.getElementById('profile-user-info');
+        const btn = document.createElement('button');
+        btn.id = 'remove-avatar-btn';
+        btn.type = 'button';
+        btn.className = 'block text-xs text-gray-400 hover:text-red-500 mt-2';
+        btn.innerHTML = '<i class="fas fa-trash mr-1"></i>Quitar foto';
+        nameContainer.appendChild(btn);
+        setupRemoveAvatarButton();
+    } else if (!avatarUrl && existingRemoveBtn) {
+        existingRemoveBtn.remove();
     }
 }
