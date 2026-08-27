@@ -144,8 +144,18 @@ export const createCourse = async (req, res) => {
       instructor_id: null
     });
 
-    const teacherIds = await resolveValidTeacherIds(req.body.teacher_ids);
-    await Course.assignTeachers(courseId, teacherIds);
+    try {
+      const teacherIds = await resolveValidTeacherIds(req.body.teacher_ids);
+      await Course.assignTeachers(courseId, teacherIds);
+    } catch (assignError) {
+      // El curso ya se creó en BD (con el thumbnail ya referenciado). Si
+      // asignar profesores falla, se deshace la creación completa en vez
+      // de dejar un curso a medias — sin este rollback, el catch de
+      // afuera borraría el thumbnail del disco mientras la fila del curso
+      // seguía existiendo y apuntando a él.
+      await Course.delete(courseId);
+      throw assignError;
+    }
 
     res.status(201).json({
       success: true,
@@ -249,42 +259,42 @@ export const deleteCourse = async (req, res) => {
       });
     }
 
-    // Eliminar miniatura si existe
-    if (course.thumbnail) {
-      deleteFile(course.thumbnail);
-    }
-
-    // Borrar TODO el resto de archivos del curso antes de borrarlo: las
-    // filas de contents/task_submissions se van solas en cascada (FK ON
-    // DELETE CASCADE en course_id/content_id), pero eso nunca toca el
-    // disco — sin esto, cada video/archivo/instrucciones de tarea del
-    // curso, y cada entrega de cada estudiante, quedaba huérfano en
-    // /uploads. Mismo criterio que deleteContent (content.controller.js)
-    // para un solo contenido, aplicado a todos los contenidos del curso.
+    // Recolectar TODAS las rutas de archivo del curso (miniatura, contenidos,
+    // entregas de tareas) ANTES de borrar nada — las filas de
+    // contents/task_submissions se van solas en cascada (FK ON DELETE
+    // CASCADE en course_id/content_id) al borrar el curso, así que hay que
+    // leerlas mientras todavía existen. Los archivos en disco recién se
+    // borran después de confirmar que el curso se eliminó en BD: si se
+    // borraran antes y el DELETE fallara, el curso completo (contenidos,
+    // inscripciones, entregas) quedaría en BD apuntando a archivos que ya
+    // no existen en disco, sin forma de recuperarlos.
     const contents = await Content.findByCourse(id);
+    const submissions = await TaskSubmission.findAllByCourse(id);
+
+    const filesToDelete = [];
+    if (course.thumbnail) filesToDelete.push(course.thumbnail);
     for (const content of contents) {
-      if (content.url && content.type !== 'url') {
-        deleteFile(content.url);
-      }
-      if (content.type === 'task') {
-        const submissions = await TaskSubmission.findAllByContent(content.id);
-        submissions.forEach(submission => deleteFile(submission.file_url));
-      }
+      if (content.url && content.type !== 'url') filesToDelete.push(content.url);
+    }
+    for (const submission of submissions) {
+      if (submission.file_url) filesToDelete.push(submission.file_url);
     }
 
     const deleted = await Course.delete(id);
 
-    if (deleted) {
-      res.json({
-        success: true,
-        message: 'Curso eliminado exitosamente'
-      });
-    } else {
-      res.status(400).json({
+    if (!deleted) {
+      return res.status(400).json({
         success: false,
         message: 'No se pudo eliminar el curso'
       });
     }
+
+    filesToDelete.forEach(deleteFile);
+
+    res.json({
+      success: true,
+      message: 'Curso eliminado exitosamente'
+    });
   } catch (error) {
     console.error('Error al eliminar curso:', error);
     res.status(500).json({

@@ -56,6 +56,37 @@ class TaskSubmission {
   }
 
   /**
+   * Todas las entregas hechas POR un usuario (en cualquier curso) — usado
+   * al eliminar la cuenta para poder borrar del disco los archivos que
+   * subió, antes de que la fila se vaya sola en cascada (FK ON DELETE
+   * CASCADE en user_id).
+   */
+  static async findAllByUser(userId) {
+    const [rows] = await pool.query(
+      'SELECT * FROM task_submissions WHERE user_id = ?',
+      [userId]
+    );
+    return rows;
+  }
+
+  /**
+   * Todas las entregas de todas las tareas de un curso, en una sola query
+   * (join contra contents en vez de un findAllByContent por cada tarea) —
+   * usado al borrar un curso completo, donde antes se hacía una consulta
+   * separada por cada tarea del curso.
+   */
+  static async findAllByCourse(courseId) {
+    const [rows] = await pool.query(
+      `SELECT ts.*
+       FROM task_submissions ts
+       INNER JOIN contents c ON c.id = ts.content_id
+       WHERE c.course_id = ? AND c.type = 'task'`,
+      [courseId]
+    );
+    return rows;
+  }
+
+  /**
    * Marcar una entrega como revisada, con comentario opcional del
    * profesor. Sin calificación numérica por ahora.
    */

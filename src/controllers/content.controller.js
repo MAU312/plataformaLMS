@@ -9,6 +9,18 @@ import { fileURLToPath } from 'url';
 // Solo http(s) — rechaza esquemas como javascript:, data:, etc.
 const URL_REGEX = /^https?:\/\/.+/i;
 
+/**
+ * Ruta pública (bajo /uploads) donde queda un archivo recién subido, según
+ * el tipo de contenido al que pertenece. Se usa tanto para armar la nueva
+ * `url` del contenido como para poder borrar ese mismo archivo si el
+ * UPDATE que lo iba a referenciar no llega a confirmarse.
+ */
+function uploadedFileUrl(contentType, filename) {
+  if (contentType === 'video') return `/uploads/videos/${filename}`;
+  if (contentType === 'image') return `/uploads/content-images/${filename}`;
+  return `/uploads/files/${filename}`;
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -599,35 +611,42 @@ export const updateContent = async (req, res) => {
     // arreglado para la miniatura del curso (ver Course.updateCourse),
     // pero nunca se replicó acá.
     const previousUrl = req.file ? content.url : null;
-    if (req.file) {
-      if (content.type === 'video') {
-        updateData.url = `/uploads/videos/${req.file.filename}`;
-      } else if (content.type === 'image') {
-        updateData.url = `/uploads/content-images/${req.file.filename}`;
-      } else {
-        updateData.url = `/uploads/files/${req.file.filename}`;
-      }
+    const newFileUrl = req.file ? uploadedFileUrl(content.type, req.file.filename) : null;
+    if (newFileUrl) {
+      updateData.url = newFileUrl;
     }
 
     const updated = await Content.update(id, updateData);
 
-    if (updated && previousUrl) {
-      deleteFile(previousUrl);
-    }
-
-    if (updated) {
-      res.json({
-        success: true,
-        message: 'Contenido actualizado exitosamente'
-      });
-    } else {
-      res.status(400).json({
+    if (!updated) {
+      // El UPDATE no afectó ninguna fila (ej. el contenido se borró en la
+      // ventana entre el findById de arriba y este update). El archivo de
+      // reemplazo ya se escribió a disco (multer corrió antes que este
+      // handler) pero nada llegó a referenciarlo — se borra para no
+      // dejarlo huérfano.
+      if (newFileUrl) deleteFile(newFileUrl);
+      return res.status(400).json({
         success: false,
         message: 'No se pudo actualizar el contenido'
       });
     }
+
+    if (previousUrl) {
+      deleteFile(previousUrl);
+    }
+
+    res.json({
+      success: true,
+      message: 'Contenido actualizado exitosamente'
+    });
   } catch (error) {
     console.error('Error al actualizar contenido:', error);
+    if (req.file) {
+      // Mismo criterio: el archivo ya está en disco pero el UPDATE nunca
+      // llegó a confirmarse (o ni se intentó, si el error fue antes). req.contentType
+      // lo fija la ruta antes de llegar acá (ver content.routes.js).
+      deleteFile(uploadedFileUrl(req.contentType, req.file.filename));
+    }
     res.status(500).json({
       success: false,
       message: 'Error al actualizar contenido'
@@ -663,24 +682,25 @@ export const deleteContent = async (req, res) => {
       }
     }
 
-    // Eliminar archivo físico (type='url' no tiene archivo local, es un
-    // link externo — no hay nada que borrar del disco).
-    if (content.url && content.type !== 'url') {
-      deleteFile(content.url);
-    }
-
-    // Si es una tarea, también hay que borrar del disco el archivo de
-    // cada entrega ANTES de borrar la tarea — la fila en task_submissions
-    // se borra sola en cascada (FK ON DELETE CASCADE), pero el archivo
-    // subido no, y quedaba huérfano en /uploads/submissions.
+    // Recolectar las rutas de archivo (el propio contenido, y si es una
+    // tarea, el archivo de cada entrega) ANTES de borrar nada — la fila en
+    // task_submissions se borra sola en cascada (FK ON DELETE CASCADE) al
+    // borrar el contenido, así que hay que leerla mientras todavía existe.
+    // Los archivos en disco recién se borran después de confirmar el
+    // DELETE en BD: si se borraran antes y el DELETE fallara, la BD
+    // quedaría apuntando a archivos que ya no existen (type='url' no tiene
+    // archivo local, es un link externo — no hay nada que borrar del disco).
+    const filesToDelete = [];
+    if (content.url && content.type !== 'url') filesToDelete.push(content.url);
     if (content.type === 'task') {
       const submissions = await TaskSubmission.findAllByContent(id);
-      submissions.forEach(submission => deleteFile(submission.file_url));
+      submissions.forEach(submission => filesToDelete.push(submission.file_url));
     }
 
     const deleted = await Content.delete(id);
 
     if (deleted) {
+      filesToDelete.forEach(deleteFile);
       res.json({
         success: true,
         message: 'Contenido eliminado exitosamente'

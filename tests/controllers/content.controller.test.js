@@ -515,7 +515,38 @@ test('updateContent: si el UPDATE no afecta ninguna fila, NO borra el archivo an
   await contentController.updateContent(req, res);
 
   assert.equal(res.statusCode, 400);
-  assert.equal(unlinkCall.mock.calls.length, 0, 'no debe borrar el archivo viejo si el UPDATE no confirmó en BD');
+  assert.equal(unlinkCall.mock.calls.length, 0, 'no debe borrar el archivo viejo si el UPDATE no confirmó en BD (y el archivo nuevo tampoco existía de verdad en este test)');
+});
+
+test('updateContent: si el UPDATE no afecta ninguna fila, borra el archivo NUEVO recién subido (no lo deja huérfano)', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'file', url: '/uploads/files/viejo.pdf' }));
+  t.mock.method(Content, 'update', async () => false);
+  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
+  t.mock.method(fs, 'existsSync', () => true);
+  const req = mockReq({ params: { id: 1 }, body: {}, file: { filename: 'nuevo.pdf' } });
+  const res = mockRes();
+
+  await contentController.updateContent(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(unlinkCall.mock.calls.length, 1, 'el archivo de reemplazo ya escrito a disco no debe quedar huérfano');
+  assert.match(unlinkCall.mock.calls[0].arguments[0], /nuevo\.pdf$/);
+});
+
+test('updateContent: si Content.update lanza una excepción, también borra el archivo nuevo recién subido', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'file', url: '/uploads/files/viejo.pdf' }));
+  t.mock.method(Content, 'update', async () => { throw new Error('conexión perdida'); });
+  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
+  t.mock.method(fs, 'existsSync', () => true);
+  const req = mockReq({ params: { id: 1 }, body: {}, file: { filename: 'nuevo.pdf' } });
+  req.contentType = 'file';
+  const res = mockRes();
+
+  await contentController.updateContent(req, res);
+
+  assert.equal(res.statusCode, 500);
+  assert.equal(unlinkCall.mock.calls.length, 1, 'el archivo de reemplazo ya escrito a disco no debe quedar huérfano ni cuando update() lanza una excepción');
+  assert.match(unlinkCall.mock.calls[0].arguments[0], /nuevo\.pdf$/);
 });
 
 test('deleteContent: en type=url no intenta borrar ningún archivo del disco (la "url" es un link externo)', async (t) => {
@@ -543,6 +574,20 @@ test('deleteContent: en type=file SÍ borra el archivo del disco', async (t) => 
 
   assert.equal(res.statusCode, 200);
   assert.equal(unlinkCall.mock.calls.length, 1);
+});
+
+test('deleteContent: si Content.delete no confirma (0 filas), NO borra el archivo del disco', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'file', url: '/uploads/files/x.pdf' }));
+  t.mock.method(Content, 'delete', async () => false);
+  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
+  t.mock.method(fs, 'existsSync', () => true);
+  const req = mockReq({ params: { id: 1 } });
+  const res = mockRes();
+
+  await contentController.deleteContent(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(unlinkCall.mock.calls.length, 0, 'si el DELETE no confirmó, el archivo no debe tocarse');
 });
 
 test('deleteContent: al borrar una tarea con entregas, también borra del disco el archivo de cada entrega (si no, quedan huérfanas)', async (t) => {

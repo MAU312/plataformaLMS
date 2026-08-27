@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
+import TaskSubmission from '../models/TaskSubmission.js';
 import { deleteFile } from '../middlewares/upload.middleware.js';
 
 const VALID_ROLES = ['admin', 'student', 'teacher'];
@@ -101,6 +102,7 @@ export const getUserById = async (req, res) => {
     if (!user) return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
     res.json({ success: true, data: user });
   } catch (error) {
+    console.error('Error al obtener usuario:', error);
     res.status(500).json({ success: false, message: 'Error al obtener usuario' });
   }
 };
@@ -182,6 +184,7 @@ export const toggleUserActive = async (req, res) => {
       data: { is_active: newState }
     });
   } catch (error) {
+    console.error('Error al cambiar estado del usuario:', error);
     res.status(500).json({ success: false, message: 'Error al cambiar estado del usuario' });
   }
 };
@@ -194,9 +197,32 @@ export const deleteUser = async (req, res) => {
     if (req.session.user.id === parseInt(req.params.id)) {
       return res.status(400).json({ success: false, message: 'No puedes eliminar tu propia cuenta' });
     }
-    await User.delete(req.params.id);
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    // Recolectar archivos (avatar + entregas de tareas que subió) ANTES de
+    // borrar — las filas correspondientes se van solas en cascada (FK ON
+    // DELETE CASCADE en user_id), pero eso nunca toca el disco. Se borran
+    // recién después de confirmar el DELETE en BD, mismo criterio que
+    // deleteCourse/deleteContent.
+    const submissions = await TaskSubmission.findAllByUser(req.params.id);
+    const filesToDelete = [];
+    if (user.avatar_url) filesToDelete.push(user.avatar_url);
+    submissions.forEach(submission => { if (submission.file_url) filesToDelete.push(submission.file_url); });
+
+    const deleted = await User.delete(req.params.id);
+    if (!deleted) {
+      return res.status(400).json({ success: false, message: 'No se pudo eliminar el usuario' });
+    }
+
+    filesToDelete.forEach(deleteFile);
+
     res.json({ success: true, message: 'Usuario eliminado exitosamente' });
   } catch (error) {
+    console.error('Error al eliminar usuario:', error);
     res.status(500).json({ success: false, message: 'Error al eliminar usuario' });
   }
 };
@@ -217,6 +243,7 @@ export const getUsersByRole = async (req, res) => {
     const users = await User.findByRole(role);
     res.json({ success: true, data: users });
   } catch (error) {
+    console.error('Error al obtener usuarios por rol:', error);
     res.status(500).json({ success: false, message: 'Error al obtener usuarios' });
   }
 };
@@ -229,6 +256,7 @@ export const getUserStats = async (req, res) => {
     const stats = await User.countByRole();
     res.json({ success: true, data: stats });
   } catch (error) {
+    console.error('Error al obtener estadísticas de usuarios:', error);
     res.status(500).json({ success: false, message: 'Error al obtener estadísticas' });
   }
 };
