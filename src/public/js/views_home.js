@@ -110,7 +110,7 @@ function renderCourseCard(course) {
         <div class="course-card bg-white rounded-xl shadow-md overflow-hidden border border-gray-100" onclick="navigateTo('/course/${course.id}')">
             <div class="h-44 bg-gradient-to-br from-cenat-green to-cenat-green-light flex items-center justify-center relative overflow-hidden">
                 ${thumbnailUrl 
-                    ? `<img src="${thumbnailUrl}" alt="${escapeHtml(course.title)}" class="w-full h-full object-cover">` 
+                    ? `<img src="${escapeAttr(thumbnailUrl)}" alt="${escapeAttr(course.title)}" class="w-full h-full object-cover">`
                     : `<i class="fas fa-flask text-5xl text-white opacity-80"></i>`
                 }
                 ${!course.is_active ? '<span class="badge badge-inactive absolute top-3 right-3">Inactivo</span>' : ''}
@@ -155,13 +155,8 @@ function renderEmptyState(searchTerm) {
     `;
 }
 
-// Utilidad para evitar inyección de HTML
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-window.escapeHtml = escapeHtml;
+// escapeHtml ya se define en utils.js (que carga antes que este archivo) —
+// no redeclarar acá: dos funciones globales del mismo nombre en archivos
+// distintos es la misma clase de bug que ya causó el choque de
+// `renderFolderCard` (la última en cargar gana silenciosamente).
 window.renderCourseCard = renderCourseCard;

@@ -130,10 +130,23 @@ function scrollToElement(elementId) {
 }
 
 function escapeHtml(text) {
-    if (!text) return '';
+    if (text === null || text === undefined) return '';
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// escapeHtml() escapa &, < y > (vía textContent/innerHTML) pero NO comillas —
+// insuficiente cuando el valor va dentro de un atributo `="..."` (href, src,
+// alt, title, value, data-*). Usar esta función en esos casos.
+function escapeAttr(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 // =================================

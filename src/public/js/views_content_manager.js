@@ -351,7 +351,7 @@ function renderContentItem(content, type) {
     return `
         <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition">
             ${type === 'image'
-                ? `<img src="${content.url}" alt="" class="w-10 h-10 rounded object-cover flex-shrink-0">`
+                ? `<img src="${escapeAttr(content.url)}" alt="" class="w-10 h-10 rounded object-cover flex-shrink-0">`
                 : `<i class="fas ${icon} text-xl text-cenat-green"></i>`
             }
             <div class="flex-1 min-w-0">
@@ -1034,11 +1034,11 @@ function showAddQuestionForm(courseId, folderId, kind) {
     function optionRowHTML(opt, qIndex, oIndex, options) {
         const isTrueFalse = questionType === 'true_false';
         return `
-            <div class="option-row flex items-center gap-2" ${isTrueFalse ? `data-fixed-text="${escapeHtml(opt.text)}"` : ''}>
+            <div class="option-row flex items-center gap-2" ${isTrueFalse ? `data-fixed-text="${escapeAttr(opt.text)}"` : ''}>
                 ${isQuiz ? `<input type="radio" name="correct-${qIndex}" class="option-correct-radio" ${opt.is_correct ? 'checked' : ''}>` : ''}
                 ${isTrueFalse
                     ? `<span class="text-sm text-gray-700 flex-1">${escapeHtml(opt.text)}</span>`
-                    : `<input type="text" class="option-text flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Opción ${oIndex + 1}" value="${escapeHtml(opt.text)}">`
+                    : `<input type="text" class="option-text flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Opción ${oIndex + 1}" value="${escapeAttr(opt.text)}">`
                 }
                 ${!isTrueFalse && options.length > 2 ? `
                     <button type="button" class="remove-option-btn text-gray-400 hover:text-red-500 px-1" title="Quitar opción">
@@ -1055,7 +1055,7 @@ function showAddQuestionForm(courseId, folderId, kind) {
             <div class="question-row border border-gray-200 rounded-lg p-3 space-y-2" data-q-index="${qIndex}">
                 <div class="flex items-start gap-2">
                     <span class="text-sm font-semibold text-gray-500 mt-2">${qIndex + 1}.</span>
-                    <input type="text" class="question-text flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Escribe la pregunta..." value="${escapeHtml(q.text || '')}">
+                    <input type="text" class="question-text flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Escribe la pregunta..." value="${escapeAttr(q.text || '')}">
                     <button type="button" class="remove-question-btn text-red-500 hover:text-red-700 px-2 mt-1" title="Quitar pregunta">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -1285,7 +1285,7 @@ function renderEditForm(content) {
     const titleField = `
         <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">Título *</label>
-            <input type="text" class="edit-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required value="${escapeHtml(content.title)}">
+            <input type="text" class="edit-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required value="${escapeAttr(content.title)}">
         </div>
     `;
 
@@ -1294,7 +1294,7 @@ function renderEditForm(content) {
             <label class="block text-xs font-medium text-gray-700 mb-1">${label}</label>
             ${rows
                 ? `<textarea class="edit-description w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" rows="${rows}" ${required ? 'required' : ''}>${escapeHtml(content.description || '')}</textarea>`
-                : `<input type="text" class="edit-description w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" ${required ? 'required' : ''} value="${escapeHtml(content.description || '')}">`
+                : `<input type="text" class="edit-description w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" ${required ? 'required' : ''} value="${escapeAttr(content.description || '')}">`
             }
         </div>
     `;
@@ -1326,7 +1326,7 @@ function renderEditForm(content) {
             body = descriptionField('Descripción (opcional)')
                 + `<div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">URL del video *</label>
-                    <input type="url" class="edit-url w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required value="${escapeHtml(content.url || '')}">
+                    <input type="url" class="edit-url w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required value="${escapeAttr(content.url || '')}">
                 </div>`;
             break;
         case 'quiz':

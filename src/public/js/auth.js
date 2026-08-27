@@ -183,7 +183,7 @@ function updateUIForAuthenticatedUser() {
     const userNavAvatar = document.getElementById('user-nav-avatar');
     if (userNavAvatar && currentUser) {
         userNavAvatar.innerHTML = currentUser.avatar_url
-            ? `<img src="${currentUser.avatar_url}" alt="" class="w-6 h-6 rounded-full object-cover">`
+            ? `<img src="${escapeAttr(currentUser.avatar_url)}" alt="" class="w-6 h-6 rounded-full object-cover">`
             : '<i class="fas fa-user-circle text-2xl"></i>';
     }
 

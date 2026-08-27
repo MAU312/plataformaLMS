@@ -161,7 +161,7 @@ window.renderCourseDetail = async function(params) {
                             <div class="video-player-container mb-4" id="main-video-container">
                                 ${hasAccess ? `
                                 <video id="main-video" controls>
-                                    <source src="${initialVideo.url}" type="video/mp4">
+                                    <source src="${escapeAttr(initialVideo.url)}" type="video/mp4">
                                     Tu navegador no soporta la reproducción de video.
                                 </video>
                                 ` : `
@@ -350,7 +350,7 @@ function renderContentRow(content, isActiveVideo, canTrackProgress, type, hasAcc
 
     return `
         <div class="flex items-center gap-3 p-3 rounded-lg border ${isActiveVideo && hasAccess ? 'border-cenat-green bg-green-50' : 'border-gray-200'} ${clickable ? 'hover:bg-green-50 cursor-pointer video-item' : ''} transition"
-             ${clickable ? `data-url="${content.url}" data-title="${escapeHtml(content.title)}"` : ''}>
+             ${clickable ? `data-url="${escapeAttr(content.url)}" data-title="${escapeAttr(content.title)}"` : ''}>
             
             ${canTrackProgress ? `
                 <button class="content-checkbox flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition ${completed ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-cenat-green'}"
@@ -403,7 +403,7 @@ function renderUrlContentRow(content, canTrackProgress, hasAccess) {
                 ${content.description ? `<p class="text-xs text-gray-500 truncate">${escapeHtml(content.description)}</p>` : ''}
             </div>
             ${hasAccess ? `
-                <a href="${content.url}" target="_blank" rel="noopener noreferrer" class="text-cenat-green hover:text-cenat-green-hover" title="Abrir video externo">
+                <a href="${escapeAttr(content.url)}" target="_blank" rel="noopener noreferrer" class="text-cenat-green hover:text-cenat-green-hover" title="Abrir video externo">
                     <i class="fas fa-external-link-alt"></i>
                 </a>
             ` : `
@@ -424,7 +424,7 @@ function renderUrlContentRow(content, canTrackProgress, hasAccess) {
             </div>
         ` : vimeoUrl ? `
             <div class="video-player-container mt-2 mb-1">
-                <iframe src="${vimeoUrl}" title="${escapeHtml(content.title)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                <iframe src="${vimeoUrl}" title="${escapeAttr(content.title)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
             </div>
         ` : ''}
     `;
@@ -474,7 +474,7 @@ function renderImageContentCard(content, hasAccess) {
                 <div class="flex-1 min-w-0">
                     <p class="font-medium text-gray-900">${escapeHtml(content.title)}</p>
                     ${content.description ? `<p class="text-sm text-gray-600 mt-1 whitespace-pre-line">${escapeHtml(content.description)}</p>` : ''}
-                    <img src="${content.url}" alt="${escapeHtml(content.title)}" class="w-full rounded-lg mt-3" loading="lazy">
+                    <img src="${escapeAttr(content.url)}" alt="${escapeAttr(content.title)}" class="w-full rounded-lg mt-3" loading="lazy">
                 </div>
             </div>
         </div>

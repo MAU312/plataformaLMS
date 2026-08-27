@@ -42,7 +42,7 @@ window.renderAdminEditCourse = async function(params) {
                     <form id="edit-course-form" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Título *</label>
-                            <input type="text" id="title" name="title" required value="${escapeHtml(course.title)}"
+                            <input type="text" id="title" name="title" required value="${escapeAttr(course.title)}"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition">
                         </div>
 
@@ -54,7 +54,7 @@ window.renderAdminEditCourse = async function(params) {
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Imagen de portada</label>
-                            ${course.thumbnail ? `<img src="${course.thumbnail}" class="h-24 rounded-lg object-cover mb-2">` : ''}
+                            ${course.thumbnail ? `<img src="${escapeAttr(course.thumbnail)}" class="h-24 rounded-lg object-cover mb-2">` : ''}
                             <input type="file" id="thumbnail" name="thumbnail" accept="image/*"
                                 class="w-full text-sm text-gray-600">
                         </div>

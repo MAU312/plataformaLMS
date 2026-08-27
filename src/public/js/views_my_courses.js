@@ -62,7 +62,7 @@ function renderEnrolledCourseCard(course) {
         <div class="course-card bg-white rounded-xl shadow-md overflow-hidden border border-gray-100" onclick="navigateTo('/course/${course.id}')">
             <div class="h-40 bg-gradient-to-br from-cenat-green to-cenat-green-light flex items-center justify-center relative overflow-hidden">
                 ${thumbnailUrl 
-                    ? `<img src="${thumbnailUrl}" alt="${escapeHtml(course.title)}" class="w-full h-full object-cover">` 
+                    ? `<img src="${escapeAttr(thumbnailUrl)}" alt="${escapeAttr(course.title)}" class="w-full h-full object-cover">`
                     : `<i class="fas fa-flask text-5xl text-white opacity-80"></i>`
                 }
             </div>

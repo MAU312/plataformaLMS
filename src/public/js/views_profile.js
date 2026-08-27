@@ -28,7 +28,7 @@ window.renderProfile = async function(params) {
                         <div class="relative flex-shrink-0">
                             <div id="profile-avatar" class="w-20 h-20 rounded-full overflow-hidden bg-gradient-to-br from-cenat-green to-cenat-green-light flex items-center justify-center text-white text-2xl font-bold">
                                 ${user.avatar_url
-                                    ? `<img src="${user.avatar_url}" alt="${escapeHtml(user.name)}" class="w-full h-full object-cover">`
+                                    ? `<img src="${escapeAttr(user.avatar_url)}" alt="${escapeAttr(user.name)}" class="w-full h-full object-cover">`
                                     : user.name.charAt(0).toUpperCase()
                                 }
                             </div>
