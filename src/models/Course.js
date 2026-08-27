@@ -174,19 +174,33 @@ class Course {
    * Reemplaza por completo la lista de profesores asignados a un curso
    * (borra los anteriores e inserta los nuevos) — mismo espíritu simple
    * que Content.reorder: el admin manda la lista final, no altas/bajas
-   * individuales.
+   * individuales. DELETE + INSERT van en una sola transacción: si el
+   * INSERT fallara (ej. un teacherId inválido) después de que el DELETE ya
+   * se ejecutó, el curso quedaría sin ningún profesor asignado en vez de
+   * conservar la lista anterior o rechazar el cambio completo.
    */
   static async assignTeachers(courseId, teacherIds) {
-    await pool.query('DELETE FROM course_teachers WHERE course_id = ?', [courseId]);
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      await connection.query('DELETE FROM course_teachers WHERE course_id = ?', [courseId]);
 
-    if (teacherIds.length === 0) return true;
+      if (teacherIds.length > 0) {
+        const values = teacherIds.map((teacherId) => [courseId, teacherId]);
+        await connection.query(
+          'INSERT INTO course_teachers (course_id, user_id) VALUES ?',
+          [values]
+        );
+      }
 
-    const values = teacherIds.map((teacherId) => [courseId, teacherId]);
-    await pool.query(
-      'INSERT INTO course_teachers (course_id, user_id) VALUES ?',
-      [values]
-    );
-    return true;
+      await connection.commit();
+      return true;
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   }
 
   /**
@@ -280,28 +294,43 @@ class Course {
   }
 
   /**
-   * Desinscribir un usuario de un curso
+   * Desinscribir un usuario de un curso. El DELETE de enrollments y la
+   * limpieza de content_progress van en una sola transacción: si el
+   * proceso muriera entre los dos pasos, quedaría la inscripción borrada
+   * pero el progreso viejo intacto — reapareciendo si el usuario vuelve a
+   * inscribirse, exactamente el bug que este código dice evitar.
    */
   static async unenrollUser(courseId, userId) {
-    const [result] = await pool.query(
-      'DELETE FROM enrollments WHERE course_id = ? AND user_id = ?',
-      [courseId, userId]
-    );
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
 
-    if (result.affectedRows > 0) {
-      // Limpia también el progreso de este usuario en los contenidos del
-      // curso. Sin esto, si vuelve a inscribirse más adelante, el detalle
-      // del curso seguía mostrando contenidos viejos ya tildados como
-      // completados aunque el progreso general mostrara 0%.
-      await pool.query(
-        `DELETE cp FROM content_progress cp
-         INNER JOIN contents co ON co.id = cp.content_id
-         WHERE co.course_id = ? AND cp.user_id = ?`,
+      const [result] = await connection.query(
+        'DELETE FROM enrollments WHERE course_id = ? AND user_id = ?',
         [courseId, userId]
       );
-    }
 
-    return result.affectedRows > 0;
+      if (result.affectedRows > 0) {
+        // Limpia también el progreso de este usuario en los contenidos del
+        // curso. Sin esto, si vuelve a inscribirse más adelante, el detalle
+        // del curso seguía mostrando contenidos viejos ya tildados como
+        // completados aunque el progreso general mostrara 0%.
+        await connection.query(
+          `DELETE cp FROM content_progress cp
+           INNER JOIN contents co ON co.id = cp.content_id
+           WHERE co.course_id = ? AND cp.user_id = ?`,
+          [courseId, userId]
+        );
+      }
+
+      await connection.commit();
+      return result.affectedRows > 0;
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   }
 
   /**
