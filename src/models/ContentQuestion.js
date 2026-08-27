@@ -6,8 +6,12 @@ import pool from '../config/db.js';
  * question_type (columna en `contents`, no acá) — ver Content.js.
  */
 class ContentQuestion {
-  static async create(contentId, questionText, orderIndex = 0) {
-    const [result] = await pool.query(
+  /**
+   * `executor` (pool por defecto) permite pasar una connection ya abierta
+   * dentro de una transacción — ver Content.create para el mismo criterio.
+   */
+  static async create(contentId, questionText, orderIndex = 0, executor = pool) {
+    const [result] = await executor.query(
       'INSERT INTO content_questions (content_id, question_text, order_index) VALUES (?, ?, ?)',
       [contentId, questionText, orderIndex]
     );
@@ -19,7 +23,7 @@ class ContentQuestion {
    * donde simplemente no se le hace caso al leer) — así no hace falta una
    * rama especial en el INSERT según el tipo de content.
    */
-  static async createOptions(questionId, options) {
+  static async createOptions(questionId, options, executor = pool) {
     if (!options || options.length === 0) return;
     const values = options.map((opt, index) => [
       questionId,
@@ -27,7 +31,7 @@ class ContentQuestion {
       opt.is_correct ? 1 : 0,
       opt.order_index ?? index
     ]);
-    await pool.query(
+    await executor.query(
       'INSERT INTO content_question_options (question_id, option_text, is_correct, order_index) VALUES ?',
       [values]
     );

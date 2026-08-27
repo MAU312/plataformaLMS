@@ -2,6 +2,7 @@ import Content from '../models/Content.js';
 import ContentQuestion from '../models/ContentQuestion.js';
 import ContentAnswer from '../models/ContentAnswer.js';
 import Course from '../models/Course.js';
+import pool from '../config/db.js';
 
 const QUESTION_TYPES = ['short_answer', 'multiple_choice', 'true_false'];
 
@@ -78,29 +79,47 @@ async function createQuestionContent(req, res, type) {
       return res.status(400).json({ success: false, message: 'La carpeta indicada no existe en este curso' });
     }
 
-    const contentId = await Content.create({
-      course_id,
-      type,
-      title,
-      description,
-      url: null,
-      folder_id: folderCheck.folderId,
-      question_type
-    });
+    // El content y todas sus preguntas/opciones se crean en una sola
+    // transacción: sin esto, un fallo a mitad del loop (ej. pregunta 3 de
+    // 5) dejaba un quiz/encuesta a medio construir, ya visible para los
+    // estudiantes, mientras el profesor recibía un error de creación
+    // fallida sin ninguna pista de que quedó una fila a medias.
+    const connection = await pool.getConnection();
+    let contentId;
+    try {
+      await connection.beginTransaction();
 
-    for (let i = 0; i < questions.length; i++) {
-      const q = questions[i];
-      const questionId = await ContentQuestion.create(contentId, String(q.text).trim(), i);
-      if (needsOptions) {
-        const options = q.options.map((o, idx) => ({
-          text: String(o.text).trim(),
-          // Una encuesta nunca guarda respuesta correcta, sin importar lo
-          // que mande el cliente.
-          is_correct: isQuiz ? !!o.is_correct : false,
-          order_index: idx
-        }));
-        await ContentQuestion.createOptions(questionId, options);
+      contentId = await Content.create({
+        course_id,
+        type,
+        title,
+        description,
+        url: null,
+        folder_id: folderCheck.folderId,
+        question_type
+      }, connection);
+
+      for (let i = 0; i < questions.length; i++) {
+        const q = questions[i];
+        const questionId = await ContentQuestion.create(contentId, String(q.text).trim(), i, connection);
+        if (needsOptions) {
+          const options = q.options.map((o, idx) => ({
+            text: String(o.text).trim(),
+            // Una encuesta nunca guarda respuesta correcta, sin importar lo
+            // que mande el cliente.
+            is_correct: isQuiz ? !!o.is_correct : false,
+            order_index: idx
+          }));
+          await ContentQuestion.createOptions(questionId, options, connection);
+        }
       }
+
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
     }
 
     res.status(201).json({

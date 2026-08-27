@@ -90,18 +90,24 @@ class Content {
    * `<=>` es NULL-safe: `folder_id <=> NULL` si no hay carpeta, o
    * `folder_id <=> 5` si la hay, sin necesitar dos queries distintas.
    */
-  static async create({ course_id, type, title, description, url, file_size, order_index, folder_id, question_type }) {
+  /**
+   * `executor` (pool por defecto) permite pasar una connection ya abierta
+   * dentro de una transacción — usado por quiz.controller.js para que la
+   * creación del content y la de todas sus preguntas/opciones sean una
+   * sola unidad atómica.
+   */
+  static async create({ course_id, type, title, description, url, file_size, order_index, folder_id, question_type }, executor = pool) {
     const folderId = folder_id || null;
 
     if (order_index === undefined) {
-      const [maxOrder] = await pool.query(
+      const [maxOrder] = await executor.query(
         'SELECT COALESCE(MAX(order_index), 0) + 1 as next_order FROM contents WHERE course_id = ? AND folder_id <=> ?',
         [course_id, folderId]
       );
       order_index = maxOrder[0].next_order;
     }
 
-    const [result] = await pool.query(
+    const [result] = await executor.query(
       `INSERT INTO contents (course_id, type, title, description, url, file_size, order_index, folder_id, question_type)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [course_id, type, title, description || null, url, file_size || null, order_index, folderId, question_type || null]
