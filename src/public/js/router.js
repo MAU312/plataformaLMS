@@ -153,7 +153,21 @@ function parseRoute(route) {
     return null;
 }
 
+// Token de navegación: se incrementa en cada handleRoute(). Antes solo 3
+// vistas (home, admin_courses, admin_users) se protegían a mano contra
+// respuestas de red que llegan fuera de orden (ej. navegar rápido de un
+// curso a otro antes de que termine el fetch del primero, que después
+// pisa el contenido del segundo) con su propio contador local — ahora hay
+// uno solo, centralizado acá, que cualquier vista puede usar:
+// `const myToken = getNavToken()` al empezar, y comparar con
+// `myToken === getNavToken()` antes de cada escritura al DOM tras un await.
+let navToken = 0;
+function getNavToken() {
+    return navToken;
+}
+
 async function handleRoute() {
+    navToken++;
     const currentRoute = getRoute();
     const routeData = parseRoute(currentRoute);
     
@@ -247,4 +261,5 @@ function initRouter() {
 // =================================
 
 window.navigateTo = navigateTo;
+window.getNavToken = getNavToken;
 window.initRouter = initRouter;

@@ -5,6 +5,12 @@
 window.renderCourseDetail = async function(params) {
     const app = document.getElementById('app');
     showLoading();
+    // Si se navega rápido (ej. de un curso a otro antes de que termine de
+    // cargar el primero), esta llamada a renderCourseDetail queda obsoleta
+    // a mitad de sus varios awaits — sin este chequeo, su contenido podía
+    // terminar de cargar DESPUÉS y pisar la vista del curso al que se
+    // navegó después.
+    const myNavToken = getNavToken();
 
     try {
         const response = await coursesAPI.getById(params.id);
@@ -107,6 +113,8 @@ window.renderCourseDetail = async function(params) {
             const quizResponses = await Promise.all(allQuizzes.map(q => contentsAPI.getQuestions(q.id)));
             allQuizzes.forEach((q, i) => { quizStatusById[q.id] = quizResponses[i].data; });
         }
+
+        if (myNavToken !== getNavToken()) return;
 
         app.innerHTML = `
             <div class="bg-white border-b">
