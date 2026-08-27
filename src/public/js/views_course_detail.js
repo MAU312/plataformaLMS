@@ -94,16 +94,15 @@ window.renderCourseDetail = async function(params) {
             ? Math.round((completedCount / progressTrackableContents.length) * 100)
             : 0;
 
-        // Estado de entrega de cada tarea (solo tiene sentido para un
-        // estudiante inscrito — para admin/profesor/no-inscrito no se
-        // pide, ya que no pueden entregar). Se pide para TODAS las tareas
-        // del curso, estén o no dentro de una carpeta.
+        // Estado de entrega de cada tarea: viene incluido directamente en
+        // cada content (`my_submission`, ver Content.findByCourseWithProgress)
+        // cuando hay sesión — ya no hace falta un GET
+        // /contents/:id/submission por cada tarea del curso (antes, un
+        // curso con N tareas disparaba N peticiones en paralelo solo para
+        // esto).
         const allTasks = contents.filter(c => c.type === 'task');
-        let submissionsByTask = {};
-        if (isLoggedIn && isEnrolled && allTasks.length > 0) {
-            const submissionResponses = await Promise.all(allTasks.map(t => contentsAPI.getMySubmission(t.id)));
-            allTasks.forEach((t, i) => { submissionsByTask[t.id] = submissionResponses[i].data; });
-        }
+        const submissionsByTask = {};
+        allTasks.forEach(t => { submissionsByTask[t.id] = t.my_submission; });
 
         // Igual que arriba con las tareas: si ya respondió, se necesita
         // saber para no mostrarle el formulario de nuevo (un solo intento).

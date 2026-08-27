@@ -58,17 +58,36 @@ class Content {
   /**
    * Obtener contenidos por curso INCLUYENDO si el usuario los completó
    */
+  /**
+   * `ts.*` viene de un LEFT JOIN contra task_submissions DEL PROPIO
+   * usuario — así el detalle de curso puede saber de una sola vez qué
+   * tareas ya entregó (y con qué feedback/estado de revisión) sin tener
+   * que pedir GET /contents/:id/submission una vez por cada tarea del
+   * curso (antes N peticiones en paralelo, ahora ninguna extra).
+   */
   static async findByCourseWithProgress(courseId, userId) {
     const [rows] = await pool.query(
-      `SELECT co.*, 
-        IF(cp.id IS NOT NULL, TRUE, FALSE) as completed
-       FROM contents co 
+      `SELECT co.*,
+        IF(cp.id IS NOT NULL, TRUE, FALSE) as completed,
+        ts.id as submission_id, ts.submitted_at as submission_submitted_at,
+        ts.feedback as submission_feedback, ts.reviewed_at as submission_reviewed_at
+       FROM contents co
        LEFT JOIN content_progress cp ON cp.content_id = co.id AND cp.user_id = ?
-       WHERE co.course_id = ? 
+       LEFT JOIN task_submissions ts ON ts.content_id = co.id AND ts.user_id = ?
+       WHERE co.course_id = ?
        ORDER BY co.order_index ASC`,
-      [userId, courseId]
+      [userId, userId, courseId]
     );
-    return rows;
+    return rows.map((row) => {
+      if (row.type !== 'task') return row;
+      const { submission_id, submission_submitted_at, submission_feedback, submission_reviewed_at, ...rest } = row;
+      return {
+        ...rest,
+        my_submission: submission_id
+          ? { submitted_at: submission_submitted_at, feedback: submission_feedback, reviewed_at: submission_reviewed_at }
+          : null
+      };
+    });
   }
 
   /**
