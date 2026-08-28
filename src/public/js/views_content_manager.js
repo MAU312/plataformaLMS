@@ -74,6 +74,7 @@ function renderDraggableFolderItem(courseId, contents, folder) {
             <span class="drag-handle flex items-center px-1 text-gray-300 hover:text-gray-500 cursor-grab flex-shrink-0" title="Arrastrar para reordenar">
                 <i class="fas fa-grip-vertical"></i>
             </span>
+            ${renderReorderButtons(folder.id)}
             <div class="flex-1 min-w-0">
                 <div id="content-display-${folder.id}">
                     <details class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" open>
@@ -228,15 +229,63 @@ function encodeDataAttr(obj) {
 }
 
 /**
+ * Botones de subir/bajar — alternativa por teclado/lector de pantalla al
+ * arrastre con mouse, que por su naturaleza no es operable de otra forma.
+ * Reutilizan exactamente el mismo persistContentOrder() que usa soltar un
+ * drag, así que quedan sujetos a las mismas reglas (solo se mueve dentro
+ * de la misma lista/carpeta).
+ */
+function renderReorderButtons(contentId) {
+    return `
+        <span class="reorder-buttons flex flex-col justify-center flex-shrink-0">
+            <button type="button" onclick="moveContentItem(${contentId}, -1)" class="text-gray-300 hover:text-cenat-green leading-none px-1" title="Mover arriba" aria-label="Mover arriba">
+                <i class="fas fa-chevron-up text-xs"></i>
+            </button>
+            <button type="button" onclick="moveContentItem(${contentId}, 1)" class="text-gray-300 hover:text-cenat-green leading-none px-1" title="Mover abajo" aria-label="Mover abajo">
+                <i class="fas fa-chevron-down text-xs"></i>
+            </button>
+        </span>
+    `;
+}
+
+/**
+ * Intercambia un .draggable-item con su vecino directo (arriba si
+ * direction=-1, abajo si direction=1) dentro de su propio .sortable-list,
+ * y persiste el nuevo orden — mismo criterio de "hijos directos
+ * solamente" que getDragAfterElement/persistContentOrder: un item nunca
+ * tiene como previousElementSibling/nextElementSibling algo de OTRA
+ * lista, porque las listas anidadas de una carpeta viven más adentro en
+ * el DOM, no como hermanas.
+ */
+async function moveContentItem(contentId, direction) {
+    const item = document.querySelector(`.draggable-item[data-content-id="${contentId}"]`);
+    if (!item) return;
+    const container = item.closest('.sortable-list');
+    if (!container) return;
+
+    const target = direction < 0 ? item.previousElementSibling : item.nextElementSibling;
+    if (!target || !target.classList.contains('draggable-item')) return;
+
+    if (direction < 0) {
+        container.insertBefore(item, target);
+    } else {
+        container.insertBefore(target, item);
+    }
+
+    await persistContentOrder(container);
+}
+
+/**
  * Envuelve una fila de contenido con lo necesario para arrastrarla:
  * `draggable="true"`, un mango visual (decorativo — arrastrar desde
  * cualquier parte de la fila funciona igual, salvo desde un botón/link,
- * que el navegador no deja iniciar un drag ahí por default), y
- * `data-content-id`/`data-content-json` para leer el nuevo orden al
- * soltar y los datos del contenido al editar. `content-display-{id}` /
- * `content-edit-{id}` son el par que usa editContentHandler para mostrar
- * el formulario de edición en el lugar de la fila, sin tener que
- * reordenar el resto del markup por tipo.
+ * que el navegador no deja iniciar un drag ahí por default), botones de
+ * subir/bajar (ver renderReorderButtons), y `data-content-id`/
+ * `data-content-json` para leer el nuevo orden al soltar y los datos del
+ * contenido al editar. `content-display-{id}` / `content-edit-{id}` son
+ * el par que usa editContentHandler para mostrar el formulario de
+ * edición en el lugar de la fila, sin tener que reordenar el resto del
+ * markup por tipo.
  */
 function renderDraggableItem(content) {
     return `
@@ -244,6 +293,7 @@ function renderDraggableItem(content) {
             <span class="drag-handle flex items-center px-1 text-gray-300 hover:text-gray-500 cursor-grab flex-shrink-0" title="Arrastrar para reordenar">
                 <i class="fas fa-grip-vertical"></i>
             </span>
+            ${renderReorderButtons(content.id)}
             <div class="flex-1 min-w-0">
                 <div id="content-display-${content.id}">${renderManagerContentItem(content)}</div>
                 <div id="content-edit-${content.id}"></div>
@@ -1482,3 +1532,4 @@ window.showAddForumForm = showAddForumForm;
 window.deleteContentHandler = deleteContentHandler;
 window.editContentHandler = editContentHandler;
 window.cancelEditContent = cancelEditContent;
+window.moveContentItem = moveContentItem;
