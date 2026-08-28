@@ -90,6 +90,20 @@ class ContentAnswer {
   }
 
   /**
+   * Cuántos estudiantes distintos ya respondieron un content — se usa para
+   * bloquear la edición de preguntas una vez que hay respuestas reales
+   * (editar reemplaza las preguntas, y por el ON DELETE CASCADE de
+   * content_questions eso se llevaría las respuestas existentes).
+   */
+  static async countRespondents(contentId) {
+    const [rows] = await pool.query(
+      'SELECT COUNT(DISTINCT user_id) as count FROM content_answers WHERE content_id = ?',
+      [contentId]
+    );
+    return rows[0].count;
+  }
+
+  /**
    * Calificación manual de una respuesta corta. multiple_choice/true_false
    * ya se autocalifican al enviar y NO deben poder recalificarse a mano —
    * el WHERE contra contents.question_type lo garantiza a nivel de datos

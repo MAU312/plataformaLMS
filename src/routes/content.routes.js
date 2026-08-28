@@ -318,6 +318,32 @@ router.get(
 );
 
 /**
+ * GET /api/contents/:id/questions/manage
+ * Preguntas de un cuestionario/encuesta para editar (con is_correct
+ * siempre incluido y el conteo de respondentes). Admin, o el profesor
+ * asignado al curso.
+ */
+router.get(
+  '/:id/questions/manage',
+  isAuthenticated,
+  requireCourseManager(courseIdFromContentParam),
+  quizController.getQuestionsForManage
+);
+
+/**
+ * PUT /api/contents/:id/questions
+ * Reemplaza título/descripción/tipo de pregunta y todas las preguntas de
+ * un cuestionario/encuesta. Solo funciona mientras nadie respondió
+ * todavía (ver quiz.controller.js). Admin, o el profesor asignado al curso.
+ */
+router.put(
+  '/:id/questions',
+  isAuthenticated,
+  requireCourseManager(courseIdFromContentParam),
+  quizController.updateQuestions
+);
+
+/**
  * GET /api/contents/:id/forum
  * Tema + respuestas de un foro. Admin, inscrito, o profesor asignado.
  */

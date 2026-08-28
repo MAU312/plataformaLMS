@@ -24,13 +24,76 @@ async function resolveFolderId(folderIdInput, courseId) {
 }
 
 /**
- * Crea un content tipo 'quiz' o 'survey' con sus preguntas (y opciones,
- * cuando aplica). Ambos comparten el 100% de la validación y el esquema —
- * la única diferencia real es si se exige/guarda `is_correct`:
+ * Valida question_type + el array de preguntas/opciones — compartido entre
+ * crear (createQuestionContent) y reemplazar (updateQuestions) un set de
+ * preguntas, misma regla en los dos casos:
  * - quiz: exactamente una opción correcta por pregunta (multiple_choice/
  *   true_false). short_answer no lleva opciones, la revisa el profesor.
- * - survey: nunca hay respuesta correcta, is_correct siempre se guarda en 0
- *   sin importar lo que mande el cliente.
+ * - survey: nunca hay respuesta correcta (is_correct del cliente se ignora
+ *   al insertar, ver insertQuestions).
+ */
+function validateQuestions(question_type, questions, isQuiz) {
+  if (!QUESTION_TYPES.includes(question_type)) {
+    return { ok: false, message: 'El tipo de pregunta no es válido' };
+  }
+  if (!Array.isArray(questions) || questions.length === 0) {
+    return { ok: false, message: 'Se requiere al menos una pregunta' };
+  }
+
+  const needsOptions = question_type === 'multiple_choice' || question_type === 'true_false';
+
+  for (const q of questions) {
+    if (!q.text || !String(q.text).trim()) {
+      return { ok: false, message: 'Cada pregunta necesita un texto' };
+    }
+    if (needsOptions) {
+      const options = Array.isArray(q.options) ? q.options : [];
+      if (options.length < 2) {
+        return { ok: false, message: 'Cada pregunta necesita al menos 2 opciones' };
+      }
+      if (question_type === 'true_false' && options.length !== 2) {
+        return { ok: false, message: 'Verdadero/falso necesita exactamente 2 opciones' };
+      }
+      if (!options.every((o) => o.text && String(o.text).trim())) {
+        return { ok: false, message: 'Cada opción necesita un texto' };
+      }
+      if (isQuiz && options.filter((o) => o.is_correct).length !== 1) {
+        return { ok: false, message: 'Cada pregunta debe tener exactamente una opción correcta' };
+      }
+    }
+  }
+
+  return { ok: true };
+}
+
+/**
+ * Inserta las preguntas (y opciones) de un quiz/survey ya validado, dentro
+ * de la connection de una transacción — compartido entre crear y
+ * reemplazar un set de preguntas.
+ */
+async function insertQuestions(contentId, question_type, questions, isQuiz, connection) {
+  const needsOptions = question_type === 'multiple_choice' || question_type === 'true_false';
+
+  for (let i = 0; i < questions.length; i++) {
+    const q = questions[i];
+    const questionId = await ContentQuestion.create(contentId, String(q.text).trim(), i, connection);
+    if (needsOptions) {
+      const options = q.options.map((o, idx) => ({
+        text: String(o.text).trim(),
+        // Una encuesta nunca guarda respuesta correcta, sin importar lo
+        // que mande el cliente.
+        is_correct: isQuiz ? !!o.is_correct : false,
+        order_index: idx
+      }));
+      await ContentQuestion.createOptions(questionId, options, connection);
+    }
+  }
+}
+
+/**
+ * Crea un content tipo 'quiz' o 'survey' con sus preguntas (y opciones,
+ * cuando aplica). Ver validateQuestions/insertQuestions para las reglas
+ * compartidas con updateQuestions.
  */
 async function createQuestionContent(req, res, type) {
   const isQuiz = type === 'quiz';
@@ -43,35 +106,9 @@ async function createQuestionContent(req, res, type) {
       return res.status(400).json({ success: false, message: 'El ID del curso y el título son requeridos' });
     }
 
-    if (!QUESTION_TYPES.includes(question_type)) {
-      return res.status(400).json({ success: false, message: 'El tipo de pregunta no es válido' });
-    }
-
-    if (!Array.isArray(questions) || questions.length === 0) {
-      return res.status(400).json({ success: false, message: 'Se requiere al menos una pregunta' });
-    }
-
-    const needsOptions = question_type === 'multiple_choice' || question_type === 'true_false';
-
-    for (const q of questions) {
-      if (!q.text || !String(q.text).trim()) {
-        return res.status(400).json({ success: false, message: 'Cada pregunta necesita un texto' });
-      }
-      if (needsOptions) {
-        const options = Array.isArray(q.options) ? q.options : [];
-        if (options.length < 2) {
-          return res.status(400).json({ success: false, message: 'Cada pregunta necesita al menos 2 opciones' });
-        }
-        if (question_type === 'true_false' && options.length !== 2) {
-          return res.status(400).json({ success: false, message: 'Verdadero/falso necesita exactamente 2 opciones' });
-        }
-        if (!options.every((o) => o.text && String(o.text).trim())) {
-          return res.status(400).json({ success: false, message: 'Cada opción necesita un texto' });
-        }
-        if (isQuiz && options.filter((o) => o.is_correct).length !== 1) {
-          return res.status(400).json({ success: false, message: 'Cada pregunta debe tener exactamente una opción correcta' });
-        }
-      }
+    const validation = validateQuestions(question_type, questions, isQuiz);
+    if (!validation.ok) {
+      return res.status(400).json({ success: false, message: validation.message });
     }
 
     const folderCheck = await resolveFolderId(folder_id, course_id);
@@ -99,20 +136,7 @@ async function createQuestionContent(req, res, type) {
         question_type
       }, connection);
 
-      for (let i = 0; i < questions.length; i++) {
-        const q = questions[i];
-        const questionId = await ContentQuestion.create(contentId, String(q.text).trim(), i, connection);
-        if (needsOptions) {
-          const options = q.options.map((o, idx) => ({
-            text: String(o.text).trim(),
-            // Una encuesta nunca guarda respuesta correcta, sin importar lo
-            // que mande el cliente.
-            is_correct: isQuiz ? !!o.is_correct : false,
-            order_index: idx
-          }));
-          await ContentQuestion.createOptions(questionId, options, connection);
-        }
-      }
+      await insertQuestions(contentId, question_type, questions, isQuiz, connection);
 
       await connection.commit();
     } catch (error) {
@@ -135,6 +159,112 @@ async function createQuestionContent(req, res, type) {
 
 export const createQuizContent = (req, res) => createQuestionContent(req, res, 'quiz');
 export const createSurveyContent = (req, res) => createQuestionContent(req, res, 'survey');
+
+/**
+ * Preguntas de un quiz/survey para que el profesor/admin las edite —
+ * siempre con is_correct (a diferencia de getQuestions, pensado para el
+ * estudiante que todavía no respondió) y con `respondent_count`, que el
+ * frontend usa para decidir si ofrece el editor completo o el aviso de
+ * "hay que borrar y crear de nuevo" (ver updateQuestions).
+ */
+export const getQuestionsForManage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const content = await Content.findById(id);
+
+    if (!content) {
+      return res.status(404).json({ success: false, message: 'Contenido no encontrado' });
+    }
+    if (!['quiz', 'survey'].includes(content.type)) {
+      return res.status(400).json({ success: false, message: 'Este contenido no es un cuestionario ni una encuesta' });
+    }
+
+    const [questions, respondentCount] = await Promise.all([
+      ContentQuestion.findByContent(id, { includeCorrect: true }),
+      ContentAnswer.countRespondents(id)
+    ]);
+
+    res.json({
+      success: true,
+      data: { question_type: content.question_type, questions, respondent_count: respondentCount }
+    });
+  } catch (error) {
+    console.error('Error al obtener las preguntas para editar:', error);
+    res.status(500).json({ success: false, message: 'Error al obtener las preguntas' });
+  }
+};
+
+/**
+ * Reemplaza título/descripción/tipo de pregunta y TODAS las preguntas de un
+ * quiz/survey — solo mientras nadie respondió todavía (ContentQuestion
+ * tiene ON DELETE CASCADE hacia content_question_options y
+ * content_answers, así que borrar las preguntas viejas se llevaría
+ * respuestas reales si las hubiera). Con respondentCount > 0 el frontend
+ * ni siquiera ofrece este formulario, pero se revalida acá también — un
+ * PUT directo no debe poder saltarse la regla.
+ */
+export const updateQuestions = async (req, res) => {
+  const { id } = req.params;
+  const content = await Content.findById(id);
+
+  try {
+    if (!content) {
+      return res.status(404).json({ success: false, message: 'Contenido no encontrado' });
+    }
+    if (!['quiz', 'survey'].includes(content.type)) {
+      return res.status(400).json({ success: false, message: 'Este contenido no es un cuestionario ni una encuesta' });
+    }
+
+    const { title, description, question_type, questions } = req.body;
+    const isQuiz = content.type === 'quiz';
+
+    if (!title || !String(title).trim()) {
+      return res.status(400).json({ success: false, message: 'El título es requerido' });
+    }
+
+    const validation = validateQuestions(question_type, questions, isQuiz);
+    if (!validation.ok) {
+      return res.status(400).json({ success: false, message: validation.message });
+    }
+
+    const respondentCount = await ContentAnswer.countRespondents(id);
+    if (respondentCount > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No se pueden editar las preguntas: ya hay respuestas registradas. Borra y crea de nuevo si necesitas cambiarlas.'
+      });
+    }
+
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      await Content.update(id, {
+        title: String(title).trim(),
+        description: description !== undefined ? description : content.description,
+        question_type
+      }, connection);
+
+      await ContentQuestion.deleteByContent(id, connection);
+      await insertQuestions(id, question_type, questions, isQuiz, connection);
+
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+
+    res.json({
+      success: true,
+      message: isQuiz ? 'Cuestionario actualizado exitosamente' : 'Encuesta actualizada exitosamente'
+    });
+  } catch (error) {
+    console.error('Error al actualizar las preguntas:', error);
+    res.status(500).json({ success: false, message: 'Error al actualizar las preguntas' });
+  }
+};
 
 /**
  * Preguntas de un cuestionario/encuesta para que el estudiante responda —

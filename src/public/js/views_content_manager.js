@@ -1025,22 +1025,35 @@ function showAddTaskForm(courseId, folderId) {
 }
 
 // =================================
-// Formulario para agregar CUESTIONARIO o ENCUESTA
+// Formulario para CUESTIONARIO o ENCUESTA (crear y editar preguntas)
 // Comparten el mismo formulario dinámico: el tipo de pregunta se elige una
 // sola vez para todo el cuestionario/encuesta (no se mezcla por pregunta),
 // y la única diferencia visual es que una encuesta no muestra el radio de
 // "marcar como correcta" (no tiene sentido, no hay respuesta correcta).
+// `renderQuestionForm` es compartido entre crear (showAddQuizForm/
+// showAddSurveyForm más abajo) y editar (editQuestionContentHandler, ver
+// sección "Editar contenido existente") — la única diferencia real es si
+// arranca vacío o precargado con datos existentes, y a qué endpoint apunta
+// el submit (eso lo decide quien llama, vía `apiCall`).
 // =================================
 
-function showAddQuestionForm(courseId, folderId, kind) {
+function renderQuestionForm(container, {
+    kind,
+    initialTitle = '',
+    initialDescription = '',
+    initialQuestionType = 'multiple_choice',
+    initialQuestions = null,
+    idleLabel,
+    apiCall,
+    successMessage,
+    errorMessage,
+    onCancel
+}) {
     const isQuiz = kind === 'quiz';
-    const kindLabel = isQuiz ? 'Cuestionario' : 'Encuesta';
-    const apiCall = isQuiz ? contentsAPI.createQuiz : contentsAPI.createSurvey;
-    const container = document.getElementById(scopeId(`add-${kind}-form-container`, folderId));
 
     // question_type aplica a TODAS las preguntas del cuestionario/encuesta
     // (se elige una sola vez), por eso vive acá arriba y no por pregunta.
-    let questionType = 'multiple_choice';
+    let questionType = initialQuestionType;
 
     function blankOptions() {
         if (questionType === 'true_false') {
@@ -1052,7 +1065,9 @@ function showAddQuestionForm(courseId, folderId, kind) {
         return null; // short_answer no lleva opciones
     }
 
-    let questions = [{ text: '', options: blankOptions() }];
+    let questions = (initialQuestions && initialQuestions.length > 0)
+        ? initialQuestions
+        : [{ text: '', options: blankOptions() }];
 
     // Lee el estado ACTUAL desde el DOM (no desde `questions`) antes de
     // cualquier re-render estructural (agregar/quitar pregunta u opción,
@@ -1122,14 +1137,14 @@ function showAddQuestionForm(courseId, folderId, kind) {
     }
 
     container.innerHTML = `
-        <form class="add-${kind}-form bg-green-50 rounded-lg p-4 mb-4 space-y-3">
+        <form class="question-content-form bg-green-50 rounded-lg p-4 mb-4 space-y-3">
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Título ${isQuiz ? 'del cuestionario' : 'de la encuesta'} *</label>
-                <input type="text" class="quiz-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="Ej: ${isQuiz ? 'Quiz semana 1' : 'Encuesta de satisfacción'}">
+                <input type="text" class="quiz-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="Ej: ${isQuiz ? 'Quiz semana 1' : 'Encuesta de satisfacción'}" value="${escapeAttr(initialTitle)}">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Descripción (opcional)</label>
-                <input type="text" class="quiz-description w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green">
+                <input type="text" class="quiz-description w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" value="${escapeAttr(initialDescription)}">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Tipo de pregunta *</label>
@@ -1146,7 +1161,7 @@ function showAddQuestionForm(courseId, folderId, kind) {
             </button>
             <div class="flex gap-2 pt-2 border-t border-green-100">
                 <button type="submit" class="submit-quiz-btn bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
-                    <i class="fas fa-check mr-1"></i> Guardar ${kindLabel}
+                    ${idleLabel}
                 </button>
                 <button type="button" class="cancel-quiz-btn text-gray-600 px-4 py-2 text-sm">Cancelar</button>
             </div>
@@ -1157,9 +1172,10 @@ function showAddQuestionForm(courseId, folderId, kind) {
     const listEl = formEl.querySelector('.questions-list');
     const typeSelect = formEl.querySelector('.quiz-question-type');
 
+    typeSelect.value = questionType;
     rerender();
 
-    formEl.querySelector('.cancel-quiz-btn').addEventListener('click', () => { container.innerHTML = ''; });
+    formEl.querySelector('.cancel-quiz-btn').addEventListener('click', onCancel);
 
     typeSelect.addEventListener('change', () => {
         const currentTexts = readCurrentQuestions().map((q) => q.text);
@@ -1241,7 +1257,6 @@ function showAddQuestionForm(courseId, folderId, kind) {
         }
 
         const payload = {
-            course_id: courseId,
             title,
             description,
             question_type: questionType,
@@ -1250,17 +1265,32 @@ function showAddQuestionForm(courseId, folderId, kind) {
                 options: questionType === 'short_answer'
                     ? undefined
                     : q.options.map((o) => ({ text: o.text.trim(), is_correct: !!o.is_correct }))
-            })),
-            folder_id: folderId || undefined
+            }))
         };
 
         await submitContentForm(submitBtn, {
             loadingLabel: 'Guardando...',
-            idleLabel: `<i class="fas fa-check mr-1"></i> Guardar ${kindLabel}`,
+            idleLabel,
             apiCall: () => apiCall(payload),
-            successMessage: `${kindLabel} agregad${isQuiz ? 'o' : 'a'} exitosamente`,
-            errorMessage: `Error al guardar ${isQuiz ? 'el cuestionario' : 'la encuesta'}`
+            successMessage,
+            errorMessage
         });
+    });
+}
+
+function showAddQuestionForm(courseId, folderId, kind) {
+    const isQuiz = kind === 'quiz';
+    const kindLabel = isQuiz ? 'Cuestionario' : 'Encuesta';
+    const create = isQuiz ? contentsAPI.createQuiz : contentsAPI.createSurvey;
+    const container = document.getElementById(scopeId(`add-${kind}-form-container`, folderId));
+
+    renderQuestionForm(container, {
+        kind,
+        idleLabel: `<i class="fas fa-check mr-1"></i> Guardar ${kindLabel}`,
+        apiCall: (payload) => create({ ...payload, course_id: courseId, folder_id: folderId || undefined }),
+        successMessage: `${kindLabel} agregad${isQuiz ? 'o' : 'a'} exitosamente`,
+        errorMessage: `Error al guardar ${isQuiz ? 'el cuestionario' : 'la encuesta'}`,
+        onCancel: () => { container.innerHTML = ''; }
     });
 }
 
@@ -1284,7 +1314,9 @@ function showAddSurveyForm(courseId, folderId) {
 /**
  * Los datos del contenido salen del propio DOM (data-content-json en el
  * .draggable-item, ver encodeDataAttr) — no hace falta pedirlos de nuevo
- * al servidor, ya llegaron con el resto del contenido del curso.
+ * al servidor, ya llegaron con el resto del contenido del curso. Un quiz/
+ * survey es la excepción (ver editQuestionContentHandler): sus preguntas
+ * no viajan en esa fila, hay que pedirlas aparte.
  */
 function editContentHandler(id) {
     const row = document.querySelector(`.draggable-item[data-content-id="${id}"]`);
@@ -1295,12 +1327,68 @@ function editContentHandler(id) {
     const editContainer = document.getElementById(`content-edit-${id}`);
     if (!display || !editContainer) return;
 
+    if (['quiz', 'survey'].includes(content.type)) {
+        editQuestionContentHandler(content, display, editContainer);
+        return;
+    }
+
     display.classList.add('hidden');
     editContainer.innerHTML = renderEditForm(content);
 
     const form = editContainer.querySelector('.edit-content-form');
     form.addEventListener('submit', (e) => submitEditContent(e, content));
     form.querySelector('.cancel-edit-btn').addEventListener('click', () => cancelEditContent(id));
+}
+
+/**
+ * Editar un quiz/survey pide primero las preguntas actuales al servidor
+ * (con is_correct, y el conteo de respondentes) — eso no viene en
+ * data-content-json. Si ya hay respuestas, se cae al formulario simple de
+ * título/descripción (con el aviso de por qué no se puede tocar la
+ * estructura); si nadie respondió todavía, se ofrece el editor completo de
+ * preguntas (mismo formulario que crear, precargado con lo existente).
+ */
+async function editQuestionContentHandler(content, display, editContainer) {
+    editContainer.innerHTML = '<p class="text-xs text-gray-400 mt-2 px-1">Cargando preguntas...</p>';
+
+    let data;
+    try {
+        ({ data } = await contentsAPI.getQuestionsForManage(content.id));
+    } catch (error) {
+        editContainer.innerHTML = '';
+        showToast(error.message || 'Error al cargar las preguntas', 'error');
+        return;
+    }
+
+    display.classList.add('hidden');
+
+    if (data.respondent_count > 0) {
+        editContainer.innerHTML = renderEditForm(content, data.respondent_count);
+        const form = editContainer.querySelector('.edit-content-form');
+        form.addEventListener('submit', (e) => submitEditContent(e, content));
+        form.querySelector('.cancel-edit-btn').addEventListener('click', () => cancelEditContent(content.id));
+        return;
+    }
+
+    const isQuiz = content.type === 'quiz';
+    const kindLabel = isQuiz ? 'Cuestionario' : 'Encuesta';
+    renderQuestionForm(editContainer, {
+        kind: content.type,
+        initialTitle: content.title,
+        initialDescription: content.description || '',
+        initialQuestionType: data.question_type,
+        initialQuestions: data.questions.map((q) => ({
+            text: q.question_text,
+            options: (q.options || []).length > 0
+                ? q.options.map((o) => ({ text: o.option_text, is_correct: !!o.is_correct }))
+                : null
+        })),
+        idleLabel: '<i class="fas fa-check mr-1"></i> Guardar',
+        apiCall: (payload) => contentsAPI.updateQuestions(content.id, payload),
+        successMessage: `${kindLabel} actualizad${isQuiz ? 'o' : 'a'} exitosamente`,
+        errorMessage: `Error al actualizar ${isQuiz ? 'el cuestionario' : 'la encuesta'}`,
+        onCancel: () => cancelEditContent(content.id)
+    });
 }
 
 function cancelEditContent(id) {
@@ -1314,11 +1402,12 @@ function cancelEditContent(id) {
  * Campos según el tipo — todos comparten título; el resto varía porque
  * cada tipo guarda su "contenido real" en un lugar distinto (texto/foro en
  * description, url en url, video/imagen/archivo/tarea en un archivo que
- * se puede reemplazar opcionalmente). Un cuestionario/encuesta solo deja
- * editar título/descripción acá — cambiar las preguntas requiere borrar y
- * crear de nuevo, es un formulario mucho más grande (ver showAddQuestionForm).
+ * se puede reemplazar opcionalmente). Un cuestionario/encuesta solo llega
+ * acá cuando ya tiene respuestas (ver editQuestionContentHandler) — sin
+ * respuestas se usa el editor completo de preguntas (renderQuestionForm),
+ * y con respuestas cambiar la estructura implicaría borrarlas.
  */
-function renderEditForm(content) {
+function renderEditForm(content, respondentCount = 0) {
     const titleField = `
         <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">Título *</label>
@@ -1367,10 +1456,12 @@ function renderEditForm(content) {
                 </div>`;
             break;
         case 'quiz':
-        case 'survey':
+        case 'survey': {
+            const respondentLabel = respondentCount === 1 ? '1 respuesta' : `${respondentCount} respuestas`;
             body = descriptionField('Descripción (opcional)')
-                + `<p class="text-xs text-gray-400">Para cambiar las preguntas hay que borrar ${content.type === 'quiz' ? 'el cuestionario' : 'la encuesta'} y crear ${content.type === 'quiz' ? 'uno' : 'una'} nuev${content.type === 'quiz' ? 'o' : 'a'}.</p>`;
+                + `<p class="text-xs text-gray-400">Ya hay ${respondentLabel} registrada${respondentCount === 1 ? '' : 's'}: para cambiar las preguntas hay que borrar ${content.type === 'quiz' ? 'el cuestionario' : 'la encuesta'} y crear ${content.type === 'quiz' ? 'uno' : 'una'} nuev${content.type === 'quiz' ? 'o' : 'a'}.</p>`;
             break;
+        }
         case 'video':
             body = descriptionField('Descripción (opcional)')
                 + fileField('Reemplazar video (opcional)', 'video/*', 'MP4, AVI, MOV, WEBM (máx. 2GB)');

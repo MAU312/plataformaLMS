@@ -112,8 +112,11 @@ class Content {
    * Actualizar contenido. `folder_id` se distingue de "no lo toques"
    * (undefined) con `!== undefined`, igual que los demás campos — así se
    * puede mandar `folder_id: null` explícito para sacar algo de su carpeta.
+   * `executor` (pool por defecto) permite pasar una connection ya abierta
+   * dentro de una transacción — usado por quiz.controller.js al reemplazar
+   * question_type junto con las preguntas de un quiz/survey.
    */
-  static async update(id, { title, description, url, order_index, folder_id }) {
+  static async update(id, { title, description, url, order_index, folder_id, question_type }, executor = pool) {
     const fields = [];
     const values = [];
 
@@ -137,11 +140,15 @@ class Content {
       fields.push('folder_id = ?');
       values.push(folder_id);
     }
+    if (question_type !== undefined) {
+      fields.push('question_type = ?');
+      values.push(question_type);
+    }
 
     if (fields.length === 0) return false;
 
     values.push(id);
-    const [result] = await pool.query(
+    const [result] = await executor.query(
       `UPDATE contents SET ${fields.join(', ')} WHERE id = ?`,
       values
     );

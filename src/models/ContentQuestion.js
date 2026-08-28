@@ -43,6 +43,17 @@ class ContentQuestion {
   }
 
   /**
+   * Borra todas las preguntas de un content (el ON DELETE CASCADE se lleva
+   * sus opciones) — usado por quiz.controller.js para reemplazar el set de
+   * preguntas al editar. Solo se llama cuando ya se confirmó que nadie
+   * respondió todavía (ver ContentAnswer.countRespondents), así no hay
+   * respuestas reales que arrastrar en cascada.
+   */
+  static async deleteByContent(contentId, executor = pool) {
+    await executor.query('DELETE FROM content_questions WHERE content_id = ?', [contentId]);
+  }
+
+  /**
    * Preguntas de un content con sus opciones. `includeCorrect: false`
    * (default) omite `is_correct` de las opciones — se usa así cuando el
    * estudiante todavía no respondió, para no filtrarle la respuesta

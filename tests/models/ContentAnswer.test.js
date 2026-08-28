@@ -125,3 +125,13 @@ test('gradeAnswer: devuelve false si la pregunta NO es short_answer (multiple_ch
   const result = await ContentAnswer.gradeAnswer(7, true);
   assert.equal(result, false);
 });
+
+test('countRespondents: cuenta usuarios distintos, no filas de respuesta (varias preguntas del mismo usuario cuentan una vez)', async (t) => {
+  const queryCall = t.mock.method(pool, 'query', async () => ([[{ count: 3 }]]));
+  const result = await ContentAnswer.countRespondents(10);
+
+  assert.equal(result, 3);
+  const [sql, params] = queryCall.mock.calls[0].arguments;
+  assert.match(sql, /COUNT\(DISTINCT user_id\)/);
+  assert.deepEqual(params, [10]);
+});

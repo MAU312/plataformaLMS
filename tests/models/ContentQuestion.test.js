@@ -81,6 +81,27 @@ test('findByContent: sin preguntas, no consulta las opciones (evita un IN () vac
   assert.equal(queryCall.mock.calls.length, 1, 'solo la consulta de preguntas, ninguna de opciones');
 });
 
+test('deleteByContent: borra por content_id, usando pool por defecto', async (t) => {
+  const queryCall = t.mock.method(pool, 'query', async () => ([{ affectedRows: 2 }]));
+
+  await ContentQuestion.deleteByContent(10);
+
+  const [sql, params] = queryCall.mock.calls[0].arguments;
+  assert.match(sql, /DELETE FROM content_questions WHERE content_id = \?/);
+  assert.deepEqual(params, [10]);
+});
+
+test('deleteByContent: acepta un executor alternativo (ej. una connection de transacción) en vez de pool', async (t) => {
+  const poolCall = t.mock.method(pool, 'query', async () => { throw new Error('no debería llamar a pool.query'); });
+  const calls = [];
+  const fakeConnection = { query: async (sql, params) => { calls.push([sql, params]); return [{}]; } };
+
+  await ContentQuestion.deleteByContent(10, fakeConnection);
+
+  assert.equal(calls.length, 1);
+  assert.equal(poolCall.mock.calls.length, 0, 'no debe tocar pool.query cuando se pasa un executor');
+});
+
 test('findByContent: cada pregunta trae solo sus propias opciones (filtradas por question_id)', async (t) => {
   t.mock.method(pool, 'query', async (sql) => {
     if (/FROM content_questions/.test(sql)) {
