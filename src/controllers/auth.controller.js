@@ -225,6 +225,12 @@ export const resetPassword = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     await User.resetPassword(user.id, hashedPassword);
 
+    // Si el reset fue porque una sesión estaba comprometida, esa sesión
+    // robada no debe seguir sirviendo después de este punto — se cierran
+    // TODAS las sesiones activas de la cuenta, no solo la que hizo el
+    // request (este endpoint no requiere estar logueado de todos modos).
+    await User.invalidateSessions(user.id);
+
     res.json({ success: true, message: 'Contraseña actualizada exitosamente. Ya puedes iniciar sesión.' });
   } catch (error) {
     console.error('Error en resetPassword:', error);

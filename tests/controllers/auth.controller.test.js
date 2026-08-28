@@ -260,6 +260,7 @@ test('resetPassword: 400 si el token es inválido o expiró', async (t) => {
 test('resetPassword: éxito actualiza la contraseña y consume el token', async (t) => {
   t.mock.method(User, 'findByValidResetTokenHash', async () => ({ id: 7 }));
   const resetCall = t.mock.method(User, 'resetPassword', async () => true);
+  t.mock.method(User, 'invalidateSessions', async () => {});
 
   const req = mockReq({ body: { token: 'token-valido', password: 'nueva123' } });
   const res = mockRes();
@@ -270,4 +271,17 @@ test('resetPassword: éxito actualiza la contraseña y consume el token', async 
   assert.equal(resetCall.mock.calls[0].arguments[0], 7);
   const storedHash = resetCall.mock.calls[0].arguments[1];
   assert.notEqual(storedHash, 'nueva123', 'la contraseña nunca debe guardarse en texto plano');
+});
+
+test('resetPassword: éxito también invalida TODAS las sesiones activas de la cuenta (no solo la que hizo el request)', async (t) => {
+  t.mock.method(User, 'findByValidResetTokenHash', async () => ({ id: 7 }));
+  t.mock.method(User, 'resetPassword', async () => true);
+  const invalidateCall = t.mock.method(User, 'invalidateSessions', async () => {});
+
+  const req = mockReq({ body: { token: 'token-valido', password: 'nueva123' } });
+  const res = mockRes();
+  await authController.resetPassword(req, res);
+
+  assert.equal(invalidateCall.mock.calls.length, 1);
+  assert.equal(invalidateCall.mock.calls[0].arguments[0], 7, 'debe invalidar las sesiones del dueño del token, no de quien hizo el request (no hay sesión propia acá)');
 });

@@ -71,3 +71,13 @@ test('findByEmailOrUsername: undefined si no hay ninguna fila', async (t) => {
   const user = await User.findByEmailOrUsername('no-existe');
   assert.equal(user, undefined);
 });
+
+test('invalidateSessions: borra las sesiones filtrando por user.id dentro del JSON de `data`', async (t) => {
+  const queryCall = t.mock.method(pool, 'query', async () => ([{ affectedRows: 2 }]));
+
+  await User.invalidateSessions(7);
+
+  const [sql, params] = queryCall.mock.calls[0].arguments;
+  assert.match(sql, /DELETE FROM sessions WHERE JSON_EXTRACT\(data, '\$\.user\.id'\) = \?/);
+  assert.deepEqual(params, [7]);
+});

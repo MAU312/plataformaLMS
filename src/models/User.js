@@ -169,6 +169,24 @@ class User {
     );
     return result.affectedRows > 0;
   }
+
+  /**
+   * Borra todas las sesiones activas de un usuario — se llama justo
+   * después de resetear la contraseña, para que una sesión ya robada (si
+   * esa fue la razón del reset) deje de servir en el acto, en vez de
+   * seguir viva hasta que expire sola (hasta 24h, ver app.js) o alguien
+   * la cierre a mano. Las sesiones de express-mysql-session no tienen una
+   * columna/FK propia hacia `users` — se guardan como JSON crudo en
+   * `data` — así que se filtra con JSON_EXTRACT sobre `user.id`, que ya
+   * queda ahí en cada sesión logueada (ver auth.controller.js login y
+   * auth.middleware.js, que lo re-sincronizan en cada request).
+   */
+  static async invalidateSessions(userId) {
+    await pool.query(
+      "DELETE FROM sessions WHERE JSON_EXTRACT(data, '$.user.id') = ?",
+      [userId]
+    );
+  }
 }
 
 export default User;
