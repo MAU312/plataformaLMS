@@ -119,3 +119,39 @@ test('reviewSubmission: éxito marca revisada con el feedback dado', async (t) =
   assert.equal(res.statusCode, 200);
   assert.deepEqual(markCall.mock.calls[0].arguments, [1, 'Buen trabajo']);
 });
+
+test('listSubmissions: 404 si la tarea no existe', async (t) => {
+  t.mock.method(Content, 'findById', async () => undefined);
+  const req = mockReq({ params: { id: 1 }, query: {} });
+  const res = mockRes();
+  await submissionController.listSubmissions(req, res);
+  assert.equal(res.statusCode, 404);
+});
+
+test('listSubmissions: devuelve las entregas paginadas', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 1, title: 'Tarea' }));
+  const findCall = t.mock.method(TaskSubmission, 'findPaginatedByContent', async () => ({
+    rows: [{ id: 1, student_name: 'Ana' }],
+    total: 1
+  }));
+
+  const req = mockReq({ params: { id: 1 }, query: {} });
+  const res = mockRes();
+  await submissionController.listSubmissions(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.data.submissions.length, 1);
+  assert.deepEqual(res.body.pagination, { page: 1, limit: 20, total: 1, totalPages: 1 });
+  assert.deepEqual(findCall.mock.calls[0].arguments, [1, { page: 1, limit: 20 }]);
+});
+
+test('listSubmissions: limita el "limit" recibido por query string a un máximo de 50', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 1, title: 'Tarea' }));
+  const findCall = t.mock.method(TaskSubmission, 'findPaginatedByContent', async () => ({ rows: [], total: 0 }));
+
+  const req = mockReq({ params: { id: 1 }, query: { page: '2', limit: '9999' } });
+  const res = mockRes();
+  await submissionController.listSubmissions(req, res);
+
+  assert.deepEqual(findCall.mock.calls[0].arguments, [1, { page: 2, limit: 50 }]);
+});

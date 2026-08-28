@@ -388,11 +388,14 @@ export const unenrollCourse = async (req, res) => {
 export const getEnrolledCourses = async (req, res) => {
   try {
     const userId = req.session.user.id;
-    const courses = await User.getEnrolledCourses(userId);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 12));
+    const { rows: courses, total } = await User.getEnrolledCourses(userId, { page, limit });
 
     res.json({
       success: true,
-      data: courses
+      data: courses,
+      pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) }
     });
   } catch (error) {
     console.error('Error al obtener cursos inscritos:', error);
@@ -456,9 +459,15 @@ export const getCourseStudents = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Curso no encontrado' });
     }
 
-    const students = await Course.getEnrolledStudents(id);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+    const { rows: students, total } = await Course.getEnrolledStudents(id, { page, limit });
 
-    res.json({ success: true, data: { course, students } });
+    res.json({
+      success: true,
+      data: { course, students },
+      pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) }
+    });
   } catch (error) {
     console.error('Error al obtener estudiantes del curso:', error);
     res.status(500).json({ success: false, message: 'Error al obtener estudiantes del curso' });

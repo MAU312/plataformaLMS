@@ -104,14 +104,14 @@ const coursesAPI = {
         return apiRequest(`/courses?${params}`);
     },
     getById: async (id) => apiRequest(`/courses/${id}`),
-    getEnrolled: async () => apiRequest('/courses/enrolled'),
+    getEnrolled: async ({ page = 1, limit = 12 } = {}) => apiRequest(`/courses/enrolled?${new URLSearchParams({ page, limit })}`),
     create: async (formData) => apiRequestFormData('/courses', formData),
     update: async (id, formData) => apiRequestFormData(`/courses/${id}`, formData, { method: 'PUT' }),
     enroll: async (id) => apiRequest(`/courses/${id}/enroll`, { method: 'POST' }),
     unenroll: async (id) => apiRequest(`/courses/${id}/enroll`, { method: 'DELETE' }),
     getGlobalStats: async () => apiRequest('/courses/stats/summary'),
     downloadCertificate: async (id) => { window.open(`${API_URL}/courses/${id}/certificate`, '_blank'); },
-    getStudents: async (id) => apiRequest(`/courses/${id}/students`),
+    getStudents: async (id, { page = 1, limit = 20 } = {}) => apiRequest(`/courses/${id}/students?${new URLSearchParams({ page, limit })}`),
     getTeachers: async (id) => apiRequest(`/courses/${id}/teachers`),
     getTeaching: async () => apiRequest('/courses/teaching')
 };
@@ -140,7 +140,7 @@ const contentsAPI = {
     getForumThread: async (id) => apiRequest(`/contents/${id}/forum`),
     postForumReply: async (id, data) => apiRequest(`/contents/${id}/forum`, { method: 'POST', body: JSON.stringify(data) }),
     submit: async (id, formData) => apiRequestFormData(`/contents/${id}/submit`, formData),
-    getSubmissions: async (id) => apiRequest(`/contents/${id}/submissions`),
+    getSubmissions: async (id, { page = 1, limit = 20 } = {}) => apiRequest(`/contents/${id}/submissions?${new URLSearchParams({ page, limit })}`),
     // `data` es un FormData cuando se reemplaza el archivo (video/imagen/
     // archivo/tarea) — ahí el body va tal cual, sin Content-Type manual
     // (el navegador le pone el boundary correcto). Si es un objeto plano

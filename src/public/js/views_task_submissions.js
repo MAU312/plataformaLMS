@@ -6,8 +6,10 @@
  * error en vez de la tabla.
  */
 
+const SUBMISSIONS_PER_PAGE = 20;
 let currentTaskContentId = null;
 let currentSubmissions = [];
+let currentSubmissionsPage = 1;
 
 window.renderTaskSubmissions = async function(params) {
     const app = document.getElementById('app');
@@ -15,9 +17,11 @@ window.renderTaskSubmissions = async function(params) {
     currentTaskContentId = params.id;
 
     try {
-        const response = await contentsAPI.getSubmissions(params.id);
+        const response = await contentsAPI.getSubmissions(params.id, { page: 1, limit: SUBMISSIONS_PER_PAGE });
         const { content, submissions } = response.data;
         currentSubmissions = submissions;
+        currentSubmissionsPage = 1;
+        const pagination = response.pagination || { total: submissions.length, totalPages: 1 };
 
         app.innerHTML = `
             <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -31,9 +35,11 @@ window.renderTaskSubmissions = async function(params) {
                 <p class="text-gray-500 mb-6">${escapeHtml(content.title)}</p>
 
                 <div id="submissions-table-container" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"></div>
+                <div id="submissions-pagination" class="mt-4"></div>
             </div>
         `;
         renderSubmissionsTable();
+        renderSubmissionsPaginationControls(pagination);
 
     } catch (error) {
         console.error('Error loading submissions:', error);
@@ -45,6 +51,27 @@ window.renderTaskSubmissions = async function(params) {
                 </div>
             </div>
         `;
+    }
+};
+
+function renderSubmissionsPaginationControls(pagination) {
+    const container = document.getElementById('submissions-pagination');
+    if (!container) return;
+    container.innerHTML = currentSubmissions.length > 0
+        ? renderPagination(currentSubmissionsPage, pagination.totalPages, pagination.total, SUBMISSIONS_PER_PAGE, 'goToSubmissionsPage')
+        : '';
+}
+
+window.goToSubmissionsPage = async function(page) {
+    try {
+        const response = await contentsAPI.getSubmissions(currentTaskContentId, { page, limit: SUBMISSIONS_PER_PAGE });
+        currentSubmissions = response.data.submissions;
+        currentSubmissionsPage = page;
+        const pagination = response.pagination || { total: currentSubmissions.length, totalPages: 1 };
+        renderSubmissionsTable();
+        renderSubmissionsPaginationControls(pagination);
+    } catch (error) {
+        showToast(error.message || 'Error al cargar las entregas', 'error');
     }
 };
 

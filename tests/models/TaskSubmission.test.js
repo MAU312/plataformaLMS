@@ -42,3 +42,19 @@ test('findAllByContent: hace JOIN con users para traer nombre/email del estudian
   const [sql] = queryCall.mock.calls[0].arguments;
   assert.match(sql, /INNER JOIN users u ON u\.id = ts\.user_id/);
 });
+
+test('findPaginatedByContent: igual que findAllByContent pero con LIMIT/OFFSET y total sin paginar', async (t) => {
+  const queryCall = t.mock.method(pool, 'query', async (sql) => {
+    if (/SELECT COUNT/.test(sql)) return [[{ total: 33 }]];
+    return [[{ id: 1, student_name: 'Ana' }]];
+  });
+
+  const result = await TaskSubmission.findPaginatedByContent(3, { page: 2, limit: 10 });
+
+  assert.equal(result.rows.length, 1);
+  assert.equal(result.total, 33);
+  const [sql, params] = queryCall.mock.calls[0].arguments;
+  assert.match(sql, /INNER JOIN users u ON u\.id = ts\.user_id/);
+  assert.match(sql, /LIMIT \? OFFSET \?/);
+  assert.deepEqual(params, [3, 10, 10], 'page=2, limit=10 -> OFFSET 10');
+});

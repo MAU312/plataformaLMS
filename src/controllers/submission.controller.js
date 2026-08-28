@@ -86,9 +86,15 @@ export const listSubmissions = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Tarea no encontrada' });
     }
 
-    const submissions = await TaskSubmission.findAllByContent(id);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+    const { rows: submissions, total } = await TaskSubmission.findPaginatedByContent(id, { page, limit });
 
-    res.json({ success: true, data: { content, submissions } });
+    res.json({
+      success: true,
+      data: { content, submissions },
+      pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) }
+    });
   } catch (error) {
     console.error('Error al obtener las entregas:', error);
     res.status(500).json({ success: false, message: 'Error al obtener las entregas' });

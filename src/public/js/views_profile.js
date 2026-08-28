@@ -11,7 +11,12 @@ window.renderProfile = async function(params) {
     try {
         let enrolledCourses = [];
         if (isStudent()) {
-            const response = await coursesAPI.getEnrolled();
+            // Esta sección no pagina, muestra el progreso de TODOS los
+            // cursos de un vistazo — se pide hasta el tope real que
+            // acepta el backend (ver getAllCourses/getEnrolledCourses)
+            // en vez del límite por defecto de 12, para no truncar en
+            // silencio a un estudiante inscrito en más de 12 cursos.
+            const response = await coursesAPI.getEnrolled({ limit: 50 });
             enrolledCourses = response.data || [];
         }
 

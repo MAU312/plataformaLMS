@@ -244,18 +244,27 @@ class Course {
 
   /**
    * Obtener los estudiantes inscritos en un curso junto con su progreso
-   * (vista de instructor/admin).
+   * (vista de instructor/admin), paginado — devuelve también el total sin
+   * paginar para que el cliente pueda calcular el número de páginas.
    */
-  static async getEnrolledStudents(courseId) {
+  static async getEnrolledStudents(courseId, { page = 1, limit = 20 } = {}) {
+    const offset = (page - 1) * limit;
     const [rows] = await pool.query(
       `SELECT u.id, u.name, u.email, u.last_login, e.progress, e.enrolled_at, e.completed_at
        FROM enrollments e
        INNER JOIN users u ON u.id = e.user_id
        WHERE e.course_id = ?
-       ORDER BY e.progress DESC, u.name ASC`,
+       ORDER BY e.progress DESC, u.name ASC
+       LIMIT ? OFFSET ?`,
+      [courseId, limit, offset]
+    );
+
+    const [countRows] = await pool.query(
+      'SELECT COUNT(*) as total FROM enrollments WHERE course_id = ?',
       [courseId]
     );
-    return rows;
+
+    return { rows, total: countRows[0].total };
   }
 
   /**

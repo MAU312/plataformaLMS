@@ -2,56 +2,74 @@
  * Views - Mis Cursos (cursos inscritos del estudiante)
  */
 
+const MY_COURSES_PER_PAGE = 12;
+let currentMyCoursesPage = 1;
+
 window.renderMyCourses = async function(params) {
     const app = document.getElementById('app');
     showLoading();
+    currentMyCoursesPage = 1;
+
+    app.innerHTML = `
+        <div class="bg-white border-b py-8 px-4 sm:px-6 lg:px-8">
+            <div class="max-w-7xl mx-auto">
+                <h1 class="text-3xl font-extrabold text-gray-900">
+                    <i class="fas fa-book text-cenat-green mr-2"></i>
+                    Mis Cursos
+                </h1>
+                <p class="text-gray-600 mt-1">Aquí están todos los cursos en los que estás inscrito</p>
+            </div>
+        </div>
+
+        <div class="courses-bg">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                <div id="my-courses-container"></div>
+                <div id="my-courses-pagination" class="mt-6"></div>
+            </div>
+        </div>
+    `;
+
+    await loadMyCourses(1);
+};
+
+async function loadMyCourses(page) {
+    const container = document.getElementById('my-courses-container');
+    const paginationContainer = document.getElementById('my-courses-pagination');
+    if (!container) return;
 
     try {
-        const response = await coursesAPI.getEnrolled();
+        const response = await coursesAPI.getEnrolled({ page, limit: MY_COURSES_PER_PAGE });
+        currentMyCoursesPage = page;
         const courses = response.data || [];
+        const pagination = response.pagination || { total: courses.length, totalPages: 1 };
 
-        app.innerHTML = `
-            <div class="bg-white border-b py-8 px-4 sm:px-6 lg:px-8">
-                <div class="max-w-7xl mx-auto">
-                    <h1 class="text-3xl font-extrabold text-gray-900">
-                        <i class="fas fa-book text-cenat-green mr-2"></i>
-                        Mis Cursos
-                    </h1>
-                    <p class="text-gray-600 mt-1">Aquí están todos los cursos en los que estás inscrito</p>
-                </div>
+        container.innerHTML = courses.length > 0 ? `
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                ${courses.map(course => renderEnrolledCourseCard(course)).join('')}
             </div>
-
-            <div class="courses-bg">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-                    ${courses.length > 0 ? `
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                            ${courses.map(course => renderEnrolledCourseCard(course)).join('')}
-                        </div>
-                    ` : `
-                        <div class="empty-state">
-                            <i class="fas fa-book-open"></i>
-                            <p class="text-xl text-gray-600 font-medium">Aún no estás inscrito en ningún curso</p>
-                            <p class="text-gray-500 mb-4">Explora el catálogo y comienza a aprender</p>
-                            <a href="#/" class="btn-cenat">
-                                <i class="fas fa-search mr-2"></i> Explorar cursos
-                            </a>
-                        </div>
-                    `}
-                </div>
+        ` : `
+            <div class="empty-state">
+                <i class="fas fa-book-open"></i>
+                <p class="text-xl text-gray-600 font-medium">Aún no estás inscrito en ningún curso</p>
+                <p class="text-gray-500 mb-4">Explora el catálogo y comienza a aprender</p>
+                <a href="#/" class="btn-cenat">
+                    <i class="fas fa-search mr-2"></i> Explorar cursos
+                </a>
             </div>
         `;
+
+        paginationContainer.innerHTML = courses.length > 0
+            ? renderPagination(page, pagination.totalPages, pagination.total, MY_COURSES_PER_PAGE, 'goToMyCoursesPage')
+            : '';
 
     } catch (error) {
         console.error('Error loading enrolled courses:', error);
-        app.innerHTML = `
-            <div class="min-h-screen flex items-center justify-center">
-                <div class="text-center">
-                    <i class="fas fa-exclamation-triangle text-5xl text-red-500 mb-4"></i>
-                    <p class="text-xl text-gray-600">Error al cargar tus cursos</p>
-                </div>
-            </div>
-        `;
+        showToast('Error al cargar tus cursos', 'error');
     }
+}
+
+window.goToMyCoursesPage = function(page) {
+    loadMyCourses(page);
 };
 
 function renderEnrolledCourseCard(course) {

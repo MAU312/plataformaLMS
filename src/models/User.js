@@ -115,16 +115,29 @@ class User {
     return result.affectedRows > 0;
   }
 
-  static async getEnrolledCourses(userId) {
+  /**
+   * Cursos en los que un usuario está inscrito, paginado — devuelve
+   * también el total sin paginar para que el cliente pueda calcular el
+   * número de páginas.
+   */
+  static async getEnrolledCourses(userId, { page = 1, limit = 12 } = {}) {
+    const offset = (page - 1) * limit;
     const [rows] = await pool.query(
-      `SELECT c.*, e.progress, e.enrolled_at 
-       FROM courses c 
-       INNER JOIN enrollments e ON c.id = e.course_id 
-       WHERE e.user_id = ? 
-       ORDER BY e.enrolled_at DESC`,
+      `SELECT c.*, e.progress, e.enrolled_at
+       FROM courses c
+       INNER JOIN enrollments e ON c.id = e.course_id
+       WHERE e.user_id = ?
+       ORDER BY e.enrolled_at DESC
+       LIMIT ? OFFSET ?`,
+      [userId, limit, offset]
+    );
+
+    const [countRows] = await pool.query(
+      'SELECT COUNT(*) as total FROM enrollments WHERE user_id = ?',
       [userId]
     );
-    return rows;
+
+    return { rows, total: countRows[0].total };
   }
 
   static async countByRole() {

@@ -7,6 +7,16 @@
  * asignados — eso lo controla únicamente el equipo de LANBA - CeNAT.
  */
 
+// Mismo valor que STUDENTS_PER_PAGE en views_admin_course_students.js,
+// pero con OTRO nombre a propósito: un `const` de nivel superior no es
+// local a su <script> — vive en el scope global compartido por todos los
+// scripts clásicos de la página (esto no es como un módulo aparte). Dos
+// `const STUDENTS_PER_PAGE` en archivos distintos son una redeclaración
+// del MISMO nombre y tiran un SyntaxError que mata la ejecución completa
+// del script que carga después (confirmado en vivo: rompía por completo
+// views_teacher_course.js sin ningún log de error visible a simple vista).
+const TEACHER_STUDENTS_PER_PAGE = 20;
+
 window.renderTeacherCourse = async function(params) {
     const app = document.getElementById('app');
     showLoading();
@@ -64,13 +74,17 @@ window.renderTeacherCourse = async function(params) {
     }
 };
 
+let currentTeacherStudentsCourseId = null;
+
 window.renderTeacherCourseStudents = async function(params) {
     const app = document.getElementById('app');
     showLoading();
+    currentTeacherStudentsCourseId = params.id;
 
     try {
-        const response = await coursesAPI.getStudents(params.id);
+        const response = await coursesAPI.getStudents(params.id, { page: 1, limit: TEACHER_STUDENTS_PER_PAGE });
         const { course, students } = response.data;
+        const pagination = response.pagination || { total: students.length, totalPages: 1 };
 
         app.innerHTML = `
             <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -84,13 +98,22 @@ window.renderTeacherCourseStudents = async function(params) {
                 <p class="text-gray-500 mb-6">${escapeHtml(course.title)}</p>
 
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    ${renderStudentsTableHTML(students)}
+                    <div id="teacher-students-table-container">${renderStudentsTableHTML(students)}</div>
                 </div>
+                <div id="teacher-students-pagination" class="mt-4"></div>
             </div>
         `;
+
+        document.getElementById('teacher-students-pagination').innerHTML = students.length > 0
+            ? renderPagination(1, pagination.totalPages, pagination.total, TEACHER_STUDENTS_PER_PAGE, 'goToTeacherStudentsPage')
+            : '';
 
     } catch (error) {
         console.error('Error loading course students:', error);
         showToast('Error al cargar los estudiantes del curso', 'error');
     }
+};
+
+window.goToTeacherStudentsPage = function(page) {
+    loadCourseStudentsPage(currentTeacherStudentsCourseId, page, 'teacher-students-table-container', 'teacher-students-pagination', 'goToTeacherStudentsPage');
 };
