@@ -497,6 +497,32 @@ function renderForumItem(content) {
     `;
 }
 
+/**
+ * Boilerplate compartido por el submit de cada formulario "Agregar X"
+ * (carpeta/video/archivo/imagen/texto/url/foro/tarea/quiz/encuesta):
+ * deshabilita el botón con un spinner, llama la API, muestra el toast de
+ * éxito y re-renderiza el panel — o restaura el botón a su texto normal
+ * si falló. Lo específico de cada formulario (qué campos leer, validarlos,
+ * armar el payload/FormData, y qué endpoint llamar) sigue viviendo en
+ * cada showAddXForm — solo este tramo final, idéntico en los 9, se
+ * comparte acá.
+ */
+async function submitContentForm(submitBtn, { loadingLabel, idleLabel, apiCall, successMessage, errorMessage }) {
+    try {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-1"></i> ${loadingLabel}`;
+
+        await apiCall();
+        showToast(successMessage, 'success');
+        contentManagerRerender();
+
+    } catch (error) {
+        showToast(error.message || errorMessage, 'error');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = idleLabel;
+    }
+}
+
 // =================================
 // Formulario para crear CARPETA
 // =================================
@@ -532,19 +558,13 @@ function showAddFolderForm(courseId) {
             return;
         }
 
-        try {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Creando...';
-
-            await contentsAPI.createFolder({ course_id: courseId, title });
-            showToast('Carpeta creada exitosamente', 'success');
-            contentManagerRerender();
-
-        } catch (error) {
-            showToast(error.message || 'Error al crear la carpeta', 'error');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-check mr-1"></i> Crear Carpeta';
-        }
+        await submitContentForm(submitBtn, {
+            loadingLabel: 'Creando...',
+            idleLabel: '<i class="fas fa-check mr-1"></i> Crear Carpeta',
+            apiCall: () => contentsAPI.createFolder({ course_id: courseId, title }),
+            successMessage: 'Carpeta creada exitosamente',
+            errorMessage: 'Error al crear la carpeta'
+        });
     });
 }
 
@@ -602,19 +622,13 @@ function showAddVideoForm(courseId, folderId) {
         formData.append('video', videoFile);
         if (folderId) formData.append('folder_id', folderId);
 
-        try {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Subiendo...';
-
-            await contentsAPI.createVideo(formData);
-            showToast('Video agregado exitosamente', 'success');
-            contentManagerRerender();
-
-        } catch (error) {
-            showToast(error.message || 'Error al subir el video', 'error');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-upload mr-1"></i> Subir Video';
-        }
+        await submitContentForm(submitBtn, {
+            loadingLabel: 'Subiendo...',
+            idleLabel: '<i class="fas fa-upload mr-1"></i> Subir Video',
+            apiCall: () => contentsAPI.createVideo(formData),
+            successMessage: 'Video agregado exitosamente',
+            errorMessage: 'Error al subir el video'
+        });
     });
 }
 
@@ -672,19 +686,13 @@ function showAddFileForm(courseId, folderId) {
         formData.append('file', file);
         if (folderId) formData.append('folder_id', folderId);
 
-        try {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Subiendo...';
-
-            await contentsAPI.createFile(formData);
-            showToast('Archivo agregado exitosamente', 'success');
-            contentManagerRerender();
-
-        } catch (error) {
-            showToast(error.message || 'Error al subir el archivo', 'error');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-upload mr-1"></i> Subir Archivo';
-        }
+        await submitContentForm(submitBtn, {
+            loadingLabel: 'Subiendo...',
+            idleLabel: '<i class="fas fa-upload mr-1"></i> Subir Archivo',
+            apiCall: () => contentsAPI.createFile(formData),
+            successMessage: 'Archivo agregado exitosamente',
+            errorMessage: 'Error al subir el archivo'
+        });
     });
 }
 
@@ -742,19 +750,13 @@ function showAddImageForm(courseId, folderId) {
         formData.append('image', imageFile);
         if (folderId) formData.append('folder_id', folderId);
 
-        try {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Subiendo...';
-
-            await contentsAPI.createImage(formData);
-            showToast('Imagen agregada exitosamente', 'success');
-            contentManagerRerender();
-
-        } catch (error) {
-            showToast(error.message || 'Error al subir la imagen', 'error');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-upload mr-1"></i> Subir Imagen';
-        }
+        await submitContentForm(submitBtn, {
+            loadingLabel: 'Subiendo...',
+            idleLabel: '<i class="fas fa-upload mr-1"></i> Subir Imagen',
+            apiCall: () => contentsAPI.createImage(formData),
+            successMessage: 'Imagen agregada exitosamente',
+            errorMessage: 'Error al subir la imagen'
+        });
     });
 }
 
@@ -798,19 +800,13 @@ function showAddTextForm(courseId, folderId) {
             return;
         }
 
-        try {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Guardando...';
-
-            await contentsAPI.createText({ course_id: courseId, title, description, folder_id: folderId || undefined });
-            showToast('Texto agregado exitosamente', 'success');
-            contentManagerRerender();
-
-        } catch (error) {
-            showToast(error.message || 'Error al guardar el texto', 'error');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-check mr-1"></i> Guardar Texto';
-        }
+        await submitContentForm(submitBtn, {
+            loadingLabel: 'Guardando...',
+            idleLabel: '<i class="fas fa-check mr-1"></i> Guardar Texto',
+            apiCall: () => contentsAPI.createText({ course_id: courseId, title, description, folder_id: folderId || undefined }),
+            successMessage: 'Texto agregado exitosamente',
+            errorMessage: 'Error al guardar el texto'
+        });
     });
 }
 
@@ -899,19 +895,13 @@ function showAddUrlForm(courseId, folderId) {
             return;
         }
 
-        try {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Guardando...';
-
-            await contentsAPI.createUrl({ course_id: courseId, title, description, url, folder_id: folderId || undefined });
-            showToast('URL agregada exitosamente', 'success');
-            contentManagerRerender();
-
-        } catch (error) {
-            showToast(error.message || 'Error al guardar la URL', 'error');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-check mr-1"></i> Guardar URL';
-        }
+        await submitContentForm(submitBtn, {
+            loadingLabel: 'Guardando...',
+            idleLabel: '<i class="fas fa-check mr-1"></i> Guardar URL',
+            apiCall: () => contentsAPI.createUrl({ course_id: courseId, title, description, url, folder_id: folderId || undefined }),
+            successMessage: 'URL agregada exitosamente',
+            errorMessage: 'Error al guardar la URL'
+        });
     });
 }
 
@@ -955,19 +945,13 @@ function showAddForumForm(courseId, folderId) {
             return;
         }
 
-        try {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Creando...';
-
-            await contentsAPI.createForum({ course_id: courseId, title, description, folder_id: folderId || undefined });
-            showToast('Tema de foro creado exitosamente', 'success');
-            contentManagerRerender();
-
-        } catch (error) {
-            showToast(error.message || 'Error al crear el tema de foro', 'error');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-check mr-1"></i> Crear Tema';
-        }
+        await submitContentForm(submitBtn, {
+            loadingLabel: 'Creando...',
+            idleLabel: '<i class="fas fa-check mr-1"></i> Crear Tema',
+            apiCall: () => contentsAPI.createForum({ course_id: courseId, title, description, folder_id: folderId || undefined }),
+            successMessage: 'Tema de foro creado exitosamente',
+            errorMessage: 'Error al crear el tema de foro'
+        });
     });
 }
 
@@ -1030,19 +1014,13 @@ function showAddTaskForm(courseId, folderId) {
         }
         if (folderId) formData.append('folder_id', folderId);
 
-        try {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Guardando...';
-
-            await contentsAPI.createTask(formData);
-            showToast('Tarea agregada exitosamente', 'success');
-            contentManagerRerender();
-
-        } catch (error) {
-            showToast(error.message || 'Error al guardar la tarea', 'error');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-check mr-1"></i> Guardar Tarea';
-        }
+        await submitContentForm(submitBtn, {
+            loadingLabel: 'Guardando...',
+            idleLabel: '<i class="fas fa-check mr-1"></i> Guardar Tarea',
+            apiCall: () => contentsAPI.createTask(formData),
+            successMessage: 'Tarea agregada exitosamente',
+            errorMessage: 'Error al guardar la tarea'
+        });
     });
 }
 
@@ -1276,19 +1254,13 @@ function showAddQuestionForm(courseId, folderId, kind) {
             folder_id: folderId || undefined
         };
 
-        try {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Guardando...';
-
-            await apiCall(payload);
-            showToast(`${kindLabel} agregad${isQuiz ? 'o' : 'a'} exitosamente`, 'success');
-            contentManagerRerender();
-
-        } catch (error) {
-            showToast(error.message || `Error al guardar ${isQuiz ? 'el cuestionario' : 'la encuesta'}`, 'error');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = `<i class="fas fa-check mr-1"></i> Guardar ${kindLabel}`;
-        }
+        await submitContentForm(submitBtn, {
+            loadingLabel: 'Guardando...',
+            idleLabel: `<i class="fas fa-check mr-1"></i> Guardar ${kindLabel}`,
+            apiCall: () => apiCall(payload),
+            successMessage: `${kindLabel} agregad${isQuiz ? 'o' : 'a'} exitosamente`,
+            errorMessage: `Error al guardar ${isQuiz ? 'el cuestionario' : 'la encuesta'}`
+        });
     });
 }
 
@@ -1472,18 +1444,13 @@ async function submitEditContent(e, content) {
         if (urlInput) payload.url = urlInput.value.trim();
     }
 
-    try {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Guardando...';
-
-        await contentsAPI.update(content.id, payload);
-        showToast('Contenido actualizado exitosamente', 'success');
-        contentManagerRerender();
-    } catch (error) {
-        showToast(error.message || 'Error al actualizar el contenido', 'error');
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-check mr-1"></i> Guardar';
-    }
+    await submitContentForm(submitBtn, {
+        loadingLabel: 'Guardando...',
+        idleLabel: '<i class="fas fa-check mr-1"></i> Guardar',
+        apiCall: () => contentsAPI.update(content.id, payload),
+        successMessage: 'Contenido actualizado exitosamente',
+        errorMessage: 'Error al actualizar el contenido'
+    });
 }
 
 const CONTENT_TYPE_LABELS = {
