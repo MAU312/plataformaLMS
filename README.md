@@ -14,7 +14,7 @@
   <img alt="Express" src="https://img.shields.io/badge/Express-5-000000?logo=express&logoColor=white">
   <img alt="MySQL" src="https://img.shields.io/badge/MySQL-8-4479A1?logo=mysql&logoColor=white">
   <img alt="Tailwind CSS" src="https://img.shields.io/badge/Tailwind_CSS-CDN-38BDF8?logo=tailwindcss&logoColor=white">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-62%20passing-brightgreen">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-274%20passing-brightgreen">
   <img alt="Uso" src="https://img.shields.io/badge/uso-académico%20%2F%20institucional-lightgrey">
 </p>
 
@@ -46,40 +46,48 @@ Es una aplicación full-stack: backend en **Node.js/Express** con **MySQL**, y u
 ## Características
 
 **Autenticación y cuentas**
-- Registro e inicio de sesión con sesiones persistidas en MySQL (no en memoria)
-- Recuperación de contraseña por correo (Gmail vía Nodemailer, con *fallback* a consola si no hay credenciales configuradas)
+- Registro e inicio de sesión (por correo o por nombre de usuario) con sesiones persistidas en MySQL (no en memoria)
+- Modo invitado: navegar el catálogo público sin necesidad de cuenta
+- Recuperación de contraseña por correo (Gmail vía Nodemailer, con *fallback* a consola si no hay credenciales configuradas) — invalida todas las sesiones activas del usuario al completarse
+- Tres roles: **estudiante**, **profesor** (gestiona los cursos que tiene asignados vía `course_teachers`) y **administrador**
+- Foto de perfil (avatar) para cualquier rol, con la misma validación de firma binaria que el resto de imágenes
 - Mostrar/ocultar contraseña en los formularios de login, registro y restablecimiento
 
 **Cursos y contenido**
-- CRUD de cursos con paginación server-side (catálogo, panel admin, usuarios)
-- Contenidos de tipo video y archivo descargable, con reordenamiento por *drag & drop*
-- Validación de archivos por firma binaria real (no solo por extensión/MIME)
-- Descarga de archivos protegida: siempre pasa por el backend, que valida sesión e inscripción antes de servir el archivo
+- CRUD de cursos con paginación server-side (catálogo, panel admin, usuarios, estudiantes de un curso, entregas de tarea)
+- Diez tipos de contenido: **video**, **archivo**, **imagen**, **texto**, **URL** (con vista previa embebida de YouTube/Vimeo y detección real de errores de reproducción), **tarea** (entrega única + revisión del profesor), **foro** de discusión (hasta 2 niveles de anidamiento, moderable), **carpeta** (agrupa contenido en un solo nivel), **cuestionario** y **encuesta** (opción múltiple, verdadero/falso o respuesta corta, con calificación automática o manual)
+- Editor completo de preguntas de un cuestionario/encuesta ya creado — bloqueado una vez que algún estudiante respondió, para no perder respuestas reales
+- Reordenamiento de contenido por *drag & drop*, con botones de subir/bajar como alternativa accesible por teclado
+- Edición de contenido existente (título, descripción, archivo) para los diez tipos, sin necesidad de borrar y recrear
+- Validación de archivos por firma binaria real (no solo por extensión/MIME), incluyendo avatares
+- Descarga de archivos protegida: siempre pasa por el backend, que valida sesión e inscripción (o rol de profesor asignado) antes de servir el archivo
 
 **Progreso y certificación**
-- Seguimiento de progreso por contenido y por curso
+- Seguimiento de progreso por contenido y por curso (excluye contenido puramente decorativo: imágenes, foros y carpetas)
 - Certificado de finalización en PDF, generado con el logo de LANBA embebido
-- Vista de progreso por estudiante para el instructor/administrador
+- Vista de progreso por estudiante para el profesor/administrador
 
 **Interfaz**
-- Modo oscuro
+- Modo oscuro, control de tamaño de letra
 - Identidad visual de LANBA (verde `#007031` tomado del logo real)
 - Diseño responsive
 
 ## Seguridad
 
-El proyecto pasó por una revisión de seguridad completa (24 hallazgos corregidos — ver [`docs/Pruebas_Seguridad_LMS_CENAT.docx`](docs/Pruebas_Seguridad_LMS_CENAT.docx)). Entre las medidas implementadas:
+El proyecto pasó por tres rondas de revisión de seguridad (31 hallazgos identificados y corregidos en total — ver [`docs/Pruebas_Seguridad_LMS_CENAT.docx`](docs/Pruebas_Seguridad_LMS_CENAT.docx)). Entre las medidas implementadas:
 
 | Medida | Detalle |
 |---|---|
-| Cabeceras HTTP | [Helmet](https://helmetjs.github.io/) en todas las respuestas |
-| Rate limiting | Límites por IP en login, registro, recuperación de contraseña, inscripción y creación de cursos |
-| Sesiones | Almacenadas en MySQL (no `MemoryStore`), cookies `httpOnly`, `sameSite=lax`, `secure` en producción |
+| Cabeceras HTTP | [Helmet](https://helmetjs.github.io/) en todas las respuestas, con una política Content-Security-Policy real (no desactivada) |
+| Rate limiting | Límites por IP/usuario en login, registro, recuperación de contraseña, inscripción, creación de cursos y publicaciones del foro |
+| Sesiones | Almacenadas en MySQL (no `MemoryStore`), cookies `httpOnly`, `sameSite=lax`, `secure` en producción; se invalidan todas al restablecer la contraseña |
 | Secretos | La app no arranca si falta `SESSION_SECRET` en el entorno |
 | Contraseñas | Hasheadas con `bcrypt`, nunca en texto plano |
-| Archivos subidos | Validación por firma binaria real (`file-type`), no solo por extensión |
-| Control de acceso | Descargas y contenido de curso siempre verifican sesión + inscripción en el backend |
-| Manejo de errores | En producción, los errores 500 no filtran detalles internos (rutas, mensajes de MySQL, *stack traces*) |
+| Archivos subidos | Validación por firma binaria real (`file-type`), no solo por extensión, incluyendo avatares |
+| Control de acceso | Descargas y contenido de curso siempre verifican sesión + inscripción (o rol de profesor asignado) en el backend |
+| Integridad transaccional | Operaciones de varios pasos (crear cuestionario, asignar profesores, desinscribir) usan transacciones de MySQL — todo o nada ante un fallo a mitad de camino |
+| Inyección | Sin XSS almacenado (escapado consistente en atributos HTML) ni SQL (parámetros preparados en todas las consultas) |
+| Manejo de errores | En producción, los errores 500 no filtran detalles internos (rutas, mensajes de MySQL, *stack traces*); manejo a nivel de proceso y apagado ordenado ante señales de terminación |
 | Dependencias | `npm audit` limpio |
 
 ## Stack tecnológico
@@ -99,12 +107,12 @@ El proyecto pasó por una revisión de seguridad completa (24 hallazgos corregid
 ```
 lms-cenat/
 ├── src/
-│   ├── app.js                  # Punto de entrada de Express
+│   ├── app.js                  # Punto de entrada de Express (Helmet/CSP, sesión, health check, apagado ordenado)
 │   ├── config/                 # Conexión a MySQL, configuración de correo
-│   ├── controllers/            # Lógica de auth, cursos y contenidos
-│   ├── middlewares/            # Auth, rate limiting, validación de archivos, uploads
-│   ├── models/                 # Content, Course, User
-│   ├── routes/                 # Definición de endpoints de la API
+│   ├── controllers/            # auth, course, content, quiz, forum, submission, user
+│   ├── middlewares/            # Auth (incl. requireCourseManager), rate limiting, validación de archivos, uploads
+│   ├── models/                 # Content, ContentQuestion, ContentAnswer, Course, ForumPost, TaskSubmission, User
+│   ├── routes/                 # Un archivo de rutas por dominio (auth, courses, contents, users, submissions, forum-posts)
 │   ├── utils/                  # Generación de certificados PDF
 │   └── public/                 # Frontend (servido como estático)
 │       ├── index.html          # Shell de la SPA
@@ -177,29 +185,29 @@ Definidas en `.env` (ver [`.env.example`](.env.example)):
 
 ## Pruebas automatizadas
 
-62 pruebas con el test runner nativo de Node (`node --test`), que mockean modelos y el pool de MySQL — **no requieren una base de datos real corriendo**:
+274 pruebas con el test runner nativo de Node (`node --test`), que mockean modelos y el pool de MySQL — **no requieren una base de datos real corriendo**:
 
 ```bash
 npm test
 ```
 
-Cubren controladores de autenticación, cursos y contenidos, middleware de validación de archivos, y lógica de modelos (cálculo de progreso, reordenamiento de contenidos).
+Cubren todos los controladores (auth, cursos, contenidos, quiz, foro, entregas, usuarios), middleware de validación de archivos, y todos los modelos (cálculo de progreso, reordenamiento, preguntas/respuestas de cuestionarios, entregas de tareas).
 
 ## API
 
-Todos los endpoints cuelgan de `/api`. Los que requieren sesión están marcados 🔒, y los que además requieren rol de administrador 🔒👑.
+Todos los endpoints cuelgan de `/api`. Los que requieren sesión están marcados 🔒, y los que además requieren rol de administrador (o profesor asignado al curso, donde se indica) 🔒👑.
 
 **`/api/auth`**
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| POST | `/register` | Registro de usuario |
-| POST | `/login` | Inicio de sesión |
+| POST | `/register` | Registro de usuario (siempre rol estudiante) |
+| POST | `/login` | Inicio de sesión, por correo o nombre de usuario |
 | POST | `/logout` | Cerrar sesión |
 | GET | `/me` 🔒 | Usuario autenticado actual |
 | GET | `/check` | Verificar estado de sesión |
 | POST | `/forgot-password` | Solicitar enlace de recuperación |
-| POST | `/reset-password` | Restablecer contraseña con token |
+| POST | `/reset-password` | Restablecer contraseña con token (invalida las demás sesiones activas) |
 
 **`/api/courses`**
 
@@ -207,6 +215,7 @@ Todos los endpoints cuelgan de `/api`. Los que requieren sesión están marcados
 |---|---|---|
 | GET | `/` | Catálogo de cursos (paginado) |
 | GET | `/enrolled` 🔒 | Cursos en los que estoy inscrito |
+| GET | `/teaching` 🔒 | Cursos donde estoy asignado como profesor |
 | GET | `/stats/summary` 🔒👑 | Estadísticas globales |
 | GET | `/:id` | Detalle de un curso |
 | POST | `/` 🔒👑 | Crear curso |
@@ -215,31 +224,59 @@ Todos los endpoints cuelgan de `/api`. Los que requieren sesión están marcados
 | POST / DELETE | `/:id/enroll` 🔒 | Inscribirse / darse de baja |
 | GET | `/:id/stats` 🔒👑 | Estadísticas del curso |
 | GET | `/:id/certificate` 🔒 | Descargar certificado en PDF |
-| GET | `/:id/students` 🔒👑 | Progreso de estudiantes inscritos |
+| GET | `/:id/students` 🔒👑 | Progreso de estudiantes inscritos (paginado) |
+| GET | `/:id/teachers` 🔒👑 | Profesores asignados al curso |
 
-**`/api/contents`**
+**`/api/contents`** — CRUD genérico + creación por tipo (`video`, `file`, `image`, `text`, `url`, `task`, `forum`, `folder`, `quiz`, `survey`), todos 🔒👑 para crear/editar/eliminar/reordenar
 
 | Método | Ruta | Descripción |
 |---|---|---|
 | GET | `/course/:courseId` | Contenidos de un curso |
-| PUT | `/course/:courseId/reorder` 🔒👑 | Reordenar contenidos (*drag & drop*) |
-| POST | `/video` 🔒👑 | Subir contenido de video |
-| POST | `/file` 🔒👑 | Subir contenido de archivo |
-| POST | `/:id/complete` 🔒 | Marcar contenido como completado |
-| DELETE | `/:id/complete` 🔒 | Desmarcar contenido |
-| GET | `/:id/download` 🔒 | Descargar archivo (valida inscripción) |
+| PUT | `/course/:courseId/reorder` 🔒👑 | Reordenar contenidos (*drag & drop* o botones) |
+| POST | `/video`, `/file`, `/image`, `/text`, `/url`, `/task`, `/forum`, `/folder`, `/quiz`, `/survey` 🔒👑 | Crear contenido de cada tipo |
 | GET | `/:id` | Detalle de un contenido |
 | PUT / DELETE | `/:id` 🔒👑 | Editar / eliminar contenido |
+| POST / DELETE | `/:id/complete` 🔒 | Marcar / desmarcar completado |
+| GET | `/:id/download` 🔒 | Descargar archivo (valida inscripción) |
+| POST | `/:id/submit` 🔒 | Entregar una tarea |
+| GET | `/:id/submission` 🔒 | Mi entrega de una tarea |
+| GET | `/:id/submissions` 🔒👑 | Entregas de una tarea (paginado) |
+| GET / POST | `/:id/forum` 🔒 | Ver / responder el hilo de un foro |
+| GET | `/:id/questions` 🔒 | Preguntas de un cuestionario/encuesta para responder |
+| POST | `/:id/answers` 🔒 | Enviar respuestas (un intento) |
+| GET | `/:id/results` 🔒👑 | Resultados de un cuestionario/encuesta |
+| GET | `/:id/questions/manage` 🔒👑 | Preguntas completas para editar |
+| PUT | `/:id/questions` 🔒👑 | Reemplazar preguntas (bloqueado si ya hay respuestas) |
+| PUT | `/answers/:answerId/grade` 🔒👑 | Calificar manualmente una respuesta corta |
 
-**`/api/users`** — todos 🔒👑 (gestión de usuarios: listar, ver, editar, activar/desactivar, eliminar, estadísticas)
+**`/api/submissions`** — 🔒 (entregas de tareas)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/:id/download` | Descargar el archivo de una entrega |
+| PUT | `/:id/review` 🔒👑 | Calificar/revisar una entrega |
+
+**`/api/forum-posts`** — 🔒 (moderación de respuestas del foro)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| PUT | `/:id` | Editar una respuesta propia |
+| DELETE | `/:id` | Eliminar una respuesta (autor, profesor del curso, o admin) |
+
+**`/api/users`**
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| PUT / DELETE | `/me/avatar` 🔒 | Subir/reemplazar o quitar mi propia foto de perfil |
+| resto | `/*` 🔒👑 | Gestión de usuarios: crear (cualquier rol), listar, ver, editar, activar/desactivar, eliminar, estadísticas |
 
 ## Documentación
 
 En [`docs/`](docs/):
 
-- **Manual técnico** — arquitectura, modelos de datos y decisiones de diseño
-- **Manual de usuario** — guía de uso para estudiantes e instructores
-- **Pruebas de seguridad** — los 24 hallazgos identificados y su corrección
+- **Manual técnico** — arquitectura, referencia completa de la API, modelo de datos y decisiones de diseño
+- **Manual de usuario** — guía de uso para estudiantes, profesores y administradores
+- **Pruebas de seguridad** — los 31 hallazgos identificados y su corrección
 
 ## Contexto académico
 
