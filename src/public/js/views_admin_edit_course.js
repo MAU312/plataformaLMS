@@ -36,7 +36,7 @@ window.renderAdminEditCourse = async function(params) {
                 </a>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 <!-- Columna izquierda: Info del curso -->
                 <div class="lg:col-span-1">
                     <form id="edit-course-form" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">

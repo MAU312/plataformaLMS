@@ -173,6 +173,7 @@ async function handleRoute() {
     
     if (!routeData) {
         render404();
+        window.scrollTo(0, 0);
         return;
     }
     
@@ -200,6 +201,11 @@ async function handleRoute() {
         console.error('Error rendering route:', error);
         showToast('Error al cargar la página', 'error');
     }
+
+    // Cada vista es una página nueva para el usuario — sin esto, navegar
+    // desde un punto scrolleado deja la vista siguiente igual de scrolleada,
+    // ocultando el nav y el título hasta que suba manualmente.
+    window.scrollTo(0, 0);
 }
 
 function render404() {

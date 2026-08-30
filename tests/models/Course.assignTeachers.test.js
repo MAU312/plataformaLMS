@@ -4,9 +4,11 @@ import pool from '../../src/config/db.js';
 import Course from '../../src/models/Course.js';
 
 /**
- * assignTeachers hace DELETE + INSERT dentro de una transacción explícita
- * (pool.getConnection() en vez de pool.query directo) — se mockea la
- * conexión completa, no pool.query.
+ * assignTeachers hace DELETE (de los que ya no están) + INSERT IGNORE (de
+ * la lista nueva) dentro de una transacción explícita (pool.getConnection()
+ * en vez de pool.query directo) — se mockea la conexión completa, no
+ * pool.query. INSERT IGNORE evita pisar el assigned_at de un profesor que
+ * ya estaba asignado y sigue en la lista.
  */
 function mockConnection(queryImpl) {
   const calls = { query: [], beginTransaction: 0, commit: 0, rollback: 0, release: 0 };
@@ -39,11 +41,11 @@ test('assignTeachers: borra los profesores anteriores e inserta la lista nueva, 
   assert.equal(calls.query.length, 2, 'un DELETE y un INSERT, no una consulta por profesor');
 
   const [deleteSql, deleteParams] = calls.query[0];
-  assert.match(deleteSql, /DELETE FROM course_teachers WHERE course_id = \?/);
-  assert.deepEqual(deleteParams, [7]);
+  assert.match(deleteSql, /DELETE FROM course_teachers WHERE course_id = \? AND user_id NOT IN \(\?\)/);
+  assert.deepEqual(deleteParams, [7, [5, 6]]);
 
   const [insertSql, insertParams] = calls.query[1];
-  assert.match(insertSql, /INSERT INTO course_teachers/);
+  assert.match(insertSql, /INSERT IGNORE INTO course_teachers/);
   assert.deepEqual(insertParams, [[[7, 5], [7, 6]]]);
 });
 

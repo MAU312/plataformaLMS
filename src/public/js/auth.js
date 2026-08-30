@@ -81,10 +81,11 @@ async function register(name, email, password, username) {
         }
 
         const response = await authAPI.register(name, email, password, username);
-        
+
         if (response.success) {
-            showToast('Registro exitoso. Por favor inicia sesión', 'success');
-            return true;
+            // Ya probó la contraseña al elegirla — lo logueamos de una vez
+            // en lugar de mandarlo de vuelta al login a escribirla otra vez.
+            return await login(email, password);
         }
         return false;
     } catch (error) {

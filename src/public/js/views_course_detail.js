@@ -156,7 +156,7 @@ window.renderCourseDetail = async function(params) {
 
             <div class="courses-bg">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                     <!-- Columna principal: Videos -->
                     <div class="lg:col-span-2 space-y-6">
                         <h2 id="videos-section" class="text-xl font-bold text-gray-900 flex items-center scroll-mt-4">

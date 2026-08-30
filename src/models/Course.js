@@ -155,26 +155,32 @@ class Course {
   }
 
   /**
-   * Reemplaza por completo la lista de profesores asignados a un curso
-   * (borra los anteriores e inserta los nuevos) — mismo espíritu simple
-   * que Content.reorder: el admin manda la lista final, no altas/bajas
-   * individuales. DELETE + INSERT van en una sola transacción: si el
-   * INSERT fallara (ej. un teacherId inválido) después de que el DELETE ya
-   * se ejecutó, el curso quedaría sin ningún profesor asignado en vez de
-   * conservar la lista anterior o rechazar el cambio completo.
+   * Reemplaza por completo la lista de profesores asignados a un curso —
+   * mismo espíritu simple que Content.reorder: el admin manda la lista
+   * final, no altas/bajas individuales. Se borran solo los que ya no están
+   * en la lista y se insertan solo los nuevos (INSERT IGNORE, protegido por
+   * el UNIQUE de (course_id, user_id)) para no pisar el `assigned_at` de un
+   * profesor que ya estaba asignado y sigue estándolo. Todo en una sola
+   * transacción para que un teacherId inválido no deje el curso a medio
+   * actualizar.
    */
   static async assignTeachers(courseId, teacherIds) {
     const connection = await pool.getConnection();
     try {
       await connection.beginTransaction();
-      await connection.query('DELETE FROM course_teachers WHERE course_id = ?', [courseId]);
 
       if (teacherIds.length > 0) {
+        await connection.query(
+          'DELETE FROM course_teachers WHERE course_id = ? AND user_id NOT IN (?)',
+          [courseId, teacherIds]
+        );
         const values = teacherIds.map((teacherId) => [courseId, teacherId]);
         await connection.query(
-          'INSERT INTO course_teachers (course_id, user_id) VALUES ?',
+          'INSERT IGNORE INTO course_teachers (course_id, user_id) VALUES ?',
           [values]
         );
+      } else {
+        await connection.query('DELETE FROM course_teachers WHERE course_id = ?', [courseId]);
       }
 
       await connection.commit();

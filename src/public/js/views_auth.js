@@ -331,13 +331,10 @@ window.renderRegister = async function(params) {
 
         const success = await register(name, email, password, username || undefined);
 
-        if (success) {
-            // Redirigir al login después de 1 segundo (el botón se queda
-            // deshabilitado mientras tanto, ya que la página va a cambiar).
-            setTimeout(() => {
-                window.location.hash = '#/login';
-            }, 1000);
-        } else {
+        // En éxito, register() ya inició sesión y redirigió (la página se
+        // re-renderiza) — no hace falta restaurar el botón. En error, el
+        // usuario se queda acá y sí necesita poder reintentar.
+        if (!success) {
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalHtml;
         }
