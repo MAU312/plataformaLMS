@@ -1,13 +1,10 @@
 import multer from 'multer';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import fs from 'fs';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { UPLOADS_ROOT } from '../config/uploads.js';
 
 // Crear directorios si no existen
-const uploadsDir = path.join(__dirname, '../../uploads');
+const uploadsDir = UPLOADS_ROOT;
 const videosDir = path.join(uploadsDir, 'videos');
 const filesDir = path.join(uploadsDir, 'files');
 const thumbnailsDir = path.join(uploadsDir, 'thumbnails');
@@ -223,7 +220,11 @@ export const uploadAvatar = multer({
 // =============================================
 
 export const deleteFile = (filePath) => {
-  const fullPath = path.join(__dirname, '../../', filePath);
+  // filePath viene como '/uploads/videos/x.mp4' (la URL pública guardada en
+  // BD) — se le quita el prefijo 'uploads/' porque UPLOADS_ROOT ya apunta a
+  // esa carpeta, dondequiera que esté configurada.
+  const relativePath = filePath.replace(/^\/?uploads\//, '');
+  const fullPath = path.join(UPLOADS_ROOT, relativePath);
   
   if (fs.existsSync(fullPath)) {
     try {

@@ -8,6 +8,7 @@ import expressMySQLSession from 'express-mysql-session';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import pool from './config/db.js';
+import { UPLOADS_ROOT } from './config/uploads.js';
 
 const MySQLStore = expressMySQLSession(session);
 
@@ -131,10 +132,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Los ARCHIVOS DESCARGABLES ('uploads/files') NO se sirven aquí a propósito:
 // deben pasar siempre por GET /api/contents/:id/download, que valida
 // autenticación e inscripción al curso antes de entregar el archivo.
-app.use('/uploads/videos', express.static(path.join(__dirname, '../uploads/videos')));
-app.use('/uploads/thumbnails', express.static(path.join(__dirname, '../uploads/thumbnails')));
-app.use('/uploads/content-images', express.static(path.join(__dirname, '../uploads/content-images')));
-app.use('/uploads/avatars', express.static(path.join(__dirname, '../uploads/avatars')));
+app.use('/uploads/videos', express.static(path.join(UPLOADS_ROOT, 'videos')));
+app.use('/uploads/thumbnails', express.static(path.join(UPLOADS_ROOT, 'thumbnails')));
+app.use('/uploads/content-images', express.static(path.join(UPLOADS_ROOT, 'content-images')));
+app.use('/uploads/avatars', express.static(path.join(UPLOADS_ROOT, 'avatars')));
 
 // =============================================
 // API Routes

@@ -2,9 +2,9 @@ import Content from '../models/Content.js';
 import Course from '../models/Course.js';
 import TaskSubmission from '../models/TaskSubmission.js';
 import { deleteFile } from '../middlewares/upload.middleware.js';
+import { UPLOADS_ROOT } from '../config/uploads.js';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
 // Solo http(s) — rechaza esquemas como javascript:, data:, etc.
 const URL_REGEX = /^https?:\/\/.+/i;
@@ -20,9 +20,6 @@ function uploadedFileUrl(contentType, filename) {
   if (contentType === 'image') return `/uploads/content-images/${filename}`;
   return `/uploads/files/${filename}`;
 }
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 /**
  * Valida un folder_id opcional recibido del body: vacío/null/undefined
@@ -789,7 +786,7 @@ export const downloadFile = async (req, res) => {
       });
     }
 
-    const filePath = path.join(__dirname, '../../', content.url);
+    const filePath = path.join(UPLOADS_ROOT, content.url.replace(/^\/?uploads\//, ''));
 
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({

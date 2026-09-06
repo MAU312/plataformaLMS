@@ -2,12 +2,9 @@ import Content from '../models/Content.js';
 import Course from '../models/Course.js';
 import TaskSubmission from '../models/TaskSubmission.js';
 import { deleteFile } from '../middlewares/upload.middleware.js';
+import { UPLOADS_ROOT } from '../config/uploads.js';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 /**
  * Entregar una tarea. La ruta ya validó (antes de multer, para no escribir
@@ -130,7 +127,7 @@ export const downloadSubmission = async (req, res) => {
       });
     }
 
-    const filePath = path.join(__dirname, '../../', submission.file_url);
+    const filePath = path.join(UPLOADS_ROOT, submission.file_url.replace(/^\/?uploads\//, ''));
 
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ success: false, message: 'Archivo no encontrado en el servidor' });
