@@ -116,6 +116,35 @@ test('createCourse: sin teacher_ids en el body, asigna una lista vacía (curso s
   assert.deepEqual(assignCall.mock.calls[0].arguments[1], []);
 });
 
+test('createCourse: usa "classic" por defecto si no se indica certificate_style', async (t) => {
+  const createCall = t.mock.method(Course, 'create', async () => 99);
+  t.mock.method(Course, 'assignTeachers', async () => true);
+  const req = mockReq({ body: { title: 'Curso nuevo' }, session: { user: { id: 1 } } });
+  const res = mockRes();
+
+  await courseController.createCourse(req, res);
+
+  assert.equal(createCall.mock.calls[0].arguments[0].certificate_style, 'classic');
+});
+
+test('createCourse: 400 si certificate_style no es uno de los estilos válidos (y borra la miniatura ya subida)', async (t) => {
+  const createCall = t.mock.method(Course, 'create', async () => 99);
+  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
+  t.mock.method(fs, 'existsSync', () => true);
+  const req = mockReq({
+    body: { title: 'Curso nuevo', certificate_style: 'no-existe' },
+    session: { user: { id: 1 } },
+    file: { filename: 'portada.png' }
+  });
+  const res = mockRes();
+
+  await courseController.createCourse(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(createCall.mock.calls.length, 0);
+  assert.equal(unlinkCall.mock.calls.length, 1, 'la miniatura ya subida por multer no debe quedar huérfana');
+});
+
 test('createCourse: si Course.create falla, borra la miniatura recién subida (no queda huérfana)', async (t) => {
   t.mock.method(Course, 'create', async () => { throw new Error('boom'); });
   const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
@@ -203,6 +232,30 @@ test('updateCourse: sin teacher_ids en el body, NO toca la asignación de profes
 
   assert.equal(res.statusCode, 200);
   assert.equal(assignCall.mock.calls.length, 0);
+});
+
+test('updateCourse: actualiza certificate_style cuando viene un id válido', async (t) => {
+  t.mock.method(Course, 'findById', async () => ({ id: 1, title: 'Curso', thumbnail: null }));
+  const updateCall = t.mock.method(Course, 'update', async () => true);
+  const req = mockReq({ params: { id: 1 }, body: { certificate_style: 'minimal' } });
+  const res = mockRes();
+
+  await courseController.updateCourse(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(updateCall.mock.calls[0].arguments[1].certificate_style, 'minimal');
+});
+
+test('updateCourse: 400 si certificate_style no es un estilo válido, sin llegar a tocar Course.update', async (t) => {
+  t.mock.method(Course, 'findById', async () => ({ id: 1, title: 'Curso', thumbnail: null }));
+  const updateCall = t.mock.method(Course, 'update', async () => true);
+  const req = mockReq({ params: { id: 1 }, body: { certificate_style: 'no-existe' } });
+  const res = mockRes();
+
+  await courseController.updateCourse(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(updateCall.mock.calls.length, 0);
 });
 
 test('getCourseTeachers: 404 si el curso no existe', async (t) => {
@@ -376,7 +429,7 @@ test('getCertificate: 403 si está inscrito pero no ha completado el curso (comp
 
 test('getCertificate: genera el PDF con los datos correctos cuando el curso está completado', async (t) => {
   const completedAt = new Date('2026-01-15');
-  t.mock.method(Course, 'findById', async () => ({ id: 1, title: 'Introducción a la IA' }));
+  t.mock.method(Course, 'findById', async () => ({ id: 1, title: 'Introducción a la IA', certificate_style: 'modern' }));
   t.mock.method(Course, 'getEnrollment', async () => ({ progress: 100, completed_at: completedAt }));
   const genCall = t.mock.method(certificateGenerator, 'generateCertificate', () => {});
 
@@ -391,6 +444,7 @@ test('getCertificate: genera el PDF con los datos correctos cuando el curso est�
   assert.equal(args.studentName, 'Ana Pérez');
   assert.equal(args.courseTitle, 'Introducción a la IA');
   assert.equal(args.completedAt, completedAt);
+  assert.equal(args.style, 'modern', 'debe pasar el estilo elegido para este curso al generador');
 });
 
 test('getCourseStudents: 404 si el curso no existe', async (t) => {

@@ -45,6 +45,15 @@ window.renderAdminCreateCourse = async function(params) {
                 </div>
 
                 <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Estilo de certificado</label>
+                    <select id="certificate_style"
+                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition">
+                        ${renderCertificateStyleOptions('classic')}
+                    </select>
+                    <p class="mt-1 text-xs text-gray-500">El diseño del certificado PDF que descarga un estudiante al completar este curso.</p>
+                </div>
+
+                <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Profesores asignados</label>
                     <div id="teacher-checkboxes" class="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto">
                         <p class="text-sm text-gray-400">Cargando profesores...</p>
@@ -84,6 +93,7 @@ window.renderAdminCreateCourse = async function(params) {
         const formData = new FormData();
         formData.append('title', title);
         formData.append('description', description);
+        formData.append('certificate_style', document.getElementById('certificate_style').value);
         formData.append('teacher_ids', JSON.stringify(getSelectedTeacherIds('teacher-checkboxes')));
         if (thumbnailFile) {
             formData.append('thumbnail', thumbnailFile);

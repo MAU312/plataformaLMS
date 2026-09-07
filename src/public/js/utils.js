@@ -458,6 +458,22 @@ function getSelectedTeacherIds(containerId) {
     return Array.from(container.querySelectorAll('input[name="teacher_ids"]:checked')).map(el => parseInt(el.value, 10));
 }
 
+// Mismos ids/orden que CERTIFICATE_STYLES en src/utils/certificate.js — se
+// mantiene esta copia acá en vez de pedirlos al backend porque son estilos
+// fijos del código (no algo que el admin pueda crear/editar), igual que
+// "Tipo de pregunta" en el editor de cuestionarios.
+const CERTIFICATE_STYLES = [
+    { id: 'classic', label: 'Clásico (marco verde)' },
+    { id: 'modern', label: 'Moderno (franja superior)' },
+    { id: 'minimal', label: 'Minimalista' }
+];
+
+function renderCertificateStyleOptions(selectedId) {
+    return CERTIFICATE_STYLES.map(s => `
+        <option value="${s.id}" ${s.id === selectedId ? 'selected' : ''}>${escapeHtml(s.label)}</option>
+    `).join('');
+}
+
 // =================================
 // Embed de video externo (YouTube/Vimeo)
 // =================================

@@ -3,7 +3,7 @@ import User from '../models/User.js';
 import Content from '../models/Content.js';
 import TaskSubmission from '../models/TaskSubmission.js';
 import { deleteFile } from '../middlewares/upload.middleware.js';
-import certificateGenerator from '../utils/certificate.js';
+import certificateGenerator, { isValidCertificateStyle, DEFAULT_CERTIFICATE_STYLE } from '../utils/certificate.js';
 import { toCsv } from '../utils/csv.js';
 
 /**
@@ -140,13 +140,18 @@ async function resolveValidTeacherIds(raw) {
  */
 export const createCourse = async (req, res) => {
   try {
-    const { title, description } = req.body;
+    const { title, description, certificate_style } = req.body;
 
     if (!title) {
       return res.status(400).json({
         success: false,
         message: 'El título es requerido'
       });
+    }
+
+    if (certificate_style !== undefined && certificate_style !== '' && !isValidCertificateStyle(certificate_style)) {
+      if (req.file) deleteFile(`/uploads/thumbnails/${req.file.filename}`);
+      return res.status(400).json({ success: false, message: 'Estilo de certificado inválido' });
     }
 
     // Si se subió una miniatura
@@ -159,7 +164,8 @@ export const createCourse = async (req, res) => {
       title,
       description,
       thumbnail,
-      instructor_id: null
+      instructor_id: null,
+      certificate_style: certificate_style || DEFAULT_CERTIFICATE_STYLE
     });
 
     try {
@@ -208,7 +214,7 @@ function toBoolean(value) {
 export const updateCourse = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, is_active, teacher_ids } = req.body;
+    const { title, description, is_active, teacher_ids, certificate_style } = req.body;
 
     const course = await Course.findById(id);
     if (!course) {
@@ -218,12 +224,18 @@ export const updateCourse = async (req, res) => {
       });
     }
 
+    if (certificate_style !== undefined && !isValidCertificateStyle(certificate_style)) {
+      if (req.file) deleteFile(`/uploads/thumbnails/${req.file.filename}`);
+      return res.status(400).json({ success: false, message: 'Estilo de certificado inválido' });
+    }
+
     // Preparar datos para actualizar
     const updateData = {};
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
     // FormData envía "true"/"false" como string; lo convertimos a 0/1 real
     if (is_active !== undefined) updateData.is_active = toBoolean(is_active) ? 1 : 0;
+    if (certificate_style !== undefined) updateData.certificate_style = certificate_style;
 
     // Si se subió nueva miniatura
     if (req.file) {
@@ -454,7 +466,8 @@ export const getCertificate = async (req, res) => {
     certificateGenerator.generateCertificate({
       studentName: req.session.user.name,
       courseTitle: course.title,
-      completedAt: enrollment.completed_at
+      completedAt: enrollment.completed_at,
+      style: course.certificate_style
     }, res);
   } catch (error) {
     console.error('Error al generar certificado:', error);

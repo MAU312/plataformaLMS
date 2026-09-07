@@ -73,10 +73,10 @@ class Course {
   /**
    * Crear un nuevo curso
    */
-  static async create({ title, description, thumbnail, instructor_id }) {
+  static async create({ title, description, thumbnail, instructor_id, certificate_style }) {
     const [result] = await pool.query(
-      'INSERT INTO courses (title, description, thumbnail, instructor_id) VALUES (?, ?, ?, ?)',
-      [title, description, thumbnail || null, instructor_id]
+      'INSERT INTO courses (title, description, thumbnail, instructor_id, certificate_style) VALUES (?, ?, ?, ?, ?)',
+      [title, description, thumbnail || null, instructor_id, certificate_style || 'classic']
     );
     return result.insertId;
   }
@@ -84,7 +84,7 @@ class Course {
   /**
    * Actualizar curso
    */
-  static async update(id, { title, description, thumbnail, is_active }) {
+  static async update(id, { title, description, thumbnail, is_active, certificate_style }) {
     const fields = [];
     const values = [];
 
@@ -103,6 +103,10 @@ class Course {
     if (is_active !== undefined) {
       fields.push('is_active = ?');
       values.push(is_active);
+    }
+    if (certificate_style !== undefined) {
+      fields.push('certificate_style = ?');
+      values.push(certificate_style);
     }
 
     if (fields.length === 0) return false;
