@@ -35,6 +35,14 @@ test('requireCourseManager: admin siempre pasa, sin consultar Course.isUserTeach
   assert.equal(isTeacherCall.mock.calls.length, 0);
 });
 
+test('requireCourseManager: profesor con admin_access (doble rol) pasa sin consultar Course.isUserTeacher', async (t) => {
+  const isTeacherCall = t.mock.method(Course, 'isUserTeacher', async () => false);
+  const { res, nextArg } = await run({ user: { id: 3, role: 'teacher', admin_access: true } });
+  assert.equal(nextArg, undefined);
+  assert.equal(res.statusCode, 200);
+  assert.equal(isTeacherCall.mock.calls.length, 0);
+});
+
 test('requireCourseManager: un estudiante recibe 403', async () => {
   const { res, nextArg } = await run({ user: { id: 2, role: 'student' } });
   assert.equal(res.statusCode, 403);

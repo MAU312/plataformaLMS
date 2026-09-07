@@ -166,7 +166,7 @@ export const deletePost = async (req, res) => {
     }
 
     const isOwner = post.user_id === req.session.user.id;
-    const isAdminUser = req.session.user.role === 'admin';
+    const isAdminUser = req.session.user.role === 'admin' || req.session.user.admin_access;
 
     let isTeacherOfCourse = false;
     if (!isOwner && !isAdminUser && req.session.user.role === 'teacher') {

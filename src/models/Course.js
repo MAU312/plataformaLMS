@@ -144,7 +144,7 @@ class Course {
    */
   static async canAccessMedia(courseId, user) {
     if (!user) return false;
-    if (user.role === 'admin') return true;
+    if (user.role === 'admin' || user.admin_access) return true;
 
     const [enrolled, isTeacher] = await Promise.all([
       Course.isUserEnrolled(courseId, user.id),

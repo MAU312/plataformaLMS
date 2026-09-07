@@ -190,6 +190,40 @@ export const toggleUserActive = async (req, res) => {
 };
 
 /**
+ * PUT /api/users/:id/admin-access
+ * Da o quita a un profesor el acceso adicional de administrador (doble
+ * rol profesor+admin) — solo aplica a usuarios con role='teacher'.
+ */
+export const setUserAdminAccess = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { admin_access } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+
+    if (user.role !== 'teacher') {
+      return res.status(400).json({
+        success: false,
+        message: 'El acceso adicional de administrador solo aplica a profesores'
+      });
+    }
+
+    const newState = Boolean(admin_access);
+    await User.setAdminAccess(id, newState);
+
+    res.json({
+      success: true,
+      message: newState ? 'Acceso de administrador otorgado' : 'Acceso de administrador retirado',
+      data: { admin_access: newState }
+    });
+  } catch (error) {
+    console.error('Error al cambiar el acceso de administrador:', error);
+    res.status(500).json({ success: false, message: 'Error al cambiar el acceso de administrador' });
+  }
+};
+
+/**
  * DELETE /api/users/:id
  */
 export const deleteUser = async (req, res) => {

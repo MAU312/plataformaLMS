@@ -18,6 +18,17 @@ test('canAccessMedia: true para admin, sin consultar inscripción ni asignación
   assert.equal(teacherCall.mock.calls.length, 0);
 });
 
+test('canAccessMedia: true para profesor con admin_access (doble rol), sin consultar inscripción ni asignación', async (t) => {
+  const enrolledCall = t.mock.method(Course, 'isUserEnrolled', async () => false);
+  const teacherCall = t.mock.method(Course, 'isUserTeacher', async () => false);
+
+  const result = await Course.canAccessMedia(1, { id: 9, role: 'teacher', admin_access: true });
+
+  assert.equal(result, true);
+  assert.equal(enrolledCall.mock.calls.length, 0);
+  assert.equal(teacherCall.mock.calls.length, 0);
+});
+
 test('canAccessMedia: true si el usuario está inscrito', async (t) => {
   t.mock.method(Course, 'isUserEnrolled', async () => true);
   t.mock.method(Course, 'isUserTeacher', async () => false);

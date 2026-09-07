@@ -135,7 +135,9 @@ function isAuthenticated() {
 }
 
 function isAdmin() {
-    return currentUser && currentUser.role === 'admin';
+    // También es "admin" un profesor con admin_access (doble rol
+    // profesor+admin), no solo role === 'admin'.
+    return currentUser && (currentUser.role === 'admin' || currentUser.admin_access);
 }
 
 function isStudent() {
@@ -188,8 +190,8 @@ function updateUIForAuthenticatedUser() {
             : '<i class="fas fa-user-circle text-2xl"></i>';
     }
 
-    // Mostrar link de admin si es administrador
-    if (currentUser && currentUser.role === 'admin') {
+    // Mostrar link de admin si es administrador (o profesor con doble rol)
+    if (currentUser && (currentUser.role === 'admin' || currentUser.admin_access)) {
         if (adminLink) adminLink.style.display = 'block';
         if (adminLinkMobile) adminLinkMobile.style.display = 'block';
     } else {

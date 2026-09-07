@@ -11,7 +11,7 @@ class User {
     const searchParams = search ? [`%${search}%`, `%${search}%`] : [];
 
     const [rows] = await pool.query(
-      `SELECT id, name, username, email, role, is_active, created_at, last_login FROM users ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      `SELECT id, name, username, email, role, admin_access, is_active, created_at, last_login FROM users ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
       [...searchParams, limit, offset]
     );
 
@@ -37,7 +37,7 @@ class User {
 
   static async findById(id) {
     const [rows] = await pool.query(
-      'SELECT id, name, username, email, role, avatar_url, is_active, created_at, last_login FROM users WHERE id = ?',
+      'SELECT id, name, username, email, role, admin_access, avatar_url, is_active, created_at, last_login FROM users WHERE id = ?',
       [id]
     );
     return rows[0];
@@ -71,10 +71,28 @@ class User {
     return result.insertId;
   }
 
+  /**
+   * `admin_access` (doble rol profesor+admin) solo tiene sentido para un
+   * profesor — si el rol cambia a otra cosa acá mismo, se apaga en la
+   * misma consulta para no dejar el flag "huérfano" en un student/admin.
+   */
   static async update(id, { name, email, role }) {
     const [result] = await pool.query(
-      'UPDATE users SET name = ?, email = ?, role = ? WHERE id = ?',
-      [name, email, role, id]
+      "UPDATE users SET name = ?, email = ?, role = ?, admin_access = CASE WHEN ? = 'teacher' THEN admin_access ELSE FALSE END WHERE id = ?",
+      [name, email, role, role, id]
+    );
+    return result.affectedRows > 0;
+  }
+
+  /**
+   * Da o quita a un profesor el acceso adicional de administrador (doble
+   * rol) — separado de update() porque ese requiere name/email/role juntos
+   * y este toggle es independiente, igual que toggleActive().
+   */
+  static async setAdminAccess(id, adminAccess) {
+    const [result] = await pool.query(
+      "UPDATE users SET admin_access = ? WHERE id = ? AND role = 'teacher'",
+      [adminAccess ? 1 : 0, id]
     );
     return result.affectedRows > 0;
   }

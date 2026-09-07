@@ -137,6 +137,57 @@ test('updateUser: un admin no puede quitarse su propio rol de admin', async (t) 
   assert.equal(res.statusCode, 400);
 });
 
+// =================================
+// setUserAdminAccess (doble rol profesor+admin)
+// =================================
+
+test('setUserAdminAccess: da acceso de administrador a un profesor', async (t) => {
+  t.mock.method(User, 'findById', async () => ({ id: 5, role: 'teacher' }));
+  const setCall = t.mock.method(User, 'setAdminAccess', async () => true);
+  const req = mockReq({
+    params: { id: '5' },
+    body: { admin_access: true },
+    session: { user: { id: 1, role: 'admin' } }
+  });
+  const res = mockRes();
+
+  await userController.setUserAdminAccess(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.data.admin_access, true);
+  assert.deepEqual(setCall.mock.calls[0].arguments, ['5', true]);
+});
+
+test('setUserAdminAccess: 400 si el usuario objetivo no es profesor', async (t) => {
+  t.mock.method(User, 'findById', async () => ({ id: 5, role: 'student' }));
+  const setCall = t.mock.method(User, 'setAdminAccess', async () => true);
+  const req = mockReq({
+    params: { id: '5' },
+    body: { admin_access: true },
+    session: { user: { id: 1, role: 'admin' } }
+  });
+  const res = mockRes();
+
+  await userController.setUserAdminAccess(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(setCall.mock.calls.length, 0);
+});
+
+test('setUserAdminAccess: 404 si el usuario no existe', async (t) => {
+  t.mock.method(User, 'findById', async () => undefined);
+  const req = mockReq({
+    params: { id: '999' },
+    body: { admin_access: true },
+    session: { user: { id: 1, role: 'admin' } }
+  });
+  const res = mockRes();
+
+  await userController.setUserAdminAccess(req, res);
+
+  assert.equal(res.statusCode, 404);
+});
+
 test('getAllUsers: pasa page/limit/search al modelo con los mismos defaults que antes', async (t) => {
   const findAllCall = t.mock.method(User, 'findAll', async () => ({ rows: [], total: 0 }));
   const req = mockReq({ query: {} });

@@ -34,7 +34,7 @@ export const isAuthenticated = async (req, res, next) => {
     // Sincroniza la sesión con la BD (ej. si un admin cambió el rol o el
     // nombre de este usuario después de que inició sesión, o si el propio
     // usuario cambió su foto de perfil).
-    req.session.user = { id: user.id, name: user.name, email: user.email, role: user.role, avatar_url: user.avatar_url };
+    req.session.user = { id: user.id, name: user.name, email: user.email, role: user.role, admin_access: Boolean(user.admin_access), avatar_url: user.avatar_url };
     next();
   } catch (error) {
     next(error);
@@ -43,12 +43,14 @@ export const isAuthenticated = async (req, res, next) => {
 
 /**
  * Middleware para verificar rol de administrador
+ * También deja pasar a un profesor con `admin_access` (doble rol
+ * profesor+admin, ver User.setAdminAccess) — no solo a role==='admin'.
  */
 export const isAdmin = (req, res, next) => {
-  if (req.session && req.session.user && req.session.user.role === 'admin') {
+  if (req.session && req.session.user && (req.session.user.role === 'admin' || req.session.user.admin_access)) {
     return next();
   }
-  
+
   return res.status(403).json({
     success: false,
     message: 'Acceso denegado. Se requieren permisos de administrador.'
@@ -111,7 +113,7 @@ export function requireCourseManager(resolveCourseId) {
       return deny(req, res, 401, 'No autorizado. Debes iniciar sesión.');
     }
 
-    if (req.session.user.role === 'admin') {
+    if (req.session.user.role === 'admin' || req.session.user.admin_access) {
       return next();
     }
 

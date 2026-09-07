@@ -837,7 +837,7 @@ export const markContentCompleted = async (req, res) => {
     // Solo se puede marcar progreso en contenido de un curso en el que
     // se está inscrito (o si es admin). Antes cualquier usuario autenticado
     // podía marcar como completado contenido de cursos ajenos.
-    const isAdminUser = req.session.user.role === 'admin';
+    const isAdminUser = req.session.user.role === 'admin' || req.session.user.admin_access;
     if (!isAdminUser) {
       const enrolled = await Course.isUserEnrolled(content.course_id, userId);
       if (!enrolled) {
@@ -889,7 +889,7 @@ export const markContentIncomplete = async (req, res) => {
     }
 
     // Misma regla que al marcar como completado.
-    const isAdminUser = req.session.user.role === 'admin';
+    const isAdminUser = req.session.user.role === 'admin' || req.session.user.admin_access;
     if (!isAdminUser) {
       const enrolled = await Course.isUserEnrolled(content.course_id, userId);
       if (!enrolled) {

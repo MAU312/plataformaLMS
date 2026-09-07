@@ -116,7 +116,7 @@ export const downloadSubmission = async (req, res) => {
 
     const content = await Content.findById(submission.content_id);
     const isOwner = submission.user_id === req.session.user.id;
-    const isAdminUser = req.session.user.role === 'admin';
+    const isAdminUser = req.session.user.role === 'admin' || req.session.user.admin_access;
     const isTeacherOfCourse = content && req.session.user.role === 'teacher'
       && await Course.isUserTeacher(content.course_id, req.session.user.id);
 

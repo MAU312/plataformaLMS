@@ -221,6 +221,13 @@ function renderUsersTable(users, page, currentUserId, pagination) {
                                     <option value="teacher" ${user.role === 'teacher' ? 'selected' : ''}>Profesor</option>
                                     <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
                                 </select>
+                                ${user.role === 'teacher' ? `
+                                    <button onclick="toggleUserAdminAccess(${user.id})"
+                                        title="${user.admin_access ? 'Quitar acceso adicional de administrador' : 'Dar también acceso de administrador (doble rol)'}"
+                                        class="ml-1 ${user.admin_access ? 'text-cenat-green' : 'text-gray-300 dark:text-slate-500'} hover:opacity-80 transition">
+                                        <i class="fas fa-user-shield"></i>
+                                    </button>
+                                ` : ''}
                             </td>
                             <td class="py-3 px-4">
                                 <span class="badge ${isActive ? 'badge-active' : 'badge-inactive'}">
@@ -279,6 +286,11 @@ async function changeUserRole(userId, newRole) {
     try {
         await usersAPI.update(userId, { name: user.name, email: user.email, role: newRole });
         user.role = newRole;
+        // El backend apaga admin_access al mismo tiempo que cambia el rol
+        // si el nuevo rol ya no es 'teacher' (ver User.update) — se refleja
+        // acá mismo para que el ícono de doble rol no quede mostrando un
+        // estado que el servidor ya descartó.
+        if (newRole !== 'teacher') user.admin_access = false;
         showToast('Rol actualizado exitosamente', 'success');
         // Re-renderiza para que el color del badge del <select> refleje el
         // nuevo rol — si no, quedaba con el color del rol anterior hasta
@@ -290,5 +302,21 @@ async function changeUserRole(userId, newRole) {
     }
 }
 
+async function toggleUserAdminAccess(userId) {
+    const user = currentPageUsers.find(u => u.id === userId);
+    if (!user) return;
+
+    try {
+        const response = await usersAPI.setAdminAccess(userId, !user.admin_access);
+        user.admin_access = response.data.admin_access;
+        showToast(response.message, 'success');
+        renderUsersTable(currentPageUsers, currentUserPage, getCurrentUser().id, currentUsersPagination);
+    } catch (error) {
+        showToast(error.message || 'Error al cambiar el acceso de administrador', 'error');
+        loadAdminUsers(currentUserPage);
+    }
+}
+
 window.toggleUserActive = toggleUserActive;
 window.changeUserRole = changeUserRole;
+window.toggleUserAdminAccess = toggleUserAdminAccess;

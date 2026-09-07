@@ -19,6 +19,7 @@ router.get('/by-role/:role', isAuthenticated, isAdmin, userController.getUsersBy
 router.get('/:id', isAuthenticated, isAdmin, userController.getUserById);
 router.put('/:id', isAuthenticated, isAdmin, userController.updateUser);
 router.put('/:id/toggle-active', isAuthenticated, isAdmin, userController.toggleUserActive);
+router.put('/:id/admin-access', isAuthenticated, isAdmin, userController.setUserAdminAccess);
 router.delete('/:id', isAuthenticated, isAdmin, userController.deleteUser);
 
 export default router;

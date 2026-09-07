@@ -182,6 +182,7 @@ const usersAPI = {
     getById: async (id) => apiRequest(`/users/${id}`),
     update: async (id, data) => apiRequest(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     toggleActive: async (id) => apiRequest(`/users/${id}/toggle-active`, { method: 'PUT' }),
+    setAdminAccess: async (id, adminAccess) => apiRequest(`/users/${id}/admin-access`, { method: 'PUT', body: JSON.stringify({ admin_access: adminAccess }) }),
     getStats: async () => apiRequest('/users/stats/count'),
     getByRole: async (role) => apiRequest(`/users/by-role/${role}`),
     uploadAvatar: async (formData) => apiRequestFormData('/users/me/avatar', formData, { method: 'PUT' }),

@@ -11,7 +11,7 @@ import certificateGenerator from '../utils/certificate.js';
 export const getAllCourses = async (req, res) => {
   try {
     // Si es admin, mostrar todos los cursos, sino solo activos
-    const isAdmin = req.session?.user?.role === 'admin';
+    const isAdmin = req.session?.user?.role === 'admin' || Boolean(req.session?.user?.admin_access);
     const page = Math.max(1, parseInt(req.query.page) || 1);
     // Tope de 50: un límite arbitrariamente alto en la query string no
     // debería poder forzar al servidor a traer/enviar de más.
