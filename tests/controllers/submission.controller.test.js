@@ -108,7 +108,7 @@ test('reviewSubmission: 404 si la entrega no existe', async (t) => {
   assert.equal(res.statusCode, 404);
 });
 
-test('reviewSubmission: éxito marca revisada con el feedback dado', async (t) => {
+test('reviewSubmission: éxito marca revisada con el feedback dado (sin calificación)', async (t) => {
   t.mock.method(TaskSubmission, 'findById', async () => ({ id: 1, content_id: 10, user_id: 2 }));
   const markCall = t.mock.method(TaskSubmission, 'markReviewed', async () => true);
 
@@ -117,7 +117,55 @@ test('reviewSubmission: éxito marca revisada con el feedback dado', async (t) =
   await submissionController.reviewSubmission(req, res);
 
   assert.equal(res.statusCode, 200);
-  assert.deepEqual(markCall.mock.calls[0].arguments, [1, 'Buen trabajo']);
+  assert.deepEqual(markCall.mock.calls[0].arguments, [1, 'Buen trabajo', null]);
+});
+
+test('reviewSubmission: guarda la calificación cuando la tarea tiene weight_percent y el valor está en rango', async (t) => {
+  t.mock.method(TaskSubmission, 'findById', async () => ({ id: 1, content_id: 10, user_id: 2 }));
+  t.mock.method(Content, 'findById', async () => ({ id: 10, type: 'task', weight_percent: 10 }));
+  const markCall = t.mock.method(TaskSubmission, 'markReviewed', async () => true);
+
+  const req = mockReq({ params: { id: 1 }, body: { feedback: 'Buen trabajo', score_earned: 7 } });
+  const res = mockRes();
+  await submissionController.reviewSubmission(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(markCall.mock.calls[0].arguments, [1, 'Buen trabajo', 7]);
+});
+
+test('reviewSubmission: 400 si la tarea no tiene weight_percent asignado y se intenta calificar', async (t) => {
+  t.mock.method(TaskSubmission, 'findById', async () => ({ id: 1, content_id: 10, user_id: 2 }));
+  t.mock.method(Content, 'findById', async () => ({ id: 10, type: 'task', weight_percent: null }));
+  const markCall = t.mock.method(TaskSubmission, 'markReviewed', async () => true);
+
+  const req = mockReq({ params: { id: 1 }, body: { score_earned: 7 } });
+  const res = mockRes();
+  await submissionController.reviewSubmission(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(markCall.mock.calls.length, 0);
+});
+
+test('reviewSubmission: 400 si la calificación es mayor al weight_percent de la tarea', async (t) => {
+  t.mock.method(TaskSubmission, 'findById', async () => ({ id: 1, content_id: 10, user_id: 2 }));
+  t.mock.method(Content, 'findById', async () => ({ id: 10, type: 'task', weight_percent: 10 }));
+
+  const req = mockReq({ params: { id: 1 }, body: { score_earned: 15 } });
+  const res = mockRes();
+  await submissionController.reviewSubmission(req, res);
+
+  assert.equal(res.statusCode, 400);
+});
+
+test('reviewSubmission: 400 si la calificación es negativa', async (t) => {
+  t.mock.method(TaskSubmission, 'findById', async () => ({ id: 1, content_id: 10, user_id: 2 }));
+  t.mock.method(Content, 'findById', async () => ({ id: 10, type: 'task', weight_percent: 10 }));
+
+  const req = mockReq({ params: { id: 1 }, body: { score_earned: -1 } });
+  const res = mockRes();
+  await submissionController.reviewSubmission(req, res);
+
+  assert.equal(res.statusCode, 400);
 });
 
 test('listSubmissions: 404 si la tarea no existe', async (t) => {

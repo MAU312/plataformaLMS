@@ -55,7 +55,8 @@ class Content {
       `SELECT co.*,
         IF(cp.id IS NOT NULL, TRUE, FALSE) as completed,
         ts.id as submission_id, ts.submitted_at as submission_submitted_at,
-        ts.feedback as submission_feedback, ts.reviewed_at as submission_reviewed_at
+        ts.feedback as submission_feedback, ts.reviewed_at as submission_reviewed_at,
+        ts.score_earned as submission_score_earned
        FROM contents co
        LEFT JOIN content_progress cp ON cp.content_id = co.id AND cp.user_id = ?
        LEFT JOIN task_submissions ts ON ts.content_id = co.id AND ts.user_id = ?
@@ -65,11 +66,11 @@ class Content {
     );
     return rows.map((row) => {
       if (row.type !== 'task') return row;
-      const { submission_id, submission_submitted_at, submission_feedback, submission_reviewed_at, ...rest } = row;
+      const { submission_id, submission_submitted_at, submission_feedback, submission_reviewed_at, submission_score_earned, ...rest } = row;
       return {
         ...rest,
         my_submission: submission_id
-          ? { submitted_at: submission_submitted_at, feedback: submission_feedback, reviewed_at: submission_reviewed_at }
+          ? { submitted_at: submission_submitted_at, feedback: submission_feedback, reviewed_at: submission_reviewed_at, score_earned: submission_score_earned }
           : null
       };
     });
@@ -89,7 +90,7 @@ class Content {
    * creación del content y la de todas sus preguntas/opciones sean una
    * sola unidad atómica.
    */
-  static async create({ course_id, type, title, description, url, file_size, order_index, folder_id, question_type }, executor = pool) {
+  static async create({ course_id, type, title, description, url, file_size, order_index, folder_id, question_type, weight_percent }, executor = pool) {
     const folderId = folder_id || null;
 
     if (order_index === undefined) {
@@ -101,9 +102,9 @@ class Content {
     }
 
     const [result] = await executor.query(
-      `INSERT INTO contents (course_id, type, title, description, url, file_size, order_index, folder_id, question_type)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [course_id, type, title, description || null, url, file_size || null, order_index, folderId, question_type || null]
+      `INSERT INTO contents (course_id, type, title, description, url, file_size, order_index, folder_id, question_type, weight_percent)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [course_id, type, title, description || null, url, file_size || null, order_index, folderId, question_type || null, weight_percent ?? null]
     );
     return result.insertId;
   }
@@ -116,7 +117,7 @@ class Content {
    * dentro de una transacción — usado por quiz.controller.js al reemplazar
    * question_type junto con las preguntas de un quiz/survey.
    */
-  static async update(id, { title, description, url, order_index, folder_id, question_type }, executor = pool) {
+  static async update(id, { title, description, url, order_index, folder_id, question_type, weight_percent }, executor = pool) {
     const fields = [];
     const values = [];
 
@@ -143,6 +144,10 @@ class Content {
     if (question_type !== undefined) {
       fields.push('question_type = ?');
       values.push(question_type);
+    }
+    if (weight_percent !== undefined) {
+      fields.push('weight_percent = ?');
+      values.push(weight_percent);
     }
 
     if (fields.length === 0) return false;

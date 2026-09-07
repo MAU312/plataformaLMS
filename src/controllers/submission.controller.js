@@ -141,21 +141,45 @@ export const downloadSubmission = async (req, res) => {
 };
 
 /**
- * Marcar una entrega como revisada, con comentario opcional. Sin
- * calificación numérica por ahora. Autorización resuelta en la ruta con
- * requireCourseManager.
+ * Marcar una entrega como revisada, con comentario y calificación
+ * opcionales. Autorización resuelta en la ruta con requireCourseManager.
+ *
+ * `score_earned` se guarda en las mismas unidades que el `weight_percent`
+ * de la tarea (ver Content) — no es una nota "de 0 a 10" aparte: si la
+ * tarea vale 10% del curso, calificarla "7" significa que el estudiante
+ * ganó 7 de esos 10 puntos porcentuales. Por eso solo tiene sentido
+ * calificar así una tarea que YA tiene un porcentaje asignado.
  */
 export const reviewSubmission = async (req, res) => {
   try {
     const { id } = req.params;
-    const { feedback } = req.body;
+    const { feedback, score_earned } = req.body;
 
     const submission = await TaskSubmission.findById(id);
     if (!submission) {
       return res.status(404).json({ success: false, message: 'Entrega no encontrada' });
     }
 
-    await TaskSubmission.markReviewed(id, feedback);
+    let scoreToSave = null;
+    if (score_earned !== undefined && score_earned !== null && score_earned !== '') {
+      const content = await Content.findById(submission.content_id);
+      if (!content.weight_percent) {
+        return res.status(400).json({
+          success: false,
+          message: 'Esta tarea no tiene un porcentaje del curso asignado, no se puede calificar numéricamente'
+        });
+      }
+      const score = Number(score_earned);
+      if (!Number.isFinite(score) || score < 0 || score > Number(content.weight_percent)) {
+        return res.status(400).json({
+          success: false,
+          message: `La calificación debe ser un número entre 0 y ${content.weight_percent}`
+        });
+      }
+      scoreToSave = score;
+    }
+
+    await TaskSubmission.markReviewed(id, feedback, scoreToSave);
 
     res.json({ success: true, message: 'Entrega marcada como revisada' });
   } catch (error) {

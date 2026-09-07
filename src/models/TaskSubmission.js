@@ -116,13 +116,15 @@ class TaskSubmission {
   }
 
   /**
-   * Marcar una entrega como revisada, con comentario opcional del
-   * profesor. Sin calificación numérica por ahora.
+   * Marcar una entrega como revisada, con comentario y calificación
+   * opcionales del profesor (ver reviewSubmission en el controller para el
+   * significado de scoreEarned — puntos ganados del weight_percent de la
+   * tarea, no una nota de 0 a 10 aparte).
    */
-  static async markReviewed(id, feedback) {
+  static async markReviewed(id, feedback, scoreEarned = null) {
     const [result] = await pool.query(
-      'UPDATE task_submissions SET feedback = ?, reviewed_at = NOW() WHERE id = ?',
-      [feedback || null, id]
+      'UPDATE task_submissions SET feedback = ?, score_earned = ?, reviewed_at = NOW() WHERE id = ?',
+      [feedback || null, scoreEarned, id]
     );
     return result.affectedRows > 0;
   }

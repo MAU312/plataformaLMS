@@ -670,6 +670,9 @@ function renderTaskCard(task, submission, hasAccess) {
                                     ${isReviewed ? 'Entrega revisada' : 'Entregado — pendiente de revisión'}
                                 </p>
                                 <p class="text-xs text-gray-500 mt-1">Entregado el ${formatDateTime(submission.submitted_at)}</p>
+                                ${isReviewed && task.weight_percent && submission.score_earned !== null && submission.score_earned !== undefined ? `
+                                    <p class="text-sm text-gray-700 mt-2"><strong>Calificación:</strong> ${submission.score_earned}/${task.weight_percent}</p>
+                                ` : ''}
                                 ${isReviewed && submission.feedback ? `
                                     <p class="text-sm text-gray-700 mt-2"><strong>Comentario del profesor:</strong> ${escapeHtml(submission.feedback)}</p>
                                 ` : ''}

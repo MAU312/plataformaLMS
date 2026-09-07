@@ -997,6 +997,11 @@ function showAddTaskForm(courseId, folderId) {
                 <input type="file" class="task-file w-full text-sm" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip,.rar">
                 <p class="text-xs text-gray-500 mt-1">PDF, DOCX, PPT, XLS, TXT, ZIP, RAR (máx. 50MB)</p>
             </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">% del curso (opcional)</label>
+                <input type="number" class="task-weight w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" min="0" max="100" step="0.01" placeholder="Ej: 10">
+                <p class="text-xs text-gray-500 mt-1">Cuánto vale esta tarea para la nota final del curso — dejalo vacío si no cuenta para la nota.</p>
+            </div>
             <div class="flex gap-2">
                 <button type="submit" class="submit-task-btn bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
                     <i class="fas fa-check mr-1"></i> Guardar Tarea
@@ -1014,6 +1019,7 @@ function showAddTaskForm(courseId, folderId) {
         const title = e.target.querySelector('.task-title').value.trim();
         const description = e.target.querySelector('.task-description').value.trim();
         const file = e.target.querySelector('.task-file').files[0];
+        const weight = e.target.querySelector('.task-weight').value.trim();
         const submitBtn = e.target.querySelector('.submit-task-btn');
 
         if (!title) {
@@ -1032,6 +1038,7 @@ function showAddTaskForm(courseId, folderId) {
         if (file) {
             formData.append('file', file);
         }
+        if (weight) formData.append('weight_percent', weight);
         if (folderId) formData.append('folder_id', folderId);
 
         await submitContentForm(submitBtn, {
@@ -1063,6 +1070,7 @@ function renderQuestionForm(container, {
     initialDescription = '',
     initialQuestionType = 'multiple_choice',
     initialQuestions = null,
+    initialWeightPercent = null,
     idleLabel,
     apiCall,
     successMessage,
@@ -1180,6 +1188,13 @@ function renderQuestionForm(container, {
                 </select>
                 <p class="text-xs text-gray-500 mt-1">Todas las preguntas de ${isQuiz ? 'este cuestionario' : 'esta encuesta'} serán de este tipo.</p>
             </div>
+            ${isQuiz ? `
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">% del curso (opcional)</label>
+                    <input type="number" class="quiz-weight w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" min="0" max="100" step="0.01" placeholder="Ej: 15" value="${initialWeightPercent ?? ''}">
+                    <p class="text-xs text-gray-500 mt-1">Cuánto vale este cuestionario para la nota final del curso — dejalo vacío si no cuenta para la nota.</p>
+                </div>
+            ` : ''}
             <div class="questions-list space-y-3"></div>
             <button type="button" class="add-question-btn text-sm text-cenat-green hover:underline">
                 <i class="fas fa-plus mr-1"></i> Agregar pregunta
@@ -1281,10 +1296,12 @@ function renderQuestionForm(container, {
             }
         }
 
+        const weightInput = formEl.querySelector('.quiz-weight');
         const payload = {
             title,
             description,
             question_type: questionType,
+            weight_percent: (isQuiz && weightInput && weightInput.value.trim()) ? weightInput.value.trim() : undefined,
             questions: currentQuestions.map((q) => ({
                 text: q.text.trim(),
                 points: isQuiz ? (q.points || 1) : 1,
@@ -1403,6 +1420,7 @@ async function editQuestionContentHandler(content, display, editContainer) {
         initialTitle: content.title,
         initialDescription: content.description || '',
         initialQuestionType: data.question_type,
+        initialWeightPercent: data.weight_percent,
         initialQuestions: data.questions.map((q) => ({
             text: q.question_text,
             points: q.points || 1,
@@ -1460,6 +1478,14 @@ function renderEditForm(content, respondentCount = 0) {
         </div>
     `;
 
+    const weightField = () => `
+        <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">% del curso (opcional)</label>
+            <input type="number" class="edit-weight w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" min="0" max="100" step="0.01" placeholder="Ej: 10" value="${content.weight_percent ?? ''}">
+            <p class="text-xs text-gray-500 mt-1">Cuánto vale esto para la nota final del curso — dejalo vacío si no cuenta para la nota.</p>
+        </div>
+    `;
+
     let body = '';
     switch (content.type) {
         case 'folder':
@@ -1473,7 +1499,8 @@ function renderEditForm(content, respondentCount = 0) {
             break;
         case 'task':
             body = descriptionField('Instrucciones (opcional)', false, 3)
-                + fileField('Reemplazar archivo de plantilla/instrucciones (opcional)', '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip,.rar', 'PDF, DOCX, PPT, XLS, TXT, ZIP, RAR (máx. 50MB)');
+                + fileField('Reemplazar archivo de plantilla/instrucciones (opcional)', '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip,.rar', 'PDF, DOCX, PPT, XLS, TXT, ZIP, RAR (máx. 50MB)')
+                + weightField();
             break;
         case 'url':
             body = descriptionField('Descripción (opcional)')
@@ -1486,6 +1513,7 @@ function renderEditForm(content, respondentCount = 0) {
         case 'survey': {
             const respondentLabel = respondentCount === 1 ? '1 respuesta' : `${respondentCount} respuestas`;
             body = descriptionField('Descripción (opcional)')
+                + (content.type === 'quiz' ? weightField() : '')
                 + `<p class="text-xs text-gray-400">Ya hay ${respondentLabel} registrada${respondentCount === 1 ? '' : 's'}: para cambiar las preguntas hay que borrar ${content.type === 'quiz' ? 'el cuestionario' : 'la encuesta'} y crear ${content.type === 'quiz' ? 'uno' : 'una'} nuev${content.type === 'quiz' ? 'o' : 'a'}.</p>`;
             break;
         }
@@ -1548,11 +1576,15 @@ async function submitEditContent(e, content) {
         if (!checkFileSize(file, maxBytes, 'El archivo')) return;
     }
 
+    const weightInput = form.querySelector('.edit-weight');
+    const weight = weightInput ? weightInput.value.trim() : undefined;
+
     let payload;
     if (file) {
         payload = new FormData();
         payload.append('title', title);
         if (descriptionInput) payload.append('description', description);
+        if (weightInput) payload.append('weight_percent', weight);
         if (content.type === 'video') payload.append('video', file);
         else if (content.type === 'image') payload.append('image', file);
         else payload.append('file', file);
@@ -1560,6 +1592,7 @@ async function submitEditContent(e, content) {
         payload = { title };
         if (descriptionInput) payload.description = description;
         if (urlInput) payload.url = urlInput.value.trim();
+        if (weightInput) payload.weight_percent = weight;
     }
 
     await submitContentForm(submitBtn, {

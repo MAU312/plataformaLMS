@@ -18,13 +18,14 @@ test('findByCourseWithProgress: una tarea con entrega trae my_submission poblado
   t.mock.method(pool, 'query', async () => ([[
     {
       id: 10, type: 'task', course_id: 7, completed: 0,
-      submission_id: 99, submission_submitted_at: '2026-01-01', submission_feedback: 'Bien', submission_reviewed_at: '2026-01-02'
+      submission_id: 99, submission_submitted_at: '2026-01-01', submission_feedback: 'Bien', submission_reviewed_at: '2026-01-02',
+      submission_score_earned: 7
     }
   ]]));
 
   const rows = await Content.findByCourseWithProgress(7, 5);
 
-  assert.deepEqual(rows[0].my_submission, { submitted_at: '2026-01-01', feedback: 'Bien', reviewed_at: '2026-01-02' });
+  assert.deepEqual(rows[0].my_submission, { submitted_at: '2026-01-01', feedback: 'Bien', reviewed_at: '2026-01-02', score_earned: 7 });
   assert.equal(rows[0].submission_id, undefined, 'los campos submission_* sueltos no deben quedar en la respuesta');
   assert.equal(rows[0].submission_submitted_at, undefined);
 });

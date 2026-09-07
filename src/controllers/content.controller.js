@@ -45,6 +45,23 @@ function uncompletableReason(type) {
   return null;
 }
 
+/**
+ * Valida el % del curso que vale una tarea/cuestionario (weight_percent),
+ * recibido como string desde el form-data. Vacío/undefined/null = "no
+ * cuenta para la nota del curso" (null en BD), no un error — asignarle un
+ * peso es opcional, no todo contenido tiene por qué calificar.
+ */
+function parseWeightPercent(input) {
+  if (input === undefined || input === null || input === '') {
+    return { ok: true, value: null };
+  }
+  const value = Number(input);
+  if (!Number.isFinite(value) || value < 0 || value > 100) {
+    return { ok: false, message: 'El porcentaje debe ser un número entre 0 y 100' };
+  }
+  return { ok: true, value };
+}
+
 async function resolveFolderId(folderIdInput, courseId) {
   if (folderIdInput === undefined || folderIdInput === null || folderIdInput === '') {
     return { ok: true, folderId: null };
@@ -410,13 +427,19 @@ export const createUrlContent = async (req, res) => {
  */
 export const createTaskContent = async (req, res) => {
   try {
-    const { course_id, title, description, folder_id } = req.body;
+    const { course_id, title, description, folder_id, weight_percent } = req.body;
 
     if (!course_id || !title) {
       return res.status(400).json({
         success: false,
         message: 'El ID del curso y el título son requeridos'
       });
+    }
+
+    const weightCheck = parseWeightPercent(weight_percent);
+    if (!weightCheck.ok) {
+      if (req.file) deleteFile(`/uploads/files/${req.file.filename}`);
+      return res.status(400).json({ success: false, message: weightCheck.message });
     }
 
     const folderCheck = await resolveFolderId(folder_id, course_id);
@@ -439,7 +462,8 @@ export const createTaskContent = async (req, res) => {
       description,
       url,
       file_size,
-      folder_id: folderCheck.folderId
+      folder_id: folderCheck.folderId,
+      weight_percent: weightCheck.value
     });
 
     res.status(201).json({
@@ -557,7 +581,7 @@ export const createFolderContent = async (req, res) => {
 export const updateContent = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, order_index, url, folder_id } = req.body;
+    const { title, description, order_index, url, folder_id, weight_percent } = req.body;
 
     const content = await Content.findById(id);
     if (!content) {
@@ -571,6 +595,24 @@ export const updateContent = async (req, res) => {
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
     if (order_index !== undefined) updateData.order_index = parseInt(order_index);
+
+    // Solo una tarea (o un cuestionario/encuesta, ver quiz.controller.js)
+    // tiene sentido calificarla como % del curso — el resto de tipos ni
+    // siquiera muestra este campo en el formulario, pero se revalida acá
+    // por si acaso.
+    if (weight_percent !== undefined) {
+      if (!['task', 'quiz', 'survey'].includes(content.type)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Solo una tarea o un cuestionario pueden tener un porcentaje del curso'
+        });
+      }
+      const weightCheck = parseWeightPercent(weight_percent);
+      if (!weightCheck.ok) {
+        return res.status(400).json({ success: false, message: weightCheck.message });
+      }
+      updateData.weight_percent = weightCheck.value;
+    }
 
     // Mover el contenido a otra carpeta (o sacarlo con folder_id: null).
     // Una carpeta no puede meterse dentro de otra (un solo nivel).

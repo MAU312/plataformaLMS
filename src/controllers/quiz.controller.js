@@ -12,6 +12,24 @@ const QUESTION_TYPES = ['short_answer', 'multiple_choice', 'true_false'];
  * de 8 líneas): folder_id vacío/null/undefined = "sin carpeta"; si viene,
  * debe existir, ser type='folder', y pertenecer al mismo curso.
  */
+/**
+ * Igual que parseWeightPercent en content.controller.js (no se comparte el
+ * módulo a propósito, mismo criterio que resolveFolderId): vacío/undefined
+ * = "no cuenta para la nota del curso" (null), no un error. Solo un quiz
+ * puede tener peso — una encuesta nunca se califica, así que no tiene
+ * sentido que cuente para la nota.
+ */
+function parseWeightPercent(input) {
+  if (input === undefined || input === null || input === '') {
+    return { ok: true, value: null };
+  }
+  const value = Number(input);
+  if (!Number.isFinite(value) || value < 0 || value > 100) {
+    return { ok: false, message: 'El porcentaje debe ser un número entre 0 y 100' };
+  }
+  return { ok: true, value };
+}
+
 async function resolveFolderId(folderIdInput, courseId) {
   if (folderIdInput === undefined || folderIdInput === null || folderIdInput === '') {
     return { ok: true, folderId: null };
@@ -103,7 +121,7 @@ async function createQuestionContent(req, res, type) {
   const label = isQuiz ? 'el cuestionario' : 'la encuesta';
 
   try {
-    const { course_id, title, description, folder_id, question_type, questions } = req.body;
+    const { course_id, title, description, folder_id, question_type, questions, weight_percent } = req.body;
 
     if (!course_id || !title) {
       return res.status(400).json({ success: false, message: 'El ID del curso y el título son requeridos' });
@@ -112,6 +130,11 @@ async function createQuestionContent(req, res, type) {
     const validation = validateQuestions(question_type, questions, isQuiz);
     if (!validation.ok) {
       return res.status(400).json({ success: false, message: validation.message });
+    }
+
+    const weightCheck = parseWeightPercent(isQuiz ? weight_percent : undefined);
+    if (!weightCheck.ok) {
+      return res.status(400).json({ success: false, message: weightCheck.message });
     }
 
     const folderCheck = await resolveFolderId(folder_id, course_id);
@@ -136,7 +159,8 @@ async function createQuestionContent(req, res, type) {
         description,
         url: null,
         folder_id: folderCheck.folderId,
-        question_type
+        question_type,
+        weight_percent: weightCheck.value
       }, connection);
 
       await insertQuestions(contentId, question_type, questions, isQuiz, connection);
@@ -189,7 +213,7 @@ export const getQuestionsForManage = async (req, res) => {
 
     res.json({
       success: true,
-      data: { question_type: content.question_type, questions, respondent_count: respondentCount }
+      data: { question_type: content.question_type, weight_percent: content.weight_percent, questions, respondent_count: respondentCount }
     });
   } catch (error) {
     console.error('Error al obtener las preguntas para editar:', error);
@@ -218,7 +242,7 @@ export const updateQuestions = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Este contenido no es un cuestionario ni una encuesta' });
     }
 
-    const { title, description, question_type, questions } = req.body;
+    const { title, description, question_type, questions, weight_percent } = req.body;
     const isQuiz = content.type === 'quiz';
 
     if (!title || !String(title).trim()) {
@@ -228,6 +252,11 @@ export const updateQuestions = async (req, res) => {
     const validation = validateQuestions(question_type, questions, isQuiz);
     if (!validation.ok) {
       return res.status(400).json({ success: false, message: validation.message });
+    }
+
+    const weightCheck = parseWeightPercent(isQuiz ? weight_percent : undefined);
+    if (!weightCheck.ok) {
+      return res.status(400).json({ success: false, message: weightCheck.message });
     }
 
     const respondentCount = await ContentAnswer.countRespondents(id);
@@ -245,7 +274,8 @@ export const updateQuestions = async (req, res) => {
       await Content.update(id, {
         title: String(title).trim(),
         description: description !== undefined ? description : content.description,
-        question_type
+        question_type,
+        weight_percent: weightCheck.value
       }, connection);
 
       await ContentQuestion.deleteByContent(id, connection);

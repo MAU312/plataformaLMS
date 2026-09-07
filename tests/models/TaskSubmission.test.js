@@ -24,14 +24,22 @@ test('create: un error de BD distinto a duplicado sí se propaga', async (t) => 
   await assert.rejects(() => TaskSubmission.create(1, 2, '/uploads/submissions/x.pdf'), /conexión perdida/);
 });
 
-test('markReviewed: hace UPDATE con el feedback y devuelve true si afectó una fila', async (t) => {
+test('markReviewed: hace UPDATE con el feedback y devuelve true si afectó una fila (sin calificación)', async (t) => {
   const queryCall = t.mock.method(pool, 'query', async () => ([{ affectedRows: 1 }]));
   const result = await TaskSubmission.markReviewed(9, 'Buen trabajo');
 
   assert.equal(result, true);
   const [sql, params] = queryCall.mock.calls[0].arguments;
-  assert.match(sql, /UPDATE task_submissions SET feedback = \?, reviewed_at = NOW\(\)/);
-  assert.deepEqual(params, ['Buen trabajo', 9]);
+  assert.match(sql, /UPDATE task_submissions SET feedback = \?, score_earned = \?, reviewed_at = NOW\(\)/);
+  assert.deepEqual(params, ['Buen trabajo', null, 9]);
+});
+
+test('markReviewed: guarda la calificación (score_earned) cuando se indica', async (t) => {
+  const queryCall = t.mock.method(pool, 'query', async () => ([{ affectedRows: 1 }]));
+  await TaskSubmission.markReviewed(9, 'Buen trabajo', 7);
+
+  const [, params] = queryCall.mock.calls[0].arguments;
+  assert.deepEqual(params, ['Buen trabajo', 7, 9]);
 });
 
 test('findAllByContent: hace JOIN con users para traer nombre/email del estudiante', async (t) => {

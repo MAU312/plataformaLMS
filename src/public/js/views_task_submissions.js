@@ -10,6 +10,9 @@ const SUBMISSIONS_PER_PAGE = 20;
 let currentTaskContentId = null;
 let currentSubmissions = [];
 let currentSubmissionsPage = 1;
+// El % del curso que vale ESTA tarea (o null si no tiene) — aplica a
+// todas las entregas de esta pantalla por igual, ver renderSubmissionRow.
+let currentTaskWeightPercent = null;
 
 window.renderTaskSubmissions = async function(params) {
     const app = document.getElementById('app');
@@ -21,6 +24,7 @@ window.renderTaskSubmissions = async function(params) {
         const { content, submissions } = response.data;
         currentSubmissions = submissions;
         currentSubmissionsPage = 1;
+        currentTaskWeightPercent = content.weight_percent;
         const pagination = response.pagination || { total: submissions.length, totalPages: 1 };
 
         app.innerHTML = `
@@ -87,6 +91,7 @@ function renderSubmissionsTable() {
                         <th class="py-3 px-4">Estudiante</th>
                         <th class="py-3 px-4">Entregado</th>
                         <th class="py-3 px-4">Estado</th>
+                        ${currentTaskWeightPercent ? '<th class="py-3 px-4">Nota</th>' : ''}
                         <th class="py-3 px-4">Comentario</th>
                         <th class="py-3 px-4 text-right">Acciones</th>
                     </tr>
@@ -106,6 +111,7 @@ function renderSubmissionsTable() {
 
 function renderSubmissionRow(s) {
     const reviewed = !!s.reviewed_at;
+    const hasScore = s.score_earned !== null && s.score_earned !== undefined;
     return `
         <tr class="border-t border-gray-100">
             <td class="py-3 px-4 font-medium text-gray-900">
@@ -116,6 +122,9 @@ function renderSubmissionRow(s) {
             <td class="py-3 px-4">
                 <span class="badge ${reviewed ? 'badge-active' : 'badge-inactive'}">${reviewed ? 'Revisada' : 'Pendiente'}</span>
             </td>
+            ${currentTaskWeightPercent ? `
+                <td class="py-3 px-4 text-gray-600">${hasScore ? `${s.score_earned}/${currentTaskWeightPercent}` : '—'}</td>
+            ` : ''}
             <td class="py-3 px-4 text-gray-600 max-w-xs whitespace-normal break-words">${s.feedback ? escapeHtml(s.feedback) : '—'}</td>
             <td class="py-3 px-4 text-right whitespace-nowrap">
                 <button onclick="downloadSubmissionHandler(${s.id})" class="text-cenat-green hover:text-cenat-green-hover mr-3" title="Descargar entrega">
@@ -127,7 +136,13 @@ function renderSubmissionRow(s) {
             </td>
         </tr>
         <tr id="review-form-row-${s.id}" class="hidden border-t border-gray-100">
-            <td colspan="5" class="px-4 py-4 bg-green-50">
+            <td colspan="${currentTaskWeightPercent ? 6 : 5}" class="px-4 py-4 bg-green-50">
+                ${currentTaskWeightPercent ? `
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Calificación (de 0 a ${currentTaskWeightPercent})</label>
+                    <input type="number" id="score-${s.id}" min="0" max="${currentTaskWeightPercent}" step="0.01"
+                        class="w-32 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green mb-2"
+                        placeholder="Ej: 7" value="${hasScore ? s.score_earned : ''}">
+                ` : ''}
                 <label class="block text-xs font-medium text-gray-700 mb-1">Comentario (opcional)</label>
                 <textarea id="feedback-${s.id}" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green">${escapeHtml(s.feedback || '')}</textarea>
                 <div class="flex gap-2 mt-2">
@@ -153,19 +168,26 @@ function hideReviewForm(id) {
 
 async function submitReview(id) {
     const feedback = document.getElementById(`feedback-${id}`).value.trim();
+    const scoreInput = document.getElementById(`score-${id}`);
+    const scoreValue = scoreInput ? scoreInput.value.trim() : '';
+
+    const payload = { feedback };
+    if (scoreValue !== '') payload.score_earned = Number(scoreValue);
 
     try {
-        await submissionsAPI.review(id, { feedback });
+        await submissionsAPI.review(id, payload);
         showToast('Entrega marcada como revisada', 'success');
 
         // Parchea el estado local en vez de volver a pedir la lista
         // completa de entregas al servidor — el endpoint de revisión no
         // devuelve la fila actualizada, pero acá ya sabemos qué cambió
-        // (el feedback recién guardado, y que reviewed_at pasa a "ahora").
+        // (el feedback/calificación recién guardados, y que reviewed_at
+        // pasa a "ahora").
         const submission = currentSubmissions.find(s => s.id === id);
         if (submission) {
             submission.feedback = feedback;
             submission.reviewed_at = new Date().toISOString();
+            if (scoreValue !== '') submission.score_earned = Number(scoreValue);
         }
         renderSubmissionsTable();
     } catch (error) {

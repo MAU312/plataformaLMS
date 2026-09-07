@@ -73,7 +73,7 @@ CREATE TABLE `content_progress` (
   KEY `idx_content` (`content_id`),
   CONSTRAINT `content_progress_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `content_progress_ibfk_2` FOREIGN KEY (`content_id`) REFERENCES `contents` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=101 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=102 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -158,6 +158,7 @@ CREATE TABLE `contents` (
   `folder_id` int DEFAULT NULL,
   `type` enum('video','file','text','url','task','forum','folder','quiz','survey','image') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `question_type` enum('short_answer','multiple_choice','true_false') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `weight_percent` decimal(5,2) DEFAULT NULL,
   `title` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   `url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -172,7 +173,7 @@ CREATE TABLE `contents` (
   KEY `idx_folder` (`folder_id`),
   CONSTRAINT `contents_folder_fk` FOREIGN KEY (`folder_id`) REFERENCES `contents` (`id`),
   CONSTRAINT `contents_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=70 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=71 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -181,7 +182,7 @@ CREATE TABLE `contents` (
 
 LOCK TABLES `contents` WRITE;
 /*!40000 ALTER TABLE `contents` DISABLE KEYS */;
-INSERT INTO `contents` VALUES (11,4,NULL,'text',NULL,'dadsad','sdsadsa',NULL,NULL,1,'2026-08-13 10:06:59','2026-08-22 11:51:38'),(12,4,NULL,'url',NULL,'musica','video musical','https://www.youtube.com/watch?v=qz6_ETehLpQ',NULL,2,'2026-08-13 10:12:18','2026-08-22 11:51:38'),(13,4,NULL,'file',NULL,'dada','dada','/uploads/files/20260515-REGLAMENTO_POKEMON_CHAMPIONS_vf-1786615954650-547301046.pdf',169027,3,'2026-08-13 10:12:34','2026-08-13 10:12:34'),(14,4,NULL,'task',NULL,'tarea','tarea','/uploads/files/BIG-DATA-GUION-DE-EXPOSICIÃN-EXTENSO-Y-CODIGO-1786615978390-294165536.docx',33332,4,'2026-08-13 10:12:58','2026-08-22 11:51:38'),(15,4,NULL,'video',NULL,'dada','dada','/uploads/videos/no-joda-1786615995296-952925826.mp4',9064665,5,'2026-08-13 10:13:15','2026-08-13 10:13:15'),(17,4,NULL,'forum',NULL,'foro 1','primer foro',NULL,NULL,6,'2026-08-13 10:44:50','2026-08-28 10:03:44'),(24,1,NULL,'folder',NULL,'Unidad 1',NULL,NULL,NULL,2,'2026-08-18 07:48:08','2026-09-07 16:30:09'),(25,1,NULL,'folder',NULL,'Unidad 2',NULL,NULL,NULL,4,'2026-08-18 07:48:16','2026-09-07 16:30:00'),(26,1,NULL,'folder',NULL,'Unidad 3',NULL,NULL,NULL,5,'2026-08-18 07:48:27','2026-09-07 16:29:59'),(27,1,24,'video',NULL,'video 1','hola','/uploads/videos/YTDown.com_YouTube_Samsung-Galaxy-Z-Fold-8-I-Unboxing-_-Cam_Media_0mWy2Vr8YHo_001_1080p-1786748414866-771704190-1787039398024-788598740.mp4',344744669,1,'2026-08-18 07:50:04','2026-08-22 11:54:36'),(28,1,24,'text',NULL,'Bienvenidos al curso','etc etc etc etc etc etc ect ect',NULL,NULL,1,'2026-08-18 07:50:35','2026-09-07 16:30:26'),(29,1,24,'file',NULL,'guia de curso',NULL,'/uploads/files/CuadroSinÃ³pticoTecnologia-1787039467932-263913221.pdf',1087774,2,'2026-08-18 07:51:07','2026-09-07 16:30:26'),(30,1,25,'task',NULL,'aaaa','hola','/uploads/files/ORDEN-DE-PRODUCCION-AC-1787064644086-314714759.pdf',463323,1,'2026-08-18 14:50:44','2026-08-22 11:55:20'),(31,1,25,'task',NULL,'tarea 1','para la tarea tiene que hacer esto aquello y aja','/uploads/files/Caso-prÃ¡ctico-PelÃ­culas-Web-1787064922936-574098792.pdf',320272,2,'2026-08-18 14:55:22','2026-08-18 14:55:22'),(32,1,25,'forum',NULL,'foro sobre el cenat','la pregunta del foro es esta, respondan',NULL,NULL,3,'2026-08-18 14:56:24','2026-08-18 14:56:24'),(38,1,NULL,'image',NULL,'imagen1a','','/uploads/content-images/imagen1-1787074088639-815344633.jpg',31680,1,'2026-08-18 17:28:08','2026-09-07 16:30:09'),(40,1,26,'quiz','multiple_choice','quiz 1','',NULL,NULL,1,'2026-08-18 17:32:40','2026-08-28 11:06:27'),(41,1,26,'quiz','true_false','quiz1',NULL,NULL,NULL,2,'2026-08-18 17:33:07','2026-08-28 11:06:27'),(42,1,26,'quiz','short_answer','quiz 3',NULL,NULL,NULL,3,'2026-08-18 17:33:35','2026-08-28 11:06:27'),(44,1,26,'url',NULL,'video',NULL,'https://www.youtube.com/watch?v=xSn66Am1GbU',NULL,5,'2026-08-18 18:57:37','2026-09-07 16:30:32'),(46,1,26,'url',NULL,'video',NULL,'https://www.youtube.com/watch?v=4DBy1-BdcsE',NULL,4,'2026-08-18 18:59:45','2026-09-07 16:30:32'),(47,1,26,'survey','multiple_choice','encuesta de satisfaccion',NULL,NULL,NULL,6,'2026-08-18 19:13:07','2026-08-28 11:06:28'),(68,1,NULL,'file',NULL,'hola','holaaa','/uploads/files/2025_2C_SC-807_Lab2---RecolecciÃ³n-de-InformaciÃ³n-(version-usando-Metagoofil)-1788798586676-268789942.pdf',1926355,3,'2026-09-07 16:29:46','2026-09-07 16:30:09');
+INSERT INTO `contents` VALUES (11,4,NULL,'text',NULL,NULL,'dadsad','sdsadsa',NULL,NULL,1,'2026-08-13 10:06:59','2026-08-22 11:51:38'),(12,4,NULL,'url',NULL,NULL,'musica','video musical','https://www.youtube.com/watch?v=qz6_ETehLpQ',NULL,2,'2026-08-13 10:12:18','2026-08-22 11:51:38'),(13,4,NULL,'file',NULL,NULL,'dada','dada','/uploads/files/20260515-REGLAMENTO_POKEMON_CHAMPIONS_vf-1786615954650-547301046.pdf',169027,3,'2026-08-13 10:12:34','2026-08-13 10:12:34'),(14,4,NULL,'task',NULL,NULL,'tarea','tarea','/uploads/files/BIG-DATA-GUION-DE-EXPOSICIÃN-EXTENSO-Y-CODIGO-1786615978390-294165536.docx',33332,4,'2026-08-13 10:12:58','2026-08-22 11:51:38'),(15,4,NULL,'video',NULL,NULL,'dada','dada','/uploads/videos/no-joda-1786615995296-952925826.mp4',9064665,5,'2026-08-13 10:13:15','2026-08-13 10:13:15'),(17,4,NULL,'forum',NULL,NULL,'foro 1','primer foro',NULL,NULL,6,'2026-08-13 10:44:50','2026-08-28 10:03:44'),(24,1,NULL,'folder',NULL,NULL,'Unidad 1',NULL,NULL,NULL,2,'2026-08-18 07:48:08','2026-09-07 16:30:09'),(25,1,NULL,'folder',NULL,NULL,'Unidad 2',NULL,NULL,NULL,4,'2026-08-18 07:48:16','2026-09-07 16:30:00'),(26,1,NULL,'folder',NULL,NULL,'Unidad 3',NULL,NULL,NULL,5,'2026-08-18 07:48:27','2026-09-07 16:29:59'),(27,1,24,'video',NULL,NULL,'video 1','hola','/uploads/videos/YTDown.com_YouTube_Samsung-Galaxy-Z-Fold-8-I-Unboxing-_-Cam_Media_0mWy2Vr8YHo_001_1080p-1786748414866-771704190-1787039398024-788598740.mp4',344744669,1,'2026-08-18 07:50:04','2026-08-22 11:54:36'),(28,1,24,'text',NULL,NULL,'Bienvenidos al curso','etc etc etc etc etc etc ect ect',NULL,NULL,1,'2026-08-18 07:50:35','2026-09-07 16:30:26'),(29,1,24,'file',NULL,NULL,'guia de curso',NULL,'/uploads/files/CuadroSinÃ³pticoTecnologia-1787039467932-263913221.pdf',1087774,2,'2026-08-18 07:51:07','2026-09-07 16:30:26'),(30,1,25,'task',NULL,NULL,'aaaa','hola','/uploads/files/ORDEN-DE-PRODUCCION-AC-1787064644086-314714759.pdf',463323,1,'2026-08-18 14:50:44','2026-08-22 11:55:20'),(31,1,25,'task',NULL,NULL,'tarea 1','para la tarea tiene que hacer esto aquello y aja','/uploads/files/Caso-prÃ¡ctico-PelÃ­culas-Web-1787064922936-574098792.pdf',320272,2,'2026-08-18 14:55:22','2026-08-18 14:55:22'),(32,1,25,'forum',NULL,NULL,'foro sobre el cenat','la pregunta del foro es esta, respondan',NULL,NULL,3,'2026-08-18 14:56:24','2026-08-18 14:56:24'),(38,1,NULL,'image',NULL,NULL,'imagen1a','','/uploads/content-images/imagen1-1787074088639-815344633.jpg',31680,1,'2026-08-18 17:28:08','2026-09-07 16:30:09'),(40,1,26,'quiz','multiple_choice',NULL,'quiz 1','',NULL,NULL,1,'2026-08-18 17:32:40','2026-08-28 11:06:27'),(41,1,26,'quiz','true_false',NULL,'quiz1',NULL,NULL,NULL,2,'2026-08-18 17:33:07','2026-08-28 11:06:27'),(42,1,26,'quiz','short_answer',NULL,'quiz 3',NULL,NULL,NULL,3,'2026-08-18 17:33:35','2026-08-28 11:06:27'),(44,1,26,'url',NULL,NULL,'video',NULL,'https://www.youtube.com/watch?v=xSn66Am1GbU',NULL,5,'2026-08-18 18:57:37','2026-09-07 16:30:32'),(46,1,26,'url',NULL,NULL,'video',NULL,'https://www.youtube.com/watch?v=4DBy1-BdcsE',NULL,4,'2026-08-18 18:59:45','2026-09-07 16:30:32'),(47,1,26,'survey','multiple_choice',NULL,'encuesta de satisfaccion',NULL,NULL,NULL,6,'2026-08-18 19:13:07','2026-08-28 11:06:28'),(68,1,NULL,'file',NULL,NULL,'hola','holaaa','/uploads/files/2025_2C_SC-807_Lab2---RecolecciÃ³n-de-InformaciÃ³n-(version-usando-Metagoofil)-1788798586676-268789942.pdf',1926355,3,'2026-09-07 16:29:46','2026-09-07 16:30:09');
 /*!40000 ALTER TABLE `contents` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -203,7 +204,7 @@ CREATE TABLE `course_teachers` (
   KEY `idx_user` (`user_id`),
   CONSTRAINT `course_teachers_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE,
   CONSTRAINT `course_teachers_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -269,7 +270,7 @@ CREATE TABLE `enrollments` (
   KEY `idx_course` (`course_id`),
   CONSTRAINT `enrollments_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `enrollments_ibfk_2` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -356,13 +357,14 @@ CREATE TABLE `task_submissions` (
   `submitted_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `reviewed_at` timestamp NULL DEFAULT NULL,
   `feedback` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `score_earned` decimal(5,2) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_submission` (`content_id`,`user_id`),
   KEY `idx_content` (`content_id`),
   KEY `idx_user` (`user_id`),
   CONSTRAINT `task_submissions_ibfk_1` FOREIGN KEY (`content_id`) REFERENCES `contents` (`id`) ON DELETE CASCADE,
   CONSTRAINT `task_submissions_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -371,7 +373,7 @@ CREATE TABLE `task_submissions` (
 
 LOCK TABLES `task_submissions` WRITE;
 /*!40000 ALTER TABLE `task_submissions` DISABLE KEYS */;
-INSERT INTO `task_submissions` VALUES (5,14,11,'/uploads/submissions/BIG-DATA-GUION-DE-EXPOSICIÃ_N-EXTENSO-Y-CODIGO-1786615978390-294165536-1786616073912-435106974.docx','2026-08-13 10:14:33','2026-08-13 10:15:24','muy bien hecho'),(6,30,12,'/uploads/submissions/EvaluaciÃ³n-grupal-(1)-1787064689465-477866861.docx','2026-08-18 14:51:29','2026-09-07 16:39:16','le faltodasasssssssssssssssssssssssssssssssssssssssssle faltodasasssssssssssssssssssssssssssssssssssssssssle faltodasasssssssssssssssssssssssssssssssssssssssssle faltodasasssssssssssssssssssssssssssssssssssssssssle faltodasasssssssssssssssssssssssssssssssssssssssss');
+INSERT INTO `task_submissions` VALUES (5,14,11,'/uploads/submissions/BIG-DATA-GUION-DE-EXPOSICIÃ_N-EXTENSO-Y-CODIGO-1786615978390-294165536-1786616073912-435106974.docx','2026-08-13 10:14:33','2026-08-13 10:15:24','muy bien hecho',NULL),(6,30,12,'/uploads/submissions/EvaluaciÃ³n-grupal-(1)-1787064689465-477866861.docx','2026-08-18 14:51:29','2026-09-07 16:39:16','le faltodasasssssssssssssssssssssssssssssssssssssssssle faltodasasssssssssssssssssssssssssssssssssssssssssle faltodasasssssssssssssssssssssssssssssssssssssssssle faltodasasssssssssssssssssssssssssssssssssssssssssle faltodasasssssssssssssssssssssssssssssssssssssssss',NULL);
 /*!40000 ALTER TABLE `task_submissions` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -402,7 +404,7 @@ CREATE TABLE `users` (
   UNIQUE KEY `username` (`username`),
   KEY `idx_email` (`email`),
   KEY `idx_role` (`role`)
-) ENGINE=InnoDB AUTO_INCREMENT=53 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -424,4 +426,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-07 13:28:21
+-- Dump completed on 2026-09-07 13:37:28
