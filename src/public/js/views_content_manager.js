@@ -589,6 +589,7 @@ function showAddVideoForm(courseId, folderId) {
                 <label class="block text-xs font-medium text-gray-700 mb-1">Archivo de video *</label>
                 <input type="file" class="video-file w-full text-sm" accept="video/*" required>
                 <p class="text-xs text-gray-500 mt-1">Formatos: MP4, AVI, MOV, WEBM (máx. 2GB)</p>
+                <video class="video-preview hidden w-full rounded-lg mt-2 max-h-64" controls></video>
             </div>
             <div class="flex gap-2">
                 <button type="submit" class="submit-video-btn bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
@@ -600,6 +601,25 @@ function showAddVideoForm(courseId, folderId) {
             </div>
         </form>
     `;
+
+    // Previsualización local del video elegido, antes de subirlo — solo
+    // usa createObjectURL (no toca el servidor), así el profesor puede
+    // confirmar que seleccionó el archivo correcto.
+    const videoFileInput = container.querySelector('.video-file');
+    const videoPreview = container.querySelector('.video-preview');
+    let previewObjectUrl = null;
+    videoFileInput.addEventListener('change', () => {
+        if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+        const file = videoFileInput.files[0];
+        if (!file) {
+            videoPreview.classList.add('hidden');
+            videoPreview.removeAttribute('src');
+            return;
+        }
+        previewObjectUrl = URL.createObjectURL(file);
+        videoPreview.src = previewObjectUrl;
+        videoPreview.classList.remove('hidden');
+    });
 
     container.querySelector('.add-video-form').addEventListener('submit', async (e) => {
         e.preventDefault();

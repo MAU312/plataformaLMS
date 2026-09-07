@@ -64,6 +64,13 @@ html {
 
 .auth-bg {
     position: relative;
+    /* z-index propio (no solo position:relative) para que este elemento
+       forme su propio contexto de apilamiento — si no, el ::before con
+       z-index:-1 de abajo se apila en el contexto del ANCESTRO más cercano
+       que sí forme uno (ej. <body>), quedando por detrás de la propia
+       imagen de fondo de este mismo elemento en vez de encima de ella, y
+       el velo oscuro nunca se ve. */
+    z-index: 0;
     background-image: url('/images/imagenfondo.png');
     background-size: cover;
     background-position: center;
@@ -93,6 +100,10 @@ html {
 
 .courses-bg {
     position: relative;
+    /* z-index propio, mismo motivo que en .auth-bg: sin esto el velo
+       ::before (z-index:-1) se apila fuera de este elemento y queda
+       tapado por su propia imagen de fondo. */
+    z-index: 0;
     /* #app tiene min-h-screen (fuerza que la página mida al menos el alto
        de la pantalla), pero este contenedor solo medía lo que ocupa su
        propio contenido (encabezado + grilla) — si hay pocos cursos, queda

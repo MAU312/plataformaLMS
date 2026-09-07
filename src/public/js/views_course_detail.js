@@ -178,8 +178,10 @@ window.renderCourseDetail = async function(params) {
                                 </div>
                                 `}
                             </div>
-                            <h3 id="current-video-title" class="text-lg font-semibold text-gray-800">${escapeHtml(initialVideo.title)}</h3>
-                            <p class="text-gray-600 text-sm mb-4">${escapeHtml(initialVideo.description || '')}</p>
+                            <div class="bg-white rounded-lg border border-gray-100 p-3 mb-4">
+                                <h3 id="current-video-title" class="text-lg font-semibold text-gray-800">${escapeHtml(initialVideo.title)}</h3>
+                                <p class="text-gray-600 text-sm">${escapeHtml(initialVideo.description || '')}</p>
+                            </div>
 
                             ${videos.length > 0 ? `
                                 <div class="space-y-2">
@@ -356,7 +358,7 @@ function renderContentRow(content, isActiveVideo, canTrackProgress, type, hasAcc
     const clickable = isVideo && hasAccess;
 
     return `
-        <div class="flex items-center gap-3 p-3 rounded-lg border ${isActiveVideo && hasAccess ? 'border-cenat-green bg-green-50' : 'border-gray-200'} ${clickable ? 'hover:bg-green-50 cursor-pointer video-item' : ''} transition"
+        <div class="flex items-center gap-3 p-3 rounded-lg border ${isActiveVideo && hasAccess ? 'border-cenat-green bg-green-50' : 'border-gray-200 bg-white'} ${clickable ? 'hover:bg-green-50 cursor-pointer video-item' : ''} transition"
              ${clickable ? `data-url="${escapeAttr(content.url)}" data-title="${escapeAttr(content.title)}"` : ''}>
             
             ${canTrackProgress ? `

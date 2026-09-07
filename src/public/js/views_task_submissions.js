@@ -116,7 +116,7 @@ function renderSubmissionRow(s) {
             <td class="py-3 px-4">
                 <span class="badge ${reviewed ? 'badge-active' : 'badge-inactive'}">${reviewed ? 'Revisada' : 'Pendiente'}</span>
             </td>
-            <td class="py-3 px-4 text-gray-600 max-w-xs truncate" title="${escapeAttr(s.feedback || '')}">${s.feedback ? escapeHtml(s.feedback) : '—'}</td>
+            <td class="py-3 px-4 text-gray-600 max-w-xs whitespace-normal break-words">${s.feedback ? escapeHtml(s.feedback) : '—'}</td>
             <td class="py-3 px-4 text-right whitespace-nowrap">
                 <button onclick="downloadSubmissionHandler(${s.id})" class="text-cenat-green hover:text-cenat-green-hover mr-3" title="Descargar entrega">
                     <i class="fas fa-download"></i>
