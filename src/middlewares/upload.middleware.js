@@ -216,6 +216,34 @@ export const uploadAvatar = multer({
 });
 
 // =============================================
+// Configuración de almacenamiento para IMPORTACIÓN MASIVA DE USUARIOS (CSV)
+// En memoria, no en disco: se parsea una sola vez al vuelo y se descarta
+// (a diferencia del resto, no es un archivo que alguien vaya a descargar
+// después).
+// =============================================
+
+const csvFilter = (req, file, cb) => {
+  const extname = path.extname(file.originalname).toLowerCase() === '.csv';
+  const mimetype = /csv|text\/plain|excel/.test(file.mimetype);
+
+  if (extname || mimetype) {
+    return cb(null, true);
+  } else {
+    const error = new Error('Solo se permiten archivos .csv');
+    error.status = 400;
+    cb(error);
+  }
+};
+
+export const uploadCsv = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 2 * 1024 * 1024 // 2MB máximo
+  },
+  fileFilter: csvFilter
+});
+
+// =============================================
 // Función auxiliar para eliminar archivos
 // =============================================
 

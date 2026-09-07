@@ -56,5 +56,44 @@ async function sendPasswordResetEmail(toEmail, resetToken) {
   });
 }
 
-const mailer = { sendPasswordResetEmail };
+/**
+ * Envía la contraseña temporal a un usuario recién creado por importación
+ * masiva (CSV). Mismo fallback a consola que sendPasswordResetEmail si no
+ * hay credenciales de correo configuradas.
+ */
+async function sendWelcomeEmail({ toEmail, name, tempPassword, courseTitle }) {
+  const loginUrl = `${APP_URL || 'http://localhost:3000'}/#/login`;
+
+  if (!emailConfigured) {
+    console.log(`\n📧 [DEV] Contraseña temporal para ${toEmail} (${name}): ${tempPassword}\n`);
+    return;
+  }
+
+  await transporter.sendMail({
+    from: `"LMS LANBA - CeNAT" <${EMAIL_USER}>`,
+    to: toEmail,
+    subject: 'Tu cuenta en LMS LANBA - CeNAT',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
+        <h2 style="color: #007031;">LMS LANBA - CeNAT</h2>
+        <p>Hola ${name},</p>
+        <p>Se creó una cuenta para vos en la plataforma${courseTitle ? ` y quedaste matriculado/a en el curso <strong>${courseTitle}</strong>` : ''}.</p>
+        <p>Podés ingresar con:</p>
+        <p>
+          Correo: <strong>${toEmail}</strong><br>
+          Contraseña temporal: <strong>${tempPassword}</strong>
+        </p>
+        <p>
+          <a href="${loginUrl}"
+             style="display: inline-block; background: #007031; color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600;">
+            Iniciar sesión
+          </a>
+        </p>
+        <p style="color: #666; font-size: 14px;">Te recomendamos cambiar esta contraseña después de tu primer ingreso.</p>
+      </div>
+    `
+  });
+}
+
+const mailer = { sendPasswordResetEmail, sendWelcomeEmail };
 export default mailer;

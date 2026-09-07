@@ -2,7 +2,7 @@ import express from 'express';
 import * as userController from '../controllers/user.controller.js';
 import { isAuthenticated, isAdmin } from '../middlewares/auth.middleware.js';
 import { userCreateLimiter } from '../middlewares/rateLimit.middleware.js';
-import { uploadAvatar } from '../middlewares/upload.middleware.js';
+import { uploadAvatar, uploadCsv } from '../middlewares/upload.middleware.js';
 import { verifyFileSignature } from '../middlewares/fileSignature.middleware.js';
 
 const router = express.Router();
@@ -13,6 +13,7 @@ router.put('/me/avatar', isAuthenticated, uploadAvatar.single('avatar'), verifyF
 router.delete('/me/avatar', isAuthenticated, userController.removeMyAvatar);
 
 router.post('/', isAuthenticated, isAdmin, userCreateLimiter, userController.createUser);
+router.post('/bulk-import', isAuthenticated, isAdmin, userCreateLimiter, uploadCsv.single('csv'), userController.bulkImportUsers);
 router.get('/', isAuthenticated, isAdmin, userController.getAllUsers);
 router.get('/stats/count', isAuthenticated, isAdmin, userController.getUserStats);
 router.get('/by-role/:role', isAuthenticated, isAdmin, userController.getUsersByRole);

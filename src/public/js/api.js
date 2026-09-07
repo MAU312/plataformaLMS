@@ -186,7 +186,8 @@ const usersAPI = {
     getStats: async () => apiRequest('/users/stats/count'),
     getByRole: async (role) => apiRequest(`/users/by-role/${role}`),
     uploadAvatar: async (formData) => apiRequestFormData('/users/me/avatar', formData, { method: 'PUT' }),
-    removeAvatar: async () => apiRequest('/users/me/avatar', { method: 'DELETE' })
+    removeAvatar: async () => apiRequest('/users/me/avatar', { method: 'DELETE' }),
+    bulkImport: async (formData) => apiRequestFormData('/users/bulk-import', formData)
 };
 
 // =================================

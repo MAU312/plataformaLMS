@@ -23,9 +23,14 @@ window.renderAdminUsers = async function(params) {
                 <i class="fas fa-users text-cenat-green mr-2"></i>
                 Gestión de Usuarios
             </h1>
-            <button onclick="openCreateUserModal()" class="btn-cenat">
-                <i class="fas fa-user-plus"></i> Crear usuario
-            </button>
+            <div class="flex gap-2">
+                <button onclick="openBulkImportModal()" class="border border-cenat-green text-cenat-green px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-50 dark:hover:bg-slate-700 transition">
+                    <i class="fas fa-file-csv"></i> Importar CSV
+                </button>
+                <button onclick="openCreateUserModal()" class="btn-cenat">
+                    <i class="fas fa-user-plus"></i> Crear usuario
+                </button>
+            </div>
         </div>
 
         <div class="relative mb-4">
@@ -148,6 +153,146 @@ async function handleCreateUserSubmit(e) {
 
 window.openCreateUserModal = openCreateUserModal;
 window.closeCreateUserModal = closeCreateUserModal;
+
+// =================================
+// Importar usuarios masivamente desde CSV
+// =================================
+
+async function openBulkImportModal() {
+    closeBulkImportModal();
+
+    const modal = document.createElement('div');
+    modal.id = 'bulk-import-modal';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center px-4';
+    modal.innerHTML = `
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeBulkImportModal()"></div>
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-w-md w-full fade-in">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+                    <i class="fas fa-file-csv text-cenat-green mr-2"></i> Importar estudiantes por CSV
+                </h2>
+                <button onclick="closeBulkImportModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-slate-200">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+
+            <div id="bulk-import-body">
+                <form id="bulk-import-form" class="space-y-4">
+                    <p class="text-sm text-gray-600 dark:text-slate-400">
+                        Archivo .csv con columnas <strong>nombre</strong> y <strong>email</strong> (máximo 100 filas).
+                        A cada estudiante nuevo se le genera una contraseña temporal y se le envía por correo.
+                    </p>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Archivo CSV *</label>
+                        <input type="file" id="bulk-import-file" accept=".csv" required
+                            class="w-full text-sm text-gray-700 dark:text-slate-300">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Matricular en un curso (opcional)</label>
+                        <select id="bulk-import-course"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
+                            <option value="">Solo crear las cuentas, sin matricular</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-3 pt-2">
+                        <button type="submit" class="btn-cenat flex-1">Importar</button>
+                        <button type="button" onclick="closeBulkImportModal()" class="text-gray-600 dark:text-slate-300 px-4 py-2 text-sm">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById('bulk-import-form').addEventListener('submit', handleBulkImportSubmit);
+
+    // Poblar el selector de cursos en paralelo — si falla, se deja usable
+    // igual (solo queda sin la opción de matricular).
+    try {
+        const response = await coursesAPI.getAll({ limit: 100 });
+        const select = document.getElementById('bulk-import-course');
+        if (select) {
+            (response.data || []).forEach(course => {
+                const option = document.createElement('option');
+                option.value = course.id;
+                option.textContent = course.title;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error al cargar los cursos para importar:', error);
+    }
+}
+
+function closeBulkImportModal() {
+    const modal = document.getElementById('bulk-import-modal');
+    if (modal) modal.remove();
+}
+
+async function handleBulkImportSubmit(e) {
+    e.preventDefault();
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const file = document.getElementById('bulk-import-file').files[0];
+    const courseId = document.getElementById('bulk-import-course').value;
+
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('csv', file);
+    if (courseId) formData.append('course_id', courseId);
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Importando...';
+
+    try {
+        const response = await usersAPI.bulkImport(formData);
+        showToast(response.message, 'success');
+        renderBulkImportResults(response.data.results);
+        loadAdminUsers(currentUserPage);
+    } catch (error) {
+        showToast(error.message || 'Error al importar el CSV', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Importar';
+    }
+}
+
+/**
+ * Reemplaza el formulario por una lista de resultados fila por fila (qué
+ * se creó, qué se omitió y por qué) — así el admin puede corregir el CSV
+ * y reintentar solo lo que falló, en vez de adivinar a partir del toast
+ * resumen.
+ */
+function renderBulkImportResults(results) {
+    const body = document.getElementById('bulk-import-body');
+    if (!body) return;
+
+    const statusBadge = {
+        created: '<span class="badge badge-active">Creado</span>',
+        skipped_existing: '<span class="badge badge-inactive">Ya existía</span>',
+        error: '<span class="badge bg-red-100 text-red-700">Error</span>'
+    };
+
+    body.innerHTML = `
+        <div class="max-h-80 overflow-y-auto space-y-2">
+            ${results.map(r => `
+                <div class="flex items-center justify-between gap-2 text-sm border-b border-gray-100 dark:border-slate-700 pb-2">
+                    <div class="min-w-0">
+                        <p class="text-gray-900 dark:text-white truncate">Fila ${r.row}${r.email ? ' — ' + escapeHtml(r.email) : ''}</p>
+                        ${r.message ? `<p class="text-xs text-gray-500 dark:text-slate-400">${escapeHtml(r.message)}</p>` : ''}
+                    </div>
+                    ${statusBadge[r.status] || ''}
+                </div>
+            `).join('')}
+        </div>
+        <button onclick="closeBulkImportModal()" class="btn-cenat w-full mt-4">Cerrar</button>
+    `;
+}
+
+window.openBulkImportModal = openBulkImportModal;
+window.closeBulkImportModal = closeBulkImportModal;
 
 async function loadAdminUsers(page) {
     const container = document.getElementById('users-table-container');

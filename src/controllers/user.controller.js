@@ -1,13 +1,23 @@
 import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
+import Course from '../models/Course.js';
 import TaskSubmission from '../models/TaskSubmission.js';
 import { deleteFile } from '../middlewares/upload.middleware.js';
+import { parseCsv } from '../utils/csv.js';
+import { generateTempPassword } from '../utils/password.js';
+import mailer from '../config/mailer.js';
 
 const VALID_ROLES = ['admin', 'student', 'teacher'];
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Misma regla que en el registro público (auth.controller.js): 3-50
 // caracteres, letras/números/punto/guion/guion bajo, nada de espacios ni '@'.
 const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{3,50}$/;
+// Tope conservador: cada fila potencialmente manda un correo real por Gmail
+// SMTP (ver mailer.js), y una cuenta gratuita de Gmail tiene un límite de
+// ~500 envíos/día compartido con los correos de recuperación de contraseña
+// — una importación enorme de un solo saque podría agotarlo para el resto
+// del día.
+const CSV_IMPORT_MAX_ROWS = 100;
 
 /**
  * POST /api/users
@@ -220,6 +230,114 @@ export const setUserAdminAccess = async (req, res) => {
   } catch (error) {
     console.error('Error al cambiar el acceso de administrador:', error);
     res.status(500).json({ success: false, message: 'Error al cambiar el acceso de administrador' });
+  }
+};
+
+/**
+ * POST /api/users/bulk-import
+ * Crea varios estudiantes de una sola vez desde un CSV (columnas "nombre"
+ * y "email", en cualquier orden — también acepta "name"/"correo"). A cada
+ * uno se le genera una contraseña temporal y se le envía por correo. Si
+ * viene `course_id`, además se matricula a cada uno en ese curso (tanto
+ * los recién creados como los que ya existían con ese email).
+ */
+export const bulkImportUsers = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'El archivo CSV es requerido' });
+    }
+
+    const courseId = req.body.course_id ? parseInt(req.body.course_id) : null;
+    let course = null;
+    if (courseId) {
+      course = await Course.findById(courseId);
+      if (!course) return res.status(404).json({ success: false, message: 'Curso no encontrado' });
+    }
+
+    const { headers, rows } = parseCsv(req.file.buffer.toString('utf8'));
+    const nameKey = headers.find((h) => ['nombre', 'name'].includes(h));
+    const emailKey = headers.find((h) => ['email', 'correo', 'correo electronico', 'correo electrónico'].includes(h));
+
+    if (!nameKey || !emailKey) {
+      return res.status(400).json({
+        success: false,
+        message: 'El CSV debe tener una columna de nombre ("nombre"/"name") y otra de email ("email"/"correo")'
+      });
+    }
+    if (rows.length === 0) {
+      return res.status(400).json({ success: false, message: 'El CSV no tiene filas de datos' });
+    }
+    if (rows.length > CSV_IMPORT_MAX_ROWS) {
+      return res.status(400).json({
+        success: false,
+        message: `Máximo ${CSV_IMPORT_MAX_ROWS} filas por importación`
+      });
+    }
+
+    const results = [];
+    let created = 0;
+    let skipped = 0;
+
+    for (let i = 0; i < rows.length; i++) {
+      const rowNum = i + 2; // +1 por el encabezado, +1 porque la fila 1 humana es la primera de datos
+      const name = String(rows[i][nameKey] || '').trim();
+      const email = String(rows[i][emailKey] || '').trim().toLowerCase();
+
+      if (!name || !email || !EMAIL_REGEX.test(email)) {
+        results.push({ row: rowNum, email: email || null, status: 'error', message: 'Nombre o email inválido' });
+        continue;
+      }
+
+      const existingUser = await User.findByEmail(email);
+      if (existingUser) {
+        skipped++;
+        if (courseId) {
+          const enrolled = await Course.enrollUser(courseId, existingUser.id);
+          results.push({
+            row: rowNum,
+            email,
+            status: 'skipped_existing',
+            message: enrolled ? 'La cuenta ya existía — se matriculó en el curso' : 'La cuenta ya existía y ya estaba matriculada en el curso'
+          });
+        } else {
+          results.push({ row: rowNum, email, status: 'skipped_existing', message: 'Ya existe una cuenta con ese email' });
+        }
+        continue;
+      }
+
+      const tempPassword = generateTempPassword();
+      const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+      let userId;
+      try {
+        userId = await User.create({ name, email, password: hashedPassword, role: 'student' });
+      } catch (dbError) {
+        results.push({ row: rowNum, email, status: 'error', message: 'No se pudo crear la cuenta' });
+        continue;
+      }
+
+      if (courseId) {
+        await Course.enrollUser(courseId, userId);
+      }
+
+      try {
+        await mailer.sendWelcomeEmail({ toEmail: email, name, tempPassword, courseTitle: course ? course.title : null });
+      } catch (emailError) {
+        console.error(`Error al enviar el correo de bienvenida a ${email}:`, emailError);
+      }
+
+      created++;
+      results.push({ row: rowNum, email, status: 'created' });
+    }
+
+    res.json({
+      success: true,
+      message: `${created} cuenta(s) creada(s), ${skipped} omitida(s) de ${rows.length} fila(s)`,
+      data: { created, skipped, total: rows.length, results }
+    });
+  } catch (error) {
+    console.error('Error al importar usuarios desde CSV:', error);
+    res.status(500).json({ success: false, message: 'Error al importar usuarios' });
   }
 };
 
