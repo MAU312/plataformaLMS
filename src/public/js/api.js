@@ -112,6 +112,8 @@ const coursesAPI = {
     getGlobalStats: async () => apiRequest('/courses/stats/summary'),
     downloadCertificate: async (id) => { window.open(`${API_URL}/courses/${id}/certificate`, '_blank'); },
     getStudents: async (id, { page = 1, limit = 20 } = {}) => apiRequest(`/courses/${id}/students?${new URLSearchParams({ page, limit })}`),
+    downloadGrades: async (id) => { window.open(`${API_URL}/courses/${id}/grades/export`, '_blank'); },
+    downloadStudentGrades: async (id, studentId) => { window.open(`${API_URL}/courses/${id}/students/${studentId}/grades/export`, '_blank'); },
     getTeachers: async (id) => apiRequest(`/courses/${id}/teachers`),
     getTeaching: async () => apiRequest('/courses/teaching')
 };

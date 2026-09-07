@@ -112,6 +112,21 @@ router.get('/:id/certificate', isAuthenticated, courseController.getCertificate)
 router.get('/:id/students', isAuthenticated, requireCourseManager((req) => req.params.id), courseController.getCourseStudents);
 
 /**
+ * GET /api/courses/:id/grades/export
+ * Descarga un CSV con la nota final de cada estudiante inscrito.
+ * Admin, o el profesor asignado a ese curso.
+ */
+router.get('/:id/grades/export', isAuthenticated, requireCourseManager((req) => req.params.id), courseController.exportCourseGrades);
+
+/**
+ * GET /api/courses/:id/students/:studentId/grades/export
+ * Descarga un CSV con el detalle de la nota de UN estudiante puntual
+ * (cada tarea/cuestionario calificado y cuánto aportó).
+ * Admin, o el profesor asignado a ese curso.
+ */
+router.get('/:id/students/:studentId/grades/export', isAuthenticated, requireCourseManager((req) => req.params.id), courseController.exportStudentGrades);
+
+/**
  * GET /api/courses/:id/teachers
  * Profesores asignados al curso
  * Admin, o el propio profesor asignado a ese curso

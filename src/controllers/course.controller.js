@@ -4,6 +4,24 @@ import Content from '../models/Content.js';
 import TaskSubmission from '../models/TaskSubmission.js';
 import { deleteFile } from '../middlewares/upload.middleware.js';
 import certificateGenerator from '../utils/certificate.js';
+import { toCsv } from '../utils/csv.js';
+
+/**
+ * Nombre de archivo seguro a partir de un título/nombre real — sin tildes
+ * ni caracteres que rompan un `Content-Disposition` o un nombre de archivo
+ * en Windows.
+ */
+// Marcas diacríticas combinantes (U+0300-U+036F) que quedan sueltas tras
+// normalize('NFD') separar una letra acentuada en letra + tilde.
+const DIACRITICS_REGEX = /[̀-ͯ]/g;
+
+function slugifyFilename(text) {
+  return String(text)
+    .normalize('NFD').replace(DIACRITICS_REGEX, '')
+    .replace(/[^a-zA-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase() || 'archivo';
+}
 
 /**
  * Obtener cursos paginados (?page, ?limit, ?search)
@@ -477,6 +495,78 @@ export const getCourseStudents = async (req, res) => {
   } catch (error) {
     console.error('Error al obtener estudiantes del curso:', error);
     res.status(500).json({ success: false, message: 'Error al obtener estudiantes del curso' });
+  }
+};
+
+/**
+ * GET /api/courses/:id/grades/export
+ * Descarga un CSV con la nota final de CADA estudiante inscrito en el
+ * curso (el "libro de calificaciones" completo) — a diferencia de
+ * getCourseStudents, sin paginar: es una descarga, tiene que traer a
+ * todos de una vez.
+ */
+export const exportCourseGrades = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const course = await Course.findById(id);
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Curso no encontrado' });
+    }
+
+    const { rows: students } = await Course.getEnrolledStudents(id, { page: 1, limit: 10000 });
+    const grades = await Promise.all(students.map((s) => Content.calculateCourseGrade(id, s.id)));
+
+    const csv = toCsv(
+      ['Nombre', 'Email', 'Progreso (%)', 'Nota'],
+      students.map((s, i) => [s.name, s.email, s.progress, grades[i] ?? ''])
+    );
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="notas-${slugifyFilename(course.title)}.csv"`);
+    // BOM al inicio: sin esto Excel abre el CSV interpretando los acentos
+    // mal (no detecta UTF-8 solo, asume la codificación regional).
+    res.send('﻿' + csv);
+  } catch (error) {
+    console.error('Error al exportar las notas del curso:', error);
+    res.status(500).json({ success: false, message: 'Error al exportar las notas' });
+  }
+};
+
+/**
+ * GET /api/courses/:id/students/:studentId/grades/export
+ * Descarga un CSV con el detalle de la nota de UN estudiante puntual:
+ * cada tarea/cuestionario calificado, cuánto valía, y cuánto ganó — no
+ * solo el número final (ver getCourseStudents/exportCourseGrades para
+ * eso), para que el profesor pueda explicarle a un estudiante puntual de
+ * dónde sale su nota.
+ */
+export const exportStudentGrades = async (req, res) => {
+  try {
+    const { id, studentId } = req.params;
+
+    const course = await Course.findById(id);
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Curso no encontrado' });
+    }
+    const student = await User.findById(studentId);
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Estudiante no encontrado' });
+    }
+
+    const { items, total } = await Content.getCourseGradeBreakdown(id, studentId);
+
+    const rows = items.map((item) => [item.title, item.type, item.weight_percent, item.earned]);
+    rows.push(['Nota final', '', '', total ?? '']);
+
+    const csv = toCsv(['Contenido', 'Tipo', 'Vale (%)', 'Nota obtenida'], rows);
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="notas-${slugifyFilename(student.name)}-${slugifyFilename(course.title)}.csv"`);
+    res.send('﻿' + csv);
+  } catch (error) {
+    console.error('Error al exportar la nota del estudiante:', error);
+    res.status(500).json({ success: false, message: 'Error al exportar la nota' });
   }
 };
 

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCsv } from '../../src/utils/csv.js';
+import { parseCsv, toCsv } from '../../src/utils/csv.js';
 
 test('parseCsv: encabezados en minúscula y una fila simple', () => {
   const { headers, rows } = parseCsv('Nombre,Email\nAna Rojas,ana@test.com');
@@ -34,4 +34,23 @@ test('parseCsv: texto vacío devuelve headers y rows vacíos', () => {
 test('parseCsv: solo encabezado, sin filas de datos', () => {
   const { rows } = parseCsv('nombre,email');
   assert.deepEqual(rows, []);
+});
+
+// =================================
+// toCsv
+// =================================
+
+test('toCsv: arma encabezados + filas separados por coma, terminados en CRLF', () => {
+  const csv = toCsv(['Nombre', 'Nota'], [['Ana', 85], ['Beto', 92]]);
+  assert.equal(csv, 'Nombre,Nota\r\nAna,85\r\nBeto,92');
+});
+
+test('toCsv: envuelve en comillas un campo que contiene una coma, escapando comillas internas', () => {
+  const csv = toCsv(['Nombre'], [['Pérez, Juan "el crack"']]);
+  assert.equal(csv, 'Nombre\r\n"Pérez, Juan ""el crack"""');
+});
+
+test('toCsv: null/undefined se escriben como campo vacío, no como el texto "null"', () => {
+  const csv = toCsv(['A', 'B'], [[null, undefined]]);
+  assert.equal(csv, 'A,B\r\n,');
 });

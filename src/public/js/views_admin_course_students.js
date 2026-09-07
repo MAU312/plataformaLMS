@@ -20,14 +20,19 @@ window.renderAdminCourseStudents = async function(params) {
                 <i class="fas fa-arrow-left mr-1"></i> Volver a cursos
             </a>
 
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-                <i class="fas fa-user-graduate text-cenat-green mr-2"></i>
-                Estudiantes inscritos
-            </h1>
+            <div class="flex items-start justify-between gap-4 flex-wrap mb-1">
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+                    <i class="fas fa-user-graduate text-cenat-green mr-2"></i>
+                    Estudiantes inscritos
+                </h1>
+                <button onclick="coursesAPI.downloadGrades(${params.id})" class="text-sm border border-cenat-green text-cenat-green px-3 py-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-slate-700 transition">
+                    <i class="fas fa-file-csv mr-1"></i> Descargar notas del curso
+                </button>
+            </div>
             <p class="text-gray-500 dark:text-slate-400 mb-6">${escapeHtml(course.title)}</p>
 
             <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
-                <div id="admin-students-table-container">${renderStudentsTableHTML(students)}</div>
+                <div id="admin-students-table-container">${renderStudentsTableHTML(students, params.id)}</div>
             </div>
             <div id="admin-students-pagination" class="mt-4"></div>
         `, 'courses');
@@ -61,7 +66,7 @@ async function loadCourseStudentsPage(courseId, page, tableContainerId, paginati
         const { students } = response.data;
         const pagination = response.pagination || { total: students.length, totalPages: 1 };
 
-        tableContainer.innerHTML = renderStudentsTableHTML(students);
+        tableContainer.innerHTML = renderStudentsTableHTML(students, courseId);
 
         const paginationContainer = document.getElementById(paginationContainerId);
         if (paginationContainer) {
@@ -81,7 +86,7 @@ async function loadCourseStudentsPage(courseId, page, tableContainerId, paginati
  * del profesor sobre su curso asignado (views_teacher_course.js, sin
  * ese sidebar, que no le corresponde a un profesor).
  */
-function renderStudentsTableHTML(students) {
+function renderStudentsTableHTML(students, courseId) {
     if (students.length === 0) {
         return `
             <div class="empty-state">
@@ -103,6 +108,7 @@ function renderStudentsTableHTML(students) {
                         <th class="py-3 px-4">Inscrito</th>
                         <th class="py-3 px-4">Último ingreso</th>
                         <th class="py-3 px-4">Completado</th>
+                        <th class="py-3 px-4 text-right">Notas</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -125,6 +131,11 @@ function renderStudentsTableHTML(students) {
                                 ${student.completed_at
                                     ? `<span class="badge badge-active"><i class="fas fa-certificate mr-1"></i> ${formatDate(student.completed_at)}</span>`
                                     : `<span class="badge badge-inactive">En curso</span>`}
+                            </td>
+                            <td class="py-3 px-4 text-right">
+                                <button onclick="coursesAPI.downloadStudentGrades(${courseId}, ${student.id})" class="text-cenat-green hover:text-cenat-green-hover" title="Descargar detalle de nota de ${escapeAttr(student.name)}">
+                                    <i class="fas fa-download"></i>
+                                </button>
                             </td>
                         </tr>
                     `).join('')}

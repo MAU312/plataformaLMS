@@ -92,13 +92,18 @@ window.renderTeacherCourseStudents = async function(params) {
                     <i class="fas fa-arrow-left mr-1"></i> Volver al curso
                 </a>
 
-                <h1 class="text-2xl font-bold text-gray-900 mb-1">
-                    <i class="fas fa-user-graduate text-cenat-green mr-2"></i> Estudiantes inscritos
-                </h1>
+                <div class="flex items-start justify-between gap-4 flex-wrap mb-1">
+                    <h1 class="text-2xl font-bold text-gray-900">
+                        <i class="fas fa-user-graduate text-cenat-green mr-2"></i> Estudiantes inscritos
+                    </h1>
+                    <button onclick="coursesAPI.downloadGrades(${params.id})" class="text-sm border border-cenat-green text-cenat-green px-3 py-1.5 rounded-lg hover:bg-green-50 transition">
+                        <i class="fas fa-file-csv mr-1"></i> Descargar notas del curso
+                    </button>
+                </div>
                 <p class="text-gray-500 mb-6">${escapeHtml(course.title)}</p>
 
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div id="teacher-students-table-container">${renderStudentsTableHTML(students)}</div>
+                    <div id="teacher-students-table-container">${renderStudentsTableHTML(students, params.id)}</div>
                 </div>
                 <div id="teacher-students-pagination" class="mt-4"></div>
             </div>

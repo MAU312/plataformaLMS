@@ -56,3 +56,23 @@ export function parseCsv(text) {
 
   return { headers, rows };
 }
+
+/**
+ * Arma un CSV a partir de encabezados + filas (arrays de valores, en el
+ * mismo orden que `headers`) — usado para las exportaciones de notas. Un
+ * campo se envuelve en comillas solo si de verdad lo necesita (contiene
+ * coma, comilla, o salto de línea), igual que hace Excel al exportar.
+ */
+export function toCsv(headers, rows) {
+  const escapeField = (value) => {
+    const str = value === null || value === undefined ? '' : String(value);
+    if (/[",\r\n]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
+    return str;
+  };
+
+  const lines = [headers.map(escapeField).join(',')];
+  for (const row of rows) {
+    lines.push(row.map(escapeField).join(','));
+  }
+  return lines.join('\r\n');
+}

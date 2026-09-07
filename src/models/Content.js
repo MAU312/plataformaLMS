@@ -286,19 +286,21 @@ class Content {
   }
 
   /**
-   * Nota final de un estudiante en un curso: suma el score_earned de cada
-   * tarea calificada CON weight_percent, más (puntos ganados / puntos
-   * posibles) × weight_percent de cada cuestionario CON weight_percent que
-   * el estudiante ya respondió por completo — "por completo" significa que
-   * ninguna pregunta de respuesta corta sigue con is_correct NULL (pendiente
-   * de que el profesor la revise a mano). Una tarea/cuestionario SIN
-   * weight_percent asignado no aporta nada (el profesor decidió que no
-   * cuenta para la nota). Devuelve null si todavía no hay nada calificado
-   * que contar, para que la UI pueda mostrar "—" en vez de "0".
+   * Detalle de la nota de un estudiante en un curso: un item por cada
+   * tarea calificada CON weight_percent, y por cada cuestionario CON
+   * weight_percent que el estudiante ya respondió POR COMPLETO —
+   * "por completo" significa que ninguna pregunta de respuesta corta sigue
+   * con is_correct NULL (pendiente de que el profesor la revise a mano).
+   * Una tarea/cuestionario SIN weight_percent asignado no genera item (el
+   * profesor decidió que no cuenta para la nota). `total` es la suma de
+   * todos los items, o null si todavía no hay ninguno (para que la UI
+   * muestre "—" en vez de "0"). Usado tanto para calcular la nota final
+   * (calculateCourseGrade) como para el CSV de detalle por estudiante (ver
+   * course.controller.js exportStudentGrades).
    */
-  static async calculateCourseGrade(courseId, userId) {
+  static async getCourseGradeBreakdown(courseId, userId) {
     const [taskRows] = await pool.query(
-      `SELECT ts.score_earned
+      `SELECT c.title, c.weight_percent, ts.score_earned
        FROM task_submissions ts
        INNER JOIN contents c ON c.id = ts.content_id
        WHERE c.course_id = ? AND ts.user_id = ? AND c.type = 'task'
@@ -306,11 +308,15 @@ class Content {
       [courseId, userId]
     );
 
-    let grade = taskRows.reduce((sum, row) => sum + Number(row.score_earned), 0);
-    let hasGraded = taskRows.length > 0;
+    const items = taskRows.map((row) => ({
+      title: row.title,
+      type: 'Tarea',
+      weight_percent: Number(row.weight_percent),
+      earned: Number(row.score_earned)
+    }));
 
     const [quizRows] = await pool.query(
-      `SELECT id, weight_percent FROM contents WHERE course_id = ? AND type = 'quiz' AND weight_percent IS NOT NULL`,
+      `SELECT id, title, weight_percent FROM contents WHERE course_id = ? AND type = 'quiz' AND weight_percent IS NOT NULL`,
       [courseId]
     );
 
@@ -330,11 +336,25 @@ class Content {
       if (maxPoints === 0) continue;
       const earnedPoints = answerRows.filter((a) => a.is_correct == 1).reduce((sum, a) => sum + a.points, 0);
 
-      grade += (earnedPoints / maxPoints) * Number(quiz.weight_percent);
-      hasGraded = true;
+      items.push({
+        title: quiz.title,
+        type: 'Cuestionario',
+        weight_percent: Number(quiz.weight_percent),
+        earned: Math.round((earnedPoints / maxPoints) * Number(quiz.weight_percent) * 100) / 100
+      });
     }
 
-    return hasGraded ? Math.round(grade * 100) / 100 : null;
+    const total = items.length > 0 ? Math.round(items.reduce((sum, item) => sum + item.earned, 0) * 100) / 100 : null;
+    return { items, total };
+  }
+
+  /**
+   * Nota final de un estudiante en un curso — ver getCourseGradeBreakdown
+   * para el detalle de cómo se calcula cada item.
+   */
+  static async calculateCourseGrade(courseId, userId) {
+    const { total } = await Content.getCourseGradeBreakdown(courseId, userId);
+    return total;
   }
 }
 

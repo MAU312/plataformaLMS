@@ -545,3 +545,81 @@ test('deleteCourse: si Course.delete no confirma (0 filas), no borra ningún arc
   assert.equal(res.statusCode, 400);
   assert.equal(unlinkCall.mock.calls.length, 0, 'si el DELETE no confirmó, los archivos no deben tocarse (evita perderlos sin haber borrado el curso)');
 });
+
+// =================================
+// exportCourseGrades
+// =================================
+
+test('exportCourseGrades: 404 si el curso no existe', async (t) => {
+  t.mock.method(Course, 'findById', async () => undefined);
+  const req = mockReq({ params: { id: 1 } });
+  const res = mockRes();
+  await courseController.exportCourseGrades(req, res);
+  assert.equal(res.statusCode, 404);
+});
+
+test('exportCourseGrades: arma un CSV con nombre/email/progreso/nota de cada estudiante, sin paginar', async (t) => {
+  t.mock.method(Course, 'findById', async () => ({ id: 1, title: 'Biotecnología Ambiental' }));
+  const getStudentsCall = t.mock.method(Course, 'getEnrolledStudents', async () => ({
+    rows: [
+      { id: 2, name: 'Ana', email: 'ana@test.com', progress: 100 },
+      { id: 3, name: 'Beto', email: 'beto@test.com', progress: 40 }
+    ],
+    total: 2
+  }));
+  t.mock.method(Content, 'calculateCourseGrade', async (courseId, userId) => (userId === 2 ? 90 : null));
+
+  const req = mockReq({ params: { id: 1 } });
+  const res = mockRes();
+  await courseController.exportCourseGrades(req, res);
+
+  assert.equal(res.headers['Content-Type'], 'text/csv; charset=utf-8');
+  assert.match(res.headers['Content-Disposition'], /attachment; filename="notas-biotecnologia-ambiental\.csv"/);
+  assert.match(res.textBody, /Nombre,Email,Progreso \(%\),Nota/);
+  assert.match(res.textBody, /Ana,ana@test\.com,100,90/);
+  assert.equal(res.textBody.includes('Beto,beto@test.com,40,'), true, 'la nota null se escribe vacía, no como "null"');
+  // No paginado: limit alto pasado a getEnrolledStudents, no el default de la vista paginada (20).
+  assert.equal(getStudentsCall.mock.calls[0].arguments[1].limit > 1000, true);
+});
+
+// =================================
+// exportStudentGrades
+// =================================
+
+test('exportStudentGrades: 404 si el curso no existe', async (t) => {
+  t.mock.method(Course, 'findById', async () => undefined);
+  const req = mockReq({ params: { id: 1, studentId: 2 } });
+  const res = mockRes();
+  await courseController.exportStudentGrades(req, res);
+  assert.equal(res.statusCode, 404);
+});
+
+test('exportStudentGrades: 404 si el estudiante no existe', async (t) => {
+  t.mock.method(Course, 'findById', async () => ({ id: 1, title: 'Curso' }));
+  t.mock.method(User, 'findById', async () => undefined);
+  const req = mockReq({ params: { id: 1, studentId: 999 } });
+  const res = mockRes();
+  await courseController.exportStudentGrades(req, res);
+  assert.equal(res.statusCode, 404);
+});
+
+test('exportStudentGrades: arma un CSV con el detalle de cada item calificado más una fila de nota final', async (t) => {
+  t.mock.method(Course, 'findById', async () => ({ id: 1, title: 'Curso' }));
+  t.mock.method(User, 'findById', async () => ({ id: 2, name: 'Ana Rojas' }));
+  t.mock.method(Content, 'getCourseGradeBreakdown', async () => ({
+    items: [
+      { title: 'Tarea 1', type: 'Tarea', weight_percent: 10, earned: 7 },
+      { title: 'Quiz 1', type: 'Cuestionario', weight_percent: 20, earned: 16 }
+    ],
+    total: 23
+  }));
+
+  const req = mockReq({ params: { id: 1, studentId: 2 } });
+  const res = mockRes();
+  await courseController.exportStudentGrades(req, res);
+
+  assert.match(res.headers['Content-Disposition'], /filename="notas-ana-rojas-curso\.csv"/);
+  assert.match(res.textBody, /Tarea 1,Tarea,10,7/);
+  assert.match(res.textBody, /Quiz 1,Cuestionario,20,16/);
+  assert.match(res.textBody, /Nota final,,,23/);
+});
