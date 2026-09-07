@@ -80,3 +80,66 @@ test('no hace nada si la ruta no trae archivo (req.file ausente)', async () => {
   assert.equal(called, true);
   assert.equal(res.statusCode, 200);
 });
+
+// =================================
+// req.files (multer .fields(), varios campos a la vez — ej. las dos
+// imágenes de la configuración del sitio en una sola petición)
+// =================================
+
+test('req.files: acepta cuando TODOS los archivos de todos los campos son válidos', async () => {
+  const png1x1 = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    'base64'
+  );
+  const pathA = tempFile(png1x1);
+  const pathB = tempFile(png1x1);
+  const req = mockReq({
+    files: {
+      login_bg_image: [{ path: pathA, originalname: 'a.png' }],
+      courses_bg_image: [{ path: pathB, originalname: 'b.png' }]
+    }
+  });
+  const res = mockRes();
+  let called = false;
+  await verifyFileSignature('image')(req, res, () => { called = true; });
+
+  assert.equal(called, true);
+  assert.equal(res.statusCode, 200);
+  assert.equal(fs.existsSync(pathA), true);
+  assert.equal(fs.existsSync(pathB), true);
+  fs.unlinkSync(pathA);
+  fs.unlinkSync(pathB);
+});
+
+test('req.files: si UN campo trae un archivo inválido, rechaza y borra TODOS los archivos de la petición (no solo el inválido)', async () => {
+  const png1x1 = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    'base64'
+  );
+  const validPath = tempFile(png1x1);
+  const fakePath = tempFile('no soy una imagen');
+  const req = mockReq({
+    files: {
+      login_bg_image: [{ path: validPath, originalname: 'real.png' }],
+      courses_bg_image: [{ path: fakePath, originalname: 'fake.png' }]
+    }
+  });
+  const res = mockRes();
+  let nextErr = 'not-called';
+  await verifyFileSignature('image')(req, res, (err) => { nextErr = err; });
+
+  assert.equal(nextErr, 'not-called');
+  assert.equal(res.statusCode, 400);
+  assert.equal(fs.existsSync(validPath), false, 'el archivo válido "hermano" tampoco debe quedar huérfano');
+  assert.equal(fs.existsSync(fakePath), false);
+});
+
+test('req.files: no hace nada si no hay archivos en ningún campo', async () => {
+  const req = mockReq({ files: {} });
+  const res = mockRes();
+  let called = false;
+  await verifyFileSignature('image')(req, res, () => { called = true; });
+
+  assert.equal(called, true);
+  assert.equal(res.statusCode, 200);
+});

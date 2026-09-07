@@ -123,7 +123,8 @@ function renderAdminLayout(content, activeSection) {
     const menuItems = [
         { id: 'dashboard', icon: 'fa-tachometer-alt', label: 'Dashboard', path: '/admin' },
         { id: 'courses', icon: 'fa-book', label: 'Cursos', path: '/admin/courses' },
-        { id: 'users', icon: 'fa-users', label: 'Usuarios', path: '/admin/users' }
+        { id: 'users', icon: 'fa-users', label: 'Usuarios', path: '/admin/users' },
+        { id: 'settings', icon: 'fa-paint-brush', label: 'Apariencia del sitio', path: '/admin/settings' }
     ];
 
     return `

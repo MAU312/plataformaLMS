@@ -19,6 +19,7 @@ import contentRoutes from './routes/content.routes.js';
 import userRoutes from './routes/user.routes.js';
 import submissionRoutes from './routes/submission.routes.js';
 import forumRoutes from './routes/forum.routes.js';
+import settingsRoutes from './routes/settings.routes.js';
 
 dotenv.config();
 
@@ -156,6 +157,7 @@ app.use('/api/contents', contentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/forum-posts', forumRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Una ruta /api/* que no matcheó ningún router de arriba (typo, endpoint
 // viejo, etc.) debe responder 404 JSON — sin esto caía en el catch-all de

@@ -80,6 +80,12 @@ const routes = {
         requireAuth: true,
         requireAdmin: true
     },
+    '/admin/settings': {
+        title: 'Apariencia del Sitio',
+        render: (params) => window.renderAdminSettings(params),
+        requireAuth: true,
+        requireAdmin: true
+    },
     '/profile': {
         title: 'Mi Perfil',
         render: (params) => window.renderProfile(params),

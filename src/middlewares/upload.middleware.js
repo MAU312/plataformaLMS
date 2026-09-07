@@ -11,8 +11,9 @@ const thumbnailsDir = path.join(uploadsDir, 'thumbnails');
 const submissionsDir = path.join(uploadsDir, 'submissions');
 const contentImagesDir = path.join(uploadsDir, 'content-images');
 const avatarsDir = path.join(uploadsDir, 'avatars');
+const siteDir = path.join(uploadsDir, 'site');
 
-[uploadsDir, videosDir, filesDir, thumbnailsDir, submissionsDir, contentImagesDir, avatarsDir].forEach(dir => {
+[uploadsDir, videosDir, filesDir, thumbnailsDir, submissionsDir, contentImagesDir, avatarsDir, siteDir].forEach(dir => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -209,6 +210,32 @@ const avatarStorage = multer.diskStorage({
 
 export const uploadAvatar = multer({
   storage: avatarStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB máximo
+  },
+  fileFilter: imageFilter
+});
+
+// =============================================
+// Configuración de almacenamiento para IMÁGENES DE SITIO
+// (fondo del login, fondo de la grilla de cursos — configuración global,
+// no de un curso puntual, ver settings.controller.js. Mismo filtro/límite
+// que el resto de las imágenes.)
+// =============================================
+
+const siteImageStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, siteDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+  }
+});
+
+export const uploadSiteImage = multer({
+  storage: siteImageStorage,
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB máximo
   },

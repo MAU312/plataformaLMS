@@ -20,10 +20,10 @@ window.renderHome = async function(params) {
         <div class="bg-gradient-to-br from-cenat-green to-cenat-green-light py-16 px-4 sm:px-6 lg:px-8">
             <div class="max-w-7xl mx-auto text-center">
                 <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-4">
-                    Cursos del LANBA - CeNAT
+                    ${escapeHtml(getSiteSetting('catalog_title', 'Cursos del LANBA - CeNAT'))}
                 </h1>
                 <p class="text-lg md:text-xl text-green-100 max-w-2xl mx-auto">
-                    Explora nuestros cursos educativos y fortalece tus conocimientos en biotecnología ambiental y ciencia abierta.
+                    ${escapeHtml(getSiteSetting('catalog_subtitle', 'Explora nuestros cursos educativos y fortalece tus conocimientos en biotecnología ambiental y ciencia abierta.'))}
                 </p>
             </div>
         </div>

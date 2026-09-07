@@ -8,8 +8,10 @@
 
 async function initApp() {
     try {
-        // 1. Verificar autenticación
-        await initAuth();
+        // 1. Verificar autenticación (y en paralelo, cargar la configuración
+        // editable del sitio — fondo del login/catálogo, texto del catálogo
+        // — son independientes entre sí, no hace falta esperarlas en serie).
+        await Promise.all([initAuth(), loadSiteSettings()]);
 
         // 2. Decidir la ruta final ANTES de inicializar el router (que
         // renderiza inmediatamente el hash actual y recién después empieza

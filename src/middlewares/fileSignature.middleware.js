@@ -36,36 +36,53 @@ const SIGNATURES = {
 };
 
 /**
- * Middleware factory: verifica que el contenido real del archivo (subido
- * por un multer.single() previo en la misma ruta) coincida con lo que su
- * extensión declara. Si no coincide, borra el archivo recién subido del
- * disco y responde 400 antes de que la petición llegue al controlador.
+ * Junta los archivos de una petición en una sola lista, sin importar si el
+ * multer previo en la ruta fue `.single()` (deja `req.file`) o `.fields()`
+ * (deja `req.files` como `{ campo: [archivo, ...] }`) — así este middleware
+ * sirve para los dos casos sin que el que arma la ruta tenga que saberlo.
+ */
+function collectUploadedFiles(req) {
+  if (req.file) return [req.file];
+  if (!req.files) return [];
+  return Object.values(req.files).flat();
+}
+
+/**
+ * Middleware factory: verifica que el contenido real de cada archivo
+ * subido (por un multer `.single()` o `.fields()` previo en la misma ruta)
+ * coincida con lo que su extensión declara. Si alguno no coincide, borra
+ * TODOS los archivos que multer ya escribió en esta misma petición (no
+ * solo el inválido — con `.fields()` puede haber más de uno, y dejar un
+ * archivo "hermano" válido en disco sin que nada en BD llegue a
+ * referenciarlo lo deja huérfano) y responde 400 antes de que la petición
+ * llegue al controlador.
  */
 export function verifyFileSignature(kind) {
   const signatures = SIGNATURES[kind];
 
   return async (req, res, next) => {
-    if (!req.file) return next();
-
-    const declaredExt = path.extname(req.file.originalname).slice(1).toLowerCase();
-    const expected = signatures[declaredExt];
-
-    if (expected === null) return next();
+    const files = collectUploadedFiles(req);
+    if (files.length === 0) return next();
 
     try {
-      const detected = await fileTypeFromFile(req.file.path);
+      for (const file of files) {
+        const declaredExt = path.extname(file.originalname).slice(1).toLowerCase();
+        const expected = signatures[declaredExt];
+        if (expected === null) continue;
 
-      if (!expected || !detected || !expected.includes(detected.ext)) {
-        await fs.unlink(req.file.path).catch(() => {});
-        return res.status(400).json({
-          success: false,
-          message: 'El contenido del archivo no coincide con su extensión. Verifica que no esté corrupto o haya sido renombrado.'
-        });
+        const detected = await fileTypeFromFile(file.path);
+        if (!expected || !detected || !expected.includes(detected.ext)) {
+          await Promise.all(files.map((f) => fs.unlink(f.path).catch(() => {})));
+          return res.status(400).json({
+            success: false,
+            message: 'El contenido del archivo no coincide con su extensión. Verifica que no esté corrupto o haya sido renombrado.'
+          });
+        }
       }
 
       next();
     } catch (error) {
-      await fs.unlink(req.file.path).catch(() => {});
+      await Promise.all(files.map((f) => fs.unlink(f.path).catch(() => {})));
       next(error);
     }
   };

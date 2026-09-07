@@ -344,6 +344,30 @@ LOCK TABLES `sessions` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `site_settings`
+--
+
+DROP TABLE IF EXISTS `site_settings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `site_settings` (
+  `key` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `value` text COLLATE utf8mb4_unicode_ci,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `site_settings`
+--
+
+LOCK TABLES `site_settings` WRITE;
+/*!40000 ALTER TABLE `site_settings` DISABLE KEYS */;
+/*!40000 ALTER TABLE `site_settings` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `task_submissions`
 --
 
@@ -405,7 +429,7 @@ CREATE TABLE `users` (
   UNIQUE KEY `username` (`username`),
   KEY `idx_email` (`email`),
   KEY `idx_role` (`role`)
-) ENGINE=InnoDB AUTO_INCREMENT=60 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=61 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -427,4 +451,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-07 14:00:53
+-- Dump completed on 2026-09-07 14:13:01

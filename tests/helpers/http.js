@@ -21,8 +21,10 @@ export function mockRes() {
 
 /**
  * Fake de `req` con lo mínimo que usan los controladores: body, params,
- * query, session y (para subidas) file.
+ * query, session y (para subidas) file/files — `file` es lo que deja un
+ * multer `.single()`, `files` lo que deja un `.fields()` (objeto
+ * `{ campo: [archivo, ...] }`).
  */
-export function mockReq({ body = {}, params = {}, query = {}, session = null, file = null } = {}) {
-  return { body, params, query, session, file };
+export function mockReq({ body = {}, params = {}, query = {}, session = null, file = null, files = null } = {}) {
+  return { body, params, query, session, file, files };
 }

@@ -210,9 +210,19 @@ const submissionsAPI = {
     review: async (id, data) => apiRequest(`/submissions/${id}/review`, { method: 'PUT', body: JSON.stringify(data) })
 };
 
+// =================================
+// Settings API (apariencia del sitio: fondos e texto del catálogo)
+// =================================
+
+const settingsAPI = {
+    getAll: async () => apiRequest('/settings'),
+    update: async (formData) => apiRequestFormData('/settings', formData, { method: 'PUT' })
+};
+
 window.authAPI = authAPI;
 window.coursesAPI = coursesAPI;
 window.contentsAPI = contentsAPI;
 window.usersAPI = usersAPI;
 window.forumPostsAPI = forumPostsAPI;
 window.submissionsAPI = submissionsAPI;
+window.settingsAPI = settingsAPI;
