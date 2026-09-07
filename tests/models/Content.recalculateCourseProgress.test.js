@@ -43,7 +43,7 @@ test('recalculateCourseProgress: progreso es 0 si el curso no tiene contenidos (
   assert.equal(result.progress, 0);
 });
 
-test('recalculateCourseProgress: excluye los contenidos type=forum, type=folder y type=image del total y de los completados', async (t) => {
+test('recalculateCourseProgress: excluye los contenidos type=folder y type=image (pero NO type=forum) del total y de los completados', async (t) => {
   const queryCall = t.mock.method(pool, 'query', async (sql) => {
     if (sql.includes('COUNT(*) as total')) return [[{ total: 3 }]];
     if (sql.includes('COUNT(*) as completed')) return [[{ completed: 3 }]];
@@ -55,6 +55,8 @@ test('recalculateCourseProgress: excluye los contenidos type=forum, type=folder 
   const totalCall = queryCall.mock.calls.find(c => c.arguments[0].includes('COUNT(*) as total'));
   const completedCall = queryCall.mock.calls.find(c => c.arguments[0].includes('COUNT(*) as completed'));
 
-  assert.match(totalCall.arguments[0], /type NOT IN \('forum', 'folder', 'image'\)/);
-  assert.match(completedCall.arguments[0], /co\.type NOT IN \('forum', 'folder', 'image'\)/);
+  assert.match(totalCall.arguments[0], /type NOT IN \('folder', 'image'\)/);
+  assert.match(completedCall.arguments[0], /co\.type NOT IN \('folder', 'image'\)/);
+  assert.doesNotMatch(totalCall.arguments[0], /forum/);
+  assert.doesNotMatch(completedCall.arguments[0], /forum/);
 });

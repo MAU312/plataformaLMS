@@ -82,13 +82,14 @@ window.renderCourseDetail = async function(params) {
         const allSurveysCount = contents.filter(c => c.type === 'survey').length;
         const allForumsCount = contents.filter(c => c.type === 'forum').length;
 
-        // El foro, una carpeta y una imagen no cuentan para el progreso del
-        // curso (discusión abierta / agrupador / decoración, ninguno tiene
-        // estado "completado" real) — igual que en el servidor
-        // (Content.recalculateCourseProgress), se excluyen del total para
-        // que el % mostrado y la visibilidad del botón de certificado
-        // coincidan con lo que realmente evalúa el backend.
-        const progressTrackableContents = contents.filter(c => c.type !== 'forum' && c.type !== 'folder' && c.type !== 'image');
+        // Una carpeta y una imagen no cuentan para el progreso del curso
+        // (agrupador / decoración, ninguna tiene estado "completado" real)
+        // — igual que en el servidor (Content.recalculateCourseProgress),
+        // se excluyen del total para que el % mostrado y la visibilidad
+        // del botón de certificado coincidan con lo que realmente evalúa
+        // el backend. El foro SÍ cuenta: participar con un post lo marca
+        // completado (ver forum.controller.js createPost).
+        const progressTrackableContents = contents.filter(c => c.type !== 'folder' && c.type !== 'image');
         const completedCount = progressTrackableContents.filter(c => c.completed).length;
         const progressPercent = progressTrackableContents.length > 0
             ? Math.round((completedCount / progressTrackableContents.length) * 100)
@@ -505,6 +506,12 @@ function renderForumCard(forum, hasAccess) {
         `;
     }
 
+    // Participar (crear un post propio) marca el foro como completado en
+    // el servidor (ver forum.controller.js createPost) — igual que
+    // entregar una tarea o responder un cuestionario, cuenta para el
+    // progreso del curso.
+    const hasParticipated = forum.completed || false;
+
     return `
         <div class="bg-white rounded-xl border border-gray-100 p-4">
             <div class="flex items-start gap-3">
@@ -512,6 +519,9 @@ function renderForumCard(forum, hasAccess) {
                 <div class="flex-1 min-w-0">
                     <p class="font-medium text-gray-900">${escapeHtml(forum.title)}</p>
                     <p class="text-sm text-gray-600 mt-1 line-clamp-2 whitespace-pre-line">${escapeHtml(forum.description || '')}</p>
+                    ${hasParticipated ? `
+                        <p class="text-sm text-green-700 font-medium mt-2"><i class="fas fa-check-circle mr-1"></i> Ya participaste en este foro</p>
+                    ` : ''}
                     <a href="#/forum/${forum.id}" class="text-sm text-cenat-green hover:text-cenat-green-hover mt-2 inline-block">
                         <i class="fas fa-comment-dots mr-1"></i> Participar en el foro
                     </a>
@@ -569,11 +579,11 @@ function renderCourseFolderCard(folder, allContents, hasAccess, canTrackProgress
     }
 
     const items = allContents.filter(c => c.folder_id === folder.id);
-    // El foro y una imagen no tienen estado "completado" (ver
-    // progressTrackableContents más arriba) — se dejan fuera del conteo de
-    // la carpeta por la misma razón. Así el badge de "completada" es
-    // consistente con el % de progreso general del curso.
-    const trackableItems = items.filter(c => c.type !== 'forum' && c.type !== 'image');
+    // Una imagen no tiene estado "completado" (ver progressTrackableContents
+    // más arriba) — se deja fuera del conteo de la carpeta por la misma
+    // razón. Así el badge de "completada" es consistente con el % de
+    // progreso general del curso.
+    const trackableItems = items.filter(c => c.type !== 'image');
     const completedItems = trackableItems.filter(c => c.completed).length;
     const allCompleted = canTrackProgress && trackableItems.length > 0 && completedItems === trackableItems.length;
 
@@ -876,7 +886,7 @@ async function refreshFolderBadge(folderId, courseId) {
         const contentsResponse = await contentsAPI.getByCourse(courseId);
         const contents = contentsResponse.data || [];
         const items = contents.filter(c => String(c.folder_id) === String(folderId));
-        const trackableItems = items.filter(c => c.type !== 'forum' && c.type !== 'image');
+        const trackableItems = items.filter(c => c.type !== 'image');
         const completedItems = trackableItems.filter(c => c.completed).length;
         const allCompleted = trackableItems.length > 0 && completedItems === trackableItems.length;
 

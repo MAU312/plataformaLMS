@@ -39,7 +39,7 @@ function uploadedFileUrl(contentType, filename) {
 function uncompletableReason(type) {
   if (type === 'task') return 'El progreso de una tarea se actualiza automáticamente al entregarla';
   if (type === 'quiz' || type === 'survey') return 'El progreso se actualiza automáticamente al responder';
-  if (type === 'forum') return 'El foro no cuenta para el progreso del curso';
+  if (type === 'forum') return 'El progreso de un foro se actualiza automáticamente al participar';
   if (type === 'folder') return 'Una carpeta no cuenta para el progreso del curso';
   if (type === 'image') return 'Una imagen no cuenta para el progreso del curso';
   return null;

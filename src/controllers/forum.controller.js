@@ -112,6 +112,16 @@ export const createPost = async (req, res) => {
       body: String(body).trim()
     });
 
+    // Participar en el foro cuenta para el progreso del curso (igual que
+    // entregar una tarea o responder un cuestionario) — pero solo para un
+    // estudiante inscrito, no para un profesor/admin respondiendo dudas en
+    // un curso que no cursa.
+    const isEnrolled = await Course.isUserEnrolled(content.course_id, req.session.user.id);
+    if (isEnrolled) {
+      await Content.markCompleted(content.id, req.session.user.id);
+      await Content.recalculateCourseProgress(content.course_id, req.session.user.id);
+    }
+
     res.status(201).json({ success: true, message: 'Respuesta publicada', data: { id: postId } });
   } catch (error) {
     console.error('Error al publicar en el foro:', error);

@@ -86,6 +86,7 @@ test('createPost: 403 si no tiene acceso al curso', async (t) => {
 test('createPost: sin parent_id, crea una respuesta de nivel 1 (parent_id null)', async (t) => {
   t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'forum', course_id: 5 }));
   t.mock.method(Course, 'canAccessMedia', async () => true);
+  t.mock.method(Course, 'isUserEnrolled', async () => false);
   const createCall = t.mock.method(ForumPost, 'create', async () => 20);
 
   const req = mockReq({ params: { id: 1 }, body: { body: 'Hola' }, session: { user: { id: 2, role: 'student' } } });
@@ -99,6 +100,7 @@ test('createPost: sin parent_id, crea una respuesta de nivel 1 (parent_id null)'
 test('createPost: respondiendo a una respuesta de NIVEL 1, queda con ese id como parent_id', async (t) => {
   t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'forum', course_id: 5 }));
   t.mock.method(Course, 'canAccessMedia', async () => true);
+  t.mock.method(Course, 'isUserEnrolled', async () => false);
   t.mock.method(ForumPost, 'findById', async () => ({ id: 10, content_id: 1, parent_id: null }));
   const createCall = t.mock.method(ForumPost, 'create', async () => 21);
 
@@ -113,6 +115,7 @@ test('createPost: respondiendo a una respuesta de NIVEL 1, queda con ese id como
 test('createPost: respondiendo a una respuesta de NIVEL 2, se aplana al nivel 1 del que colgaba (no crea nivel 3)', async (t) => {
   t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'forum', course_id: 5 }));
   t.mock.method(Course, 'canAccessMedia', async () => true);
+  t.mock.method(Course, 'isUserEnrolled', async () => false);
   // El post 11 es de nivel 2: cuelga del post 10 (nivel 1)
   t.mock.method(ForumPost, 'findById', async () => ({ id: 11, content_id: 1, parent_id: 10 }));
   const createCall = t.mock.method(ForumPost, 'create', async () => 22);
@@ -123,6 +126,40 @@ test('createPost: respondiendo a una respuesta de NIVEL 2, se aplana al nivel 1 
 
   assert.equal(res.statusCode, 201);
   assert.equal(createCall.mock.calls[0].arguments[0].parent_id, 10, 'debe engancharse al nivel 1 (10), no quedar como hijo del nivel 2 (11)');
+});
+
+test('createPost: si el autor está inscrito en el curso, marca el foro como completado y recalcula el progreso', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'forum', course_id: 5 }));
+  t.mock.method(Course, 'canAccessMedia', async () => true);
+  t.mock.method(Course, 'isUserEnrolled', async () => true);
+  t.mock.method(ForumPost, 'create', async () => 20);
+  const markCompletedCall = t.mock.method(Content, 'markCompleted', async () => true);
+  const recalcCall = t.mock.method(Content, 'recalculateCourseProgress', async () => ({ progress: 50, total: 4, completed: 2 }));
+
+  const req = mockReq({ params: { id: 1 }, body: { body: 'Hola' }, session: { user: { id: 2, role: 'student' } } });
+  const res = mockRes();
+  await forumController.createPost(req, res);
+
+  assert.equal(res.statusCode, 201);
+  assert.deepEqual(markCompletedCall.mock.calls[0].arguments, [1, 2]);
+  assert.deepEqual(recalcCall.mock.calls[0].arguments, [5, 2]);
+});
+
+test('createPost: si el autor NO está inscrito (ej. el profesor respondiendo dudas), no toca el progreso', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'forum', course_id: 5 }));
+  t.mock.method(Course, 'canAccessMedia', async () => true);
+  t.mock.method(Course, 'isUserEnrolled', async () => false);
+  t.mock.method(ForumPost, 'create', async () => 20);
+  const markCompletedCall = t.mock.method(Content, 'markCompleted', async () => true);
+  const recalcCall = t.mock.method(Content, 'recalculateCourseProgress', async () => ({ progress: 0, total: 4, completed: 0 }));
+
+  const req = mockReq({ params: { id: 1 }, body: { body: 'Respondiendo como profesor' }, session: { user: { id: 3, role: 'teacher' } } });
+  const res = mockRes();
+  await forumController.createPost(req, res);
+
+  assert.equal(res.statusCode, 201);
+  assert.equal(markCompletedCall.mock.calls.length, 0);
+  assert.equal(recalcCall.mock.calls.length, 0);
 });
 
 test('createPost: 404 si el parent_id apunta a un post de OTRO tema de foro', async (t) => {
