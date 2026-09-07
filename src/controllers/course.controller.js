@@ -463,6 +463,12 @@ export const getCourseStudents = async (req, res) => {
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
     const { rows: students, total } = await Course.getEnrolledStudents(id, { page, limit });
 
+    // Nota final por estudiante (ver Content.calculateCourseGrade) — solo
+    // se calcula sobre la página que se está mostrando, no sobre TODO el
+    // curso, para no pagar ese costo en cursos con muchos inscritos.
+    const grades = await Promise.all(students.map((s) => Content.calculateCourseGrade(id, s.id)));
+    students.forEach((s, i) => { s.grade = grades[i]; });
+
     res.json({
       success: true,
       data: { course, students },

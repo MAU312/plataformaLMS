@@ -284,6 +284,58 @@ class Content {
 
     return { progress, total, completed };
   }
+
+  /**
+   * Nota final de un estudiante en un curso: suma el score_earned de cada
+   * tarea calificada CON weight_percent, más (puntos ganados / puntos
+   * posibles) × weight_percent de cada cuestionario CON weight_percent que
+   * el estudiante ya respondió por completo — "por completo" significa que
+   * ninguna pregunta de respuesta corta sigue con is_correct NULL (pendiente
+   * de que el profesor la revise a mano). Una tarea/cuestionario SIN
+   * weight_percent asignado no aporta nada (el profesor decidió que no
+   * cuenta para la nota). Devuelve null si todavía no hay nada calificado
+   * que contar, para que la UI pueda mostrar "—" en vez de "0".
+   */
+  static async calculateCourseGrade(courseId, userId) {
+    const [taskRows] = await pool.query(
+      `SELECT ts.score_earned
+       FROM task_submissions ts
+       INNER JOIN contents c ON c.id = ts.content_id
+       WHERE c.course_id = ? AND ts.user_id = ? AND c.type = 'task'
+         AND c.weight_percent IS NOT NULL AND ts.score_earned IS NOT NULL`,
+      [courseId, userId]
+    );
+
+    let grade = taskRows.reduce((sum, row) => sum + Number(row.score_earned), 0);
+    let hasGraded = taskRows.length > 0;
+
+    const [quizRows] = await pool.query(
+      `SELECT id, weight_percent FROM contents WHERE course_id = ? AND type = 'quiz' AND weight_percent IS NOT NULL`,
+      [courseId]
+    );
+
+    for (const quiz of quizRows) {
+      const [answerRows] = await pool.query(
+        `SELECT ca.is_correct, cq.points
+         FROM content_answers ca
+         INNER JOIN content_questions cq ON cq.id = ca.question_id
+         WHERE ca.content_id = ? AND ca.user_id = ?`,
+        [quiz.id, userId]
+      );
+
+      if (answerRows.length === 0) continue;
+      if (answerRows.some((a) => a.is_correct === null)) continue;
+
+      const maxPoints = answerRows.reduce((sum, a) => sum + a.points, 0);
+      if (maxPoints === 0) continue;
+      const earnedPoints = answerRows.filter((a) => a.is_correct == 1).reduce((sum, a) => sum + a.points, 0);
+
+      grade += (earnedPoints / maxPoints) * Number(quiz.weight_percent);
+      hasGraded = true;
+    }
+
+    return hasGraded ? Math.round(grade * 100) / 100 : null;
+  }
 }
 
 export default Content;

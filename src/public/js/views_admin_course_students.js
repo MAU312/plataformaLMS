@@ -99,6 +99,7 @@ function renderStudentsTableHTML(students) {
                         <th class="py-3 px-4">Nombre</th>
                         <th class="py-3 px-4">Email</th>
                         <th class="py-3 px-4">Progreso</th>
+                        <th class="py-3 px-4">Nota</th>
                         <th class="py-3 px-4">Inscrito</th>
                         <th class="py-3 px-4">Último ingreso</th>
                         <th class="py-3 px-4">Completado</th>
@@ -117,6 +118,7 @@ function renderStudentsTableHTML(students) {
                                     <span class="text-xs text-gray-500 dark:text-slate-400 w-9 text-right">${student.progress}%</span>
                                 </div>
                             </td>
+                            <td class="py-3 px-4 text-gray-700 dark:text-slate-300 font-medium">${student.grade !== null && student.grade !== undefined ? student.grade : '—'}</td>
                             <td class="py-3 px-4 text-gray-500 dark:text-slate-400">${formatDate(student.enrolled_at)}</td>
                             <td class="py-3 px-4 text-gray-500 dark:text-slate-400">${student.last_login ? formatDate(student.last_login) : 'Nunca'}</td>
                             <td class="py-3 px-4">

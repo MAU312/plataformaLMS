@@ -410,6 +410,7 @@ test('getCourseStudents: devuelve el curso, la lista de estudiantes con su progr
     ],
     total: 2
   }));
+  t.mock.method(Content, 'calculateCourseGrade', async () => null);
 
   const req = mockReq({ params: { id: 1 }, query: {} });
   const res = mockRes();
@@ -425,12 +426,33 @@ test('getCourseStudents: devuelve el curso, la lista de estudiantes con su progr
 test('getCourseStudents: limita el "limit" recibido por query string a un máximo de 50', async (t) => {
   t.mock.method(Course, 'findById', async () => ({ id: 1, title: 'Curso' }));
   const getStudentsCall = t.mock.method(Course, 'getEnrolledStudents', async () => ({ rows: [], total: 0 }));
+  t.mock.method(Content, 'calculateCourseGrade', async () => null);
 
   const req = mockReq({ params: { id: 1 }, query: { page: '2', limit: '9999' } });
   const res = mockRes();
   await courseController.getCourseStudents(req, res);
 
   assert.deepEqual(getStudentsCall.mock.calls[0].arguments, [1, { page: 2, limit: 50 }]);
+});
+
+test('getCourseStudents: adjunta la nota calculada de cada estudiante (Content.calculateCourseGrade)', async (t) => {
+  t.mock.method(Course, 'findById', async () => ({ id: 1, title: 'Curso' }));
+  t.mock.method(Course, 'getEnrolledStudents', async () => ({
+    rows: [
+      { id: 2, name: 'Ana', email: 'ana@test.com', progress: 100 },
+      { id: 3, name: 'Beto', email: 'beto@test.com', progress: 40 }
+    ],
+    total: 2
+  }));
+  const gradeCall = t.mock.method(Content, 'calculateCourseGrade', async (courseId, userId) => (userId === 2 ? 85.5 : null));
+
+  const req = mockReq({ params: { id: 1 }, query: {} });
+  const res = mockRes();
+  await courseController.getCourseStudents(req, res);
+
+  assert.equal(res.body.data.students[0].grade, 85.5);
+  assert.equal(res.body.data.students[1].grade, null);
+  assert.equal(gradeCall.mock.calls.length, 2);
 });
 
 // =================================
