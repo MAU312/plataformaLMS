@@ -46,6 +46,9 @@ function validateQuestions(question_type, questions, isQuiz) {
     if (!q.text || !String(q.text).trim()) {
       return { ok: false, message: 'Cada pregunta necesita un texto' };
     }
+    if (q.points !== undefined && (!Number.isInteger(q.points) || q.points < 1)) {
+      return { ok: false, message: 'El puntaje de cada pregunta debe ser un entero de al menos 1' };
+    }
     if (needsOptions) {
       const options = Array.isArray(q.options) ? q.options : [];
       if (options.length < 2) {
@@ -76,7 +79,7 @@ async function insertQuestions(contentId, question_type, questions, isQuiz, conn
 
   for (let i = 0; i < questions.length; i++) {
     const q = questions[i];
-    const questionId = await ContentQuestion.create(contentId, String(q.text).trim(), i, connection);
+    const questionId = await ContentQuestion.create(contentId, String(q.text).trim(), i, q.points || 1, connection);
     if (needsOptions) {
       const options = q.options.map((o, idx) => ({
         text: String(o.text).trim(),
@@ -395,10 +398,22 @@ export const submitAnswers = async (req, res) => {
 
     const data = { progress, total, completed };
     if (isQuiz) {
-      data.score = rows.filter((r) => r.is_correct === true).length;
+      // El puntaje pondera por los puntos de cada pregunta (ver
+      // ContentQuestion.points), no por cantidad de preguntas correctas —
+      // una pregunta más difícil marcada con más puntos pesa más en el
+      // resultado final.
+      const pointsByQuestion = new Map(questions.map((q) => [q.id, q.points || 1]));
+      data.score = rows
+        .filter((r) => r.is_correct === true)
+        .reduce((sum, r) => sum + (pointsByQuestion.get(r.question_id) || 1), 0);
+      data.max_score = questions.reduce((sum, q) => sum + (q.points || 1), 0);
       data.total_questions = rows.length;
       data.pending_review = rows.filter((r) => r.is_correct === null).length;
-      data.results = rows.map((r) => ({ question_id: r.question_id, is_correct: r.is_correct }));
+      data.results = rows.map((r) => ({
+        question_id: r.question_id,
+        is_correct: r.is_correct,
+        points: pointsByQuestion.get(r.question_id) || 1
+      }));
     }
 
     res.status(201).json({
@@ -445,6 +460,7 @@ export const getResults = async (req, res) => {
         return {
           question_id: q.id,
           question_text: q.question_text,
+          points: q.points,
           answers: questionAnswers.map((a) => ({
             answer_id: a.id,
             student_name: a.student_name,
@@ -461,6 +477,7 @@ export const getResults = async (req, res) => {
         return {
           question_id: q.id,
           question_text: q.question_text,
+          points: q.points,
           correct_count: correctCount,
           incorrect_count: questionAnswers.length - correctCount
         };

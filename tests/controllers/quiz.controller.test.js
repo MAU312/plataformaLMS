@@ -53,7 +53,7 @@ test('createQuizContent: crea el content y las preguntas/opciones dentro de una 
   assert.equal(calls.rollback, 0);
   assert.equal(calls.release, 1);
   assert.equal(createContentCall.mock.calls[0].arguments[1], connection, 'Content.create debe recibir la connection de la transacción, no usar el pool por defecto');
-  assert.equal(createQuestionCall.mock.calls[0].arguments[3], connection);
+  assert.equal(createQuestionCall.mock.calls[0].arguments[4], connection);
   assert.equal(createOptionsCall.mock.calls[0].arguments[2], connection);
 });
 
@@ -260,4 +260,94 @@ test('updateQuestions: 400 si falta el título', async (t) => {
   const res = mockRes();
   await quizController.updateQuestions(req, res);
   assert.equal(res.statusCode, 400);
+});
+
+test('createQuizContent: 400 si el puntaje de una pregunta no es un entero >= 1', async (t) => {
+  const req = mockReq({
+    body: {
+      course_id: 1,
+      title: 'Quiz',
+      question_type: 'multiple_choice',
+      questions: [{ text: '¿?', points: 0, options: [{ text: 'A', is_correct: true }, { text: 'B', is_correct: false }] }]
+    }
+  });
+  const res = mockRes();
+  await quizController.createQuizContent(req, res);
+  assert.equal(res.statusCode, 400);
+  assert.match(res.body.message, /puntaje/);
+});
+
+// =================================
+// submitAnswers
+// =================================
+
+test('submitAnswers: el puntaje pondera por los puntos de cada pregunta, no por cantidad de correctas', async (t) => {
+  t.mock.method(ContentAnswer, 'hasAnswered', async () => false);
+  t.mock.method(ContentQuestion, 'findByContent', async () => ([
+    { id: 1, points: 5, options: [{ id: 10, is_correct: true }, { id: 11, is_correct: false }] },
+    { id: 2, points: 1, options: [{ id: 20, is_correct: false }, { id: 21, is_correct: true }] }
+  ]));
+  t.mock.method(ContentAnswer, 'submitAnswers', async () => true);
+  t.mock.method(Content, 'markCompleted', async () => true);
+  t.mock.method(Content, 'recalculateCourseProgress', async () => ({ progress: 50, total: 4, completed: 2 }));
+
+  const req = mockReq({
+    body: { answers: [{ question_id: 1, option_id: 10 }, { question_id: 2, option_id: 20 }] },
+    session: { user: { id: 7 } }
+  });
+  req.quizContent = { id: 100, course_id: 1, type: 'quiz', question_type: 'multiple_choice' };
+  const res = mockRes();
+
+  await quizController.submitAnswers(req, res);
+
+  assert.equal(res.statusCode, 201);
+  // Solo la pregunta 1 (5 puntos) se contestó bien; la 2 (1 punto) mal —
+  // el puntaje NO es "1 de 2 correctas", es 5 de un máximo de 6.
+  assert.equal(res.body.data.score, 5);
+  assert.equal(res.body.data.max_score, 6);
+  assert.equal(res.body.data.total_questions, 2);
+});
+
+test('submitAnswers: todas correctas suma el total de puntos posibles', async (t) => {
+  t.mock.method(ContentAnswer, 'hasAnswered', async () => false);
+  t.mock.method(ContentQuestion, 'findByContent', async () => ([
+    { id: 1, points: 3, options: [{ id: 10, is_correct: true }, { id: 11, is_correct: false }] },
+    { id: 2, points: 2, options: [{ id: 20, is_correct: false }, { id: 21, is_correct: true }] }
+  ]));
+  t.mock.method(ContentAnswer, 'submitAnswers', async () => true);
+  t.mock.method(Content, 'markCompleted', async () => true);
+  t.mock.method(Content, 'recalculateCourseProgress', async () => ({ progress: 100, total: 4, completed: 4 }));
+
+  const req = mockReq({
+    body: { answers: [{ question_id: 1, option_id: 10 }, { question_id: 2, option_id: 21 }] },
+    session: { user: { id: 7 } }
+  });
+  req.quizContent = { id: 100, course_id: 1, type: 'quiz', question_type: 'multiple_choice' };
+  const res = mockRes();
+
+  await quizController.submitAnswers(req, res);
+
+  assert.equal(res.body.data.score, 5);
+  assert.equal(res.body.data.max_score, 5);
+});
+
+// =================================
+// getResults
+// =================================
+
+test('getResults: incluye los puntos de cada pregunta en el resultado (quiz de opción múltiple)', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 40, type: 'quiz', question_type: 'multiple_choice' }));
+  t.mock.method(ContentQuestion, 'findByContent', async () => ([
+    { id: 1, question_text: '¿?', points: 4, options: [{ id: 10, option_text: 'A', is_correct: true }] }
+  ]));
+  t.mock.method(ContentAnswer, 'findAllByContent', async () => ([
+    { question_id: 1, user_id: 7, option_id: 10, is_correct: 1 }
+  ]));
+
+  const req = mockReq({ params: { id: 40 } });
+  const res = mockRes();
+  await quizController.getResults(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.data.questions[0].points, 4);
 });

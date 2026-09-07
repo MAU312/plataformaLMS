@@ -3,15 +3,24 @@ import assert from 'node:assert/strict';
 import pool from '../../src/config/db.js';
 import ContentQuestion from '../../src/models/ContentQuestion.js';
 
-test('create: inserta la pregunta y devuelve el id, usando pool por defecto', async (t) => {
+test('create: inserta la pregunta (con su puntaje) y devuelve el id, usando pool por defecto', async (t) => {
   const queryCall = t.mock.method(pool, 'query', async () => ([{ insertId: 5 }]));
 
-  const result = await ContentQuestion.create(1, '¿Cuánto es 2+2?', 0);
+  const result = await ContentQuestion.create(1, '¿Cuánto es 2+2?', 0, 2);
 
   assert.equal(result, 5);
   const [sql, params] = queryCall.mock.calls[0].arguments;
   assert.match(sql, /INSERT INTO content_questions/);
-  assert.deepEqual(params, [1, '¿Cuánto es 2+2?', 0]);
+  assert.deepEqual(params, [1, '¿Cuánto es 2+2?', 0, 2]);
+});
+
+test('create: points por defecto es 1 si no se indica', async (t) => {
+  const queryCall = t.mock.method(pool, 'query', async () => ([{ insertId: 5 }]));
+
+  await ContentQuestion.create(1, '¿Cuánto es 2+2?', 0);
+
+  const [, params] = queryCall.mock.calls[0].arguments;
+  assert.equal(params[3], 1);
 });
 
 test('create: acepta un executor alternativo (ej. una connection de transacción) en vez de pool', async (t) => {
@@ -19,7 +28,7 @@ test('create: acepta un executor alternativo (ej. una connection de transacción
   const calls = [];
   const fakeConnection = { query: async (sql, params) => { calls.push([sql, params]); return [{ insertId: 9 }]; } };
 
-  const result = await ContentQuestion.create(1, 'Pregunta', 0, fakeConnection);
+  const result = await ContentQuestion.create(1, 'Pregunta', 0, 3, fakeConnection);
 
   assert.equal(result, 9);
   assert.equal(calls.length, 1);

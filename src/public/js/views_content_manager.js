@@ -1087,7 +1087,7 @@ function renderQuestionForm(container, {
 
     let questions = (initialQuestions && initialQuestions.length > 0)
         ? initialQuestions
-        : [{ text: '', options: blankOptions() }];
+        : [{ text: '', options: blankOptions(), points: 1 }];
 
     // Lee el estado ACTUAL desde el DOM (no desde `questions`) antes de
     // cualquier re-render estructural (agregar/quitar pregunta u opción,
@@ -1095,8 +1095,10 @@ function renderQuestionForm(container, {
     function readCurrentQuestions() {
         return Array.from(listEl.querySelectorAll('.question-row')).map((row) => {
             const text = row.querySelector('.question-text').value;
+            const pointsInput = row.querySelector('.question-points');
+            const points = pointsInput ? Math.max(1, parseInt(pointsInput.value, 10) || 1) : 1;
             const optionRows = row.querySelectorAll('.option-row');
-            if (optionRows.length === 0) return { text, options: null };
+            if (optionRows.length === 0) return { text, options: null, points };
             const options = Array.from(optionRows).map((optRow) => {
                 const textInput = optRow.querySelector('.option-text');
                 const radio = optRow.querySelector('.option-correct-radio');
@@ -1105,7 +1107,7 @@ function renderQuestionForm(container, {
                     is_correct: radio ? radio.checked : false
                 };
             });
-            return { text, options };
+            return { text, options, points };
         });
     }
 
@@ -1134,6 +1136,9 @@ function renderQuestionForm(container, {
                 <div class="flex items-start gap-2">
                     <span class="text-sm font-semibold text-gray-500 mt-2">${qIndex + 1}.</span>
                     <input type="text" class="question-text flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Escribe la pregunta..." value="${escapeAttr(q.text || '')}">
+                    ${isQuiz ? `
+                        <input type="number" class="question-points w-16 px-2 py-2 border border-gray-300 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-cenat-green" min="1" step="1" title="Puntos que vale esta pregunta" value="${q.points || 1}">
+                    ` : ''}
                     <button type="button" class="remove-question-btn text-red-500 hover:text-red-700 px-2 mt-1" title="Quitar pregunta">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -1198,15 +1203,15 @@ function renderQuestionForm(container, {
     formEl.querySelector('.cancel-quiz-btn').addEventListener('click', onCancel);
 
     typeSelect.addEventListener('change', () => {
-        const currentTexts = readCurrentQuestions().map((q) => q.text);
+        const current = readCurrentQuestions();
         questionType = typeSelect.value;
-        questions = currentTexts.map((text) => ({ text, options: blankOptions() }));
+        questions = current.map(({ text, points }) => ({ text, options: blankOptions(), points }));
         rerender();
     });
 
     formEl.querySelector('.add-question-btn').addEventListener('click', () => {
         questions = readCurrentQuestions();
-        questions.push({ text: '', options: blankOptions() });
+        questions.push({ text: '', options: blankOptions(), points: 1 });
         rerender();
     });
 
@@ -1282,6 +1287,7 @@ function renderQuestionForm(container, {
             question_type: questionType,
             questions: currentQuestions.map((q) => ({
                 text: q.text.trim(),
+                points: isQuiz ? (q.points || 1) : 1,
                 options: questionType === 'short_answer'
                     ? undefined
                     : q.options.map((o) => ({ text: o.text.trim(), is_correct: !!o.is_correct }))
@@ -1399,6 +1405,7 @@ async function editQuestionContentHandler(content, display, editContainer) {
         initialQuestionType: data.question_type,
         initialQuestions: data.questions.map((q) => ({
             text: q.question_text,
+            points: q.points || 1,
             options: (q.options || []).length > 0
                 ? q.options.map((o) => ({ text: o.option_text, is_correct: !!o.is_correct }))
                 : null

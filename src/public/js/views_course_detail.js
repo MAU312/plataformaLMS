@@ -722,14 +722,17 @@ function renderQuizCard(content, quizStatus, hasAccess) {
     if (alreadyAnswered) {
         if (isQuiz) {
             const myAnswers = quizStatus.my_answers || [];
-            const total = myAnswers.length;
-            const correct = myAnswers.filter(a => a.is_correct == 1).length;
+            const pointsByQuestion = new Map((quizStatus.questions || []).map(q => [q.id, q.points || 1]));
+            const maxScore = (quizStatus.questions || []).reduce((sum, q) => sum + (q.points || 1), 0);
+            const score = myAnswers
+                .filter(a => a.is_correct == 1)
+                .reduce((sum, a) => sum + (pointsByQuestion.get(a.question_id) || 1), 0);
             const pending = myAnswers.filter(a => a.is_correct === null).length;
             statusHTML = `
                 <div class="bg-green-50 rounded-lg p-3">
                     <p class="text-sm text-green-700 font-medium"><i class="fas fa-check-circle mr-1"></i> Ya respondiste este cuestionario</p>
                     <p class="text-xs text-gray-500 mt-1">
-                        ${correct}/${total} correctas${pending > 0 ? ` — ${pending} pendiente${pending === 1 ? '' : 's'} de revisión` : ''}
+                        ${score}/${maxScore} puntos${pending > 0 ? ` — ${pending} pendiente${pending === 1 ? '' : 's'} de revisión` : ''}
                     </p>
                 </div>
             `;

@@ -10,10 +10,10 @@ class ContentQuestion {
    * `executor` (pool por defecto) permite pasar una connection ya abierta
    * dentro de una transacción — ver Content.create para el mismo criterio.
    */
-  static async create(contentId, questionText, orderIndex = 0, executor = pool) {
+  static async create(contentId, questionText, orderIndex = 0, points = 1, executor = pool) {
     const [result] = await executor.query(
-      'INSERT INTO content_questions (content_id, question_text, order_index) VALUES (?, ?, ?)',
-      [contentId, questionText, orderIndex]
+      'INSERT INTO content_questions (content_id, question_text, order_index, points) VALUES (?, ?, ?, ?)',
+      [contentId, questionText, orderIndex, points]
     );
     return result.insertId;
   }
@@ -61,7 +61,7 @@ class ContentQuestion {
    */
   static async findByContent(contentId, { includeCorrect = false } = {}) {
     const [questions] = await pool.query(
-      'SELECT id, content_id, question_text, order_index FROM content_questions WHERE content_id = ? ORDER BY order_index ASC, id ASC',
+      'SELECT id, content_id, question_text, points, order_index FROM content_questions WHERE content_id = ? ORDER BY order_index ASC, id ASC',
       [contentId]
     );
     if (questions.length === 0) return [];

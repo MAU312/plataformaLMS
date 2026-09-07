@@ -41,7 +41,7 @@ window.renderTakeQuiz = async function(params) {
                 ${content.description ? `<p class="text-gray-500 mb-6 whitespace-pre-line">${escapeHtml(content.description)}</p>` : '<div class="mb-6"></div>'}
 
                 <form id="quiz-take-form" class="space-y-4">
-                    ${questions.map((q, index) => renderQuestionField(q, index, question_type)).join('')}
+                    ${questions.map((q, index) => renderQuestionField(q, index, question_type, isQuiz)).join('')}
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
                         <button type="submit" class="submit-quiz-answers-btn btn-cenat w-full">
                             <i class="fas fa-paper-plane mr-2"></i> Enviar ${isQuiz ? 'cuestionario' : 'encuesta'}
@@ -71,10 +71,10 @@ window.renderTakeQuiz = async function(params) {
     }
 };
 
-function renderQuestionField(question, index, questionType) {
+function renderQuestionField(question, index, questionType, isQuiz) {
     return `
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <p class="font-medium text-gray-900 mb-3">${index + 1}. ${escapeHtml(question.question_text)}</p>
+            <p class="font-medium text-gray-900 mb-3">${index + 1}. ${escapeHtml(question.question_text)} ${isQuiz ? `<span class="text-xs font-normal text-gray-400">(${question.points} ${question.points === 1 ? 'punto' : 'puntos'})</span>` : ''}</p>
             ${questionType === 'short_answer' ? `
                 <textarea class="answer-input w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" data-question-id="${question.id}" rows="3" required placeholder="Escribe tu respuesta..."></textarea>
             ` : `
@@ -118,9 +118,9 @@ async function submitQuizAnswers(content, questions, questionType) {
         const response = await contentsAPI.submitAnswers(content.id, { answers });
 
         if (isQuiz) {
-            const { score, total_questions, pending_review } = response.data;
+            const { score, max_score, pending_review } = response.data;
             const pendingNote = pending_review > 0 ? ` (${pending_review} pendiente${pending_review === 1 ? '' : 's'} de revisión)` : '';
-            showToast(`Enviado — ${score}/${total_questions} correctas${pendingNote}`, 'success');
+            showToast(`Enviado — ${score}/${max_score} puntos${pendingNote}`, 'success');
         } else {
             showToast('¡Gracias por responder la encuesta!', 'success');
         }
@@ -188,7 +188,7 @@ function renderResultQuestion(q, index, isQuiz, questionType) {
     if (questionType === 'short_answer') {
         return `
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-                <p class="font-medium text-gray-900 mb-3">${index + 1}. ${escapeHtml(q.question_text)}</p>
+                <p class="font-medium text-gray-900 mb-3">${index + 1}. ${escapeHtml(q.question_text)} ${isQuiz ? `<span class="text-xs font-normal text-gray-400">(${q.points} ${q.points === 1 ? 'punto' : 'puntos'})</span>` : ''}</p>
                 ${q.answers.length > 0 ? `
                     <div class="space-y-2">
                         ${q.answers.map((a) => renderShortAnswerRow(a, isQuiz)).join('')}
@@ -203,7 +203,7 @@ function renderResultQuestion(q, index, isQuiz, questionType) {
         const percent = total > 0 ? Math.round((q.correct_count / total) * 100) : 0;
         return `
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-                <p class="font-medium text-gray-900 mb-2">${index + 1}. ${escapeHtml(q.question_text)}</p>
+                <p class="font-medium text-gray-900 mb-2">${index + 1}. ${escapeHtml(q.question_text)} <span class="text-xs font-normal text-gray-400">(${q.points} ${q.points === 1 ? 'punto' : 'puntos'})</span></p>
                 <div class="progress-bar mb-1"><div class="progress-fill" style="width: ${percent}%"></div></div>
                 <p class="text-xs text-gray-500">${q.correct_count} correctas, ${q.incorrect_count} incorrectas (${percent}%)</p>
             </div>
