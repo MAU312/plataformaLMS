@@ -79,13 +79,17 @@ html {
 
 /* Velo verde oscuro para que la tarjeta blanca resalte y el texto/logo
    de la imagen no compita con el logo real de la tarjeta. z-index -1
-   lo mantiene por encima de la imagen de fondo pero debajo de la tarjeta. */
+   lo mantiene por encima de la imagen de fondo pero debajo de la tarjeta.
+   Opacidad baja a propósito (antes 0.82/0.68) — con el z-index arreglado
+   este velo se empezó a ver por primera vez, y quedaba más oscuro de lo
+   que a Mauricio le gustaba; la imagen debe seguir viéndose vívida, solo
+   un poco atenuada. */
 .auth-bg::before {
     content: '';
     position: absolute;
     inset: 0;
     z-index: -1;
-    background: linear-gradient(135deg, rgba(0, 41, 18, 0.82), rgba(0, 92, 40, 0.68));
+    background: linear-gradient(135deg, rgba(0, 41, 18, 0.35), rgba(0, 92, 40, 0.25));
 }
 
 /* =================================
@@ -122,11 +126,11 @@ html {
     position: absolute;
     inset: 0;
     z-index: -1;
-    background: rgba(243, 244, 246, 0.88);
+    background: rgba(243, 244, 246, 0.55);
 }
 
 .dark .courses-bg::before {
-    background: rgba(30, 41, 59, 0.9);
+    background: rgba(30, 41, 59, 0.6);
 }
 
 /* =================================
@@ -295,7 +299,7 @@ html {
 }
 
 .dark .auth-bg::before {
-    background: linear-gradient(135deg, rgba(2, 12, 6, 0.92), rgba(0, 41, 18, 0.88));
+    background: linear-gradient(135deg, rgba(2, 12, 6, 0.55), rgba(0, 41, 18, 0.45));
 }
 
 /* =================================
