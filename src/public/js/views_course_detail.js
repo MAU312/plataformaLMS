@@ -593,7 +593,10 @@ function renderCourseFolderCard(folder, allContents, hasAccess, canTrackProgress
                 <i id="folder-icon-${folder.id}" class="fas ${allCompleted ? 'fa-folder text-green-500' : 'fa-folder-open text-cenat-green'} text-xl"></i>
                 <div class="flex-1 min-w-0">
                     <p class="font-medium text-gray-900">${escapeHtml(folder.title)}</p>
-                    <p class="text-xs text-gray-400">${items.length} ${items.length === 1 ? 'elemento' : 'elementos'}</p>
+                    <p class="text-xs text-gray-400">
+                        ${items.length} ${items.length === 1 ? 'elemento' : 'elementos'}
+                        ${folder.module_teacher_name ? ` — <i class="fas fa-user-tie"></i> ${escapeHtml(folder.module_teacher_name)}` : ''}
+                    </p>
                 </div>
                 <span id="folder-badge-${folder.id}" class="flex-shrink-0">${renderFolderBadgeContent(canTrackProgress, trackableItems.length, completedItems, allCompleted)}</span>
             </summary>

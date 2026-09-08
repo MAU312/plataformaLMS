@@ -139,6 +139,39 @@ class Course {
   }
 
   /**
+   * A diferencia de isUserTeacher (¿está asignado al curso, sin importar en
+   * qué rol? — usado para acceso de lectura), esto decide si puede GESTIONAR
+   * contenido puntual: un profesor sin module_id (NULL) es "de todo el
+   * curso" y puede con cualquier folderId (incluido null/nivel superior);
+   * uno con module_id solo puede si folderId coincide exactamente con su
+   * módulo. Sin fila en course_teachers, no puede nada (el admin se maneja
+   * aparte, en requireCourseManager).
+   */
+  static async canManageContent(courseId, userId, folderId) {
+    const [rows] = await pool.query(
+      'SELECT module_id FROM course_teachers WHERE course_id = ? AND user_id = ?',
+      [courseId, userId]
+    );
+    if (rows.length === 0) return false;
+    if (rows[0].module_id === null) return true;
+    return folderId != null && String(rows[0].module_id) === String(folderId);
+  }
+
+  /**
+   * Escopea (o quita el escopeo de) un profesor YA asignado al curso a un
+   * módulo puntual — moduleId null lo vuelve profesor de todo el curso de
+   * nuevo. No valida que moduleId sea una carpeta de este curso: eso lo hace
+   * el controller (mismo criterio que resolveFolderId en content.controller.js).
+   */
+  static async setTeacherModuleScope(courseId, userId, moduleId) {
+    const [result] = await pool.query(
+      'UPDATE course_teachers SET module_id = ? WHERE course_id = ? AND user_id = ?',
+      [moduleId, courseId, userId]
+    );
+    return result.affectedRows > 0;
+  }
+
+  /**
    * Determina si un usuario puede acceder al contenido real (URLs de
    * video/archivo) de un curso: admin, inscrito, o profesor asignado a
    * ese curso. Centraliza el criterio de acceso usado en varios
@@ -202,7 +235,7 @@ class Course {
    */
   static async getCourseTeachers(courseId) {
     const [rows] = await pool.query(
-      `SELECT u.id, u.name, u.email
+      `SELECT u.id, u.name, u.email, ct.module_id
        FROM course_teachers ct
        INNER JOIN users u ON u.id = ct.user_id
        WHERE ct.course_id = ?

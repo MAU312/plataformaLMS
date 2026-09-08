@@ -173,7 +173,7 @@ CREATE TABLE `contents` (
   KEY `idx_folder` (`folder_id`),
   CONSTRAINT `contents_folder_fk` FOREIGN KEY (`folder_id`) REFERENCES `contents` (`id`),
   CONSTRAINT `contents_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=74 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=81 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -197,14 +197,17 @@ CREATE TABLE `course_teachers` (
   `id` int NOT NULL AUTO_INCREMENT,
   `course_id` int NOT NULL,
   `user_id` int NOT NULL,
+  `module_id` int DEFAULT NULL,
   `assigned_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_course_teacher` (`course_id`,`user_id`),
   KEY `idx_course` (`course_id`),
   KEY `idx_user` (`user_id`),
+  KEY `idx_module` (`module_id`),
   CONSTRAINT `course_teachers_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `course_teachers_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  CONSTRAINT `course_teachers_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `course_teachers_module_fk` FOREIGN KEY (`module_id`) REFERENCES `contents` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -213,7 +216,7 @@ CREATE TABLE `course_teachers` (
 
 LOCK TABLES `course_teachers` WRITE;
 /*!40000 ALTER TABLE `course_teachers` DISABLE KEYS */;
-INSERT INTO `course_teachers` VALUES (6,4,3,'2026-08-13 10:07:02'),(12,1,16,'2026-08-30 16:55:36'),(13,1,3,'2026-09-07 16:18:34'),(15,1,14,'2026-09-07 16:20:50');
+INSERT INTO `course_teachers` VALUES (6,4,3,NULL,'2026-08-13 10:07:02'),(12,1,16,NULL,'2026-08-30 16:55:36'),(13,1,3,NULL,'2026-09-07 16:18:34'),(15,1,14,NULL,'2026-09-07 16:20:50');
 /*!40000 ALTER TABLE `course_teachers` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -430,7 +433,7 @@ CREATE TABLE `users` (
   UNIQUE KEY `username` (`username`),
   KEY `idx_email` (`email`),
   KEY `idx_role` (`role`)
-) ENGINE=InnoDB AUTO_INCREMENT=64 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=67 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -452,4 +455,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-07 19:47:09
+-- Dump completed on 2026-09-07 20:22:25

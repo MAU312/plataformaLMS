@@ -13,11 +13,11 @@ function tempFile() {
   return filePath;
 }
 
-async function run(session, courseId = 7) {
+async function run(session, courseId = 7, resolveFolderId) {
   const req = mockReq({ params: { id: String(courseId) }, session });
   const res = mockRes();
   let nextArg = 'not-called';
-  await requireCourseManager((r) => r.params.id)(req, res, (err) => { nextArg = err; });
+  await requireCourseManager((r) => r.params.id, resolveFolderId)(req, res, (err) => { nextArg = err; });
   return { res, nextArg };
 }
 
@@ -27,20 +27,20 @@ test('requireCourseManager: sin sesión responde 401 y no llama a next()', async
   assert.equal(nextArg, 'not-called');
 });
 
-test('requireCourseManager: admin siempre pasa, sin consultar Course.isUserTeacher', async (t) => {
-  const isTeacherCall = t.mock.method(Course, 'isUserTeacher', async () => false);
+test('requireCourseManager: admin siempre pasa, sin consultar Course.canManageContent', async (t) => {
+  const canManageCall = t.mock.method(Course, 'canManageContent', async () => false);
   const { res, nextArg } = await run({ user: { id: 1, role: 'admin' } });
   assert.equal(nextArg, undefined, 'next() se llama sin argumentos en éxito');
   assert.equal(res.statusCode, 200, 'no debe haber tocado el status de respuesta');
-  assert.equal(isTeacherCall.mock.calls.length, 0);
+  assert.equal(canManageCall.mock.calls.length, 0);
 });
 
-test('requireCourseManager: profesor con admin_access (doble rol) pasa sin consultar Course.isUserTeacher', async (t) => {
-  const isTeacherCall = t.mock.method(Course, 'isUserTeacher', async () => false);
+test('requireCourseManager: profesor con admin_access (doble rol) pasa sin consultar Course.canManageContent', async (t) => {
+  const canManageCall = t.mock.method(Course, 'canManageContent', async () => false);
   const { res, nextArg } = await run({ user: { id: 3, role: 'teacher', admin_access: true } });
   assert.equal(nextArg, undefined);
   assert.equal(res.statusCode, 200);
-  assert.equal(isTeacherCall.mock.calls.length, 0);
+  assert.equal(canManageCall.mock.calls.length, 0);
 });
 
 test('requireCourseManager: un estudiante recibe 403', async () => {
@@ -49,16 +49,37 @@ test('requireCourseManager: un estudiante recibe 403', async () => {
   assert.equal(nextArg, 'not-called');
 });
 
-test('requireCourseManager: profesor asignado a ESE curso pasa', async (t) => {
-  t.mock.method(Course, 'isUserTeacher', async (courseId, userId) => courseId === '7' && userId === 3);
+test('requireCourseManager: profesor asignado a ESE curso (de todo el curso) pasa', async (t) => {
+  t.mock.method(Course, 'canManageContent', async (courseId, userId) => courseId === '7' && userId === 3);
   const { res, nextArg } = await run({ user: { id: 3, role: 'teacher' } }, 7);
   assert.equal(nextArg, undefined);
   assert.equal(res.statusCode, 200);
 });
 
 test('requireCourseManager: profesor de OTRO curso recibe 403', async (t) => {
-  t.mock.method(Course, 'isUserTeacher', async () => false);
+  t.mock.method(Course, 'canManageContent', async () => false);
   const { res, nextArg } = await run({ user: { id: 3, role: 'teacher' } }, 7);
+  assert.equal(res.statusCode, 403);
+  assert.equal(nextArg, 'not-called');
+});
+
+test('requireCourseManager: sin resolveFolderId, folderId siempre se resuelve a null (comportamiento de siempre)', async (t) => {
+  const canManageCall = t.mock.method(Course, 'canManageContent', async () => true);
+  await run({ user: { id: 3, role: 'teacher' } }, 7);
+  assert.equal(canManageCall.mock.calls[0].arguments[2], null);
+});
+
+test('requireCourseManager: con resolveFolderId, un profesor escopeado a SU módulo pasa', async (t) => {
+  // Simula Course.canManageContent real: module_id=24 solo deja pasar folderId=24.
+  t.mock.method(Course, 'canManageContent', async (courseId, userId, folderId) => folderId === 24);
+  const { res, nextArg } = await run({ user: { id: 5, role: 'teacher' } }, 7, () => 24);
+  assert.equal(nextArg, undefined);
+  assert.equal(res.statusCode, 200);
+});
+
+test('requireCourseManager: con resolveFolderId, un profesor escopeado a OTRO módulo recibe 403', async (t) => {
+  t.mock.method(Course, 'canManageContent', async (courseId, userId, folderId) => folderId === 24);
+  const { res, nextArg } = await run({ user: { id: 5, role: 'teacher' } }, 7, () => 99);
   assert.equal(res.statusCode, 403);
   assert.equal(nextArg, 'not-called');
 });
@@ -73,7 +94,7 @@ test('requireCourseManager: si resolveCourseId no encuentra el curso, responde 4
 });
 
 test('requireCourseManager: si rechaza y ya había un archivo subido (multer corrió antes), lo borra del disco', async (t) => {
-  t.mock.method(Course, 'isUserTeacher', async () => false);
+  t.mock.method(Course, 'canManageContent', async () => false);
   const filePath = tempFile();
   const req = mockReq({
     params: { id: '7' },
@@ -89,7 +110,7 @@ test('requireCourseManager: si rechaza y ya había un archivo subido (multer cor
 });
 
 test('requireCourseManager: si aprueba, no toca el archivo subido', async (t) => {
-  t.mock.method(Course, 'isUserTeacher', async () => true);
+  t.mock.method(Course, 'canManageContent', async () => true);
   const filePath = tempFile();
   const req = mockReq({
     params: { id: '7' },

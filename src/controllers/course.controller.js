@@ -136,6 +136,51 @@ async function resolveValidTeacherIds(raw) {
 }
 
 /**
+ * `teacher_modules` (JSON stringificado, viene por FormData igual que
+ * teacher_ids): { "<userId>": <moduleId|null> } — a qué módulo (carpeta)
+ * queda escopeado cada profesor YA asignado al curso (ver
+ * Course.canManageContent). Un moduleId inválido (no existe, no es una
+ * carpeta, o es de otro curso) se ignora en vez de fallar toda la
+ * operación, mismo criterio que resolveValidTeacherIds. Solo se aplica a
+ * userIds que quedaron en `teacherIds` — un profesor que se está
+ * desasignando en la misma petición no tiene sentido escoparlo.
+ */
+async function resolveTeacherModuleScopes(raw, courseId, teacherIds) {
+  if (!raw) return {};
+
+  let map;
+  try {
+    map = JSON.parse(raw);
+  } catch {
+    return {};
+  }
+  if (!map || typeof map !== 'object' || Array.isArray(map)) return {};
+
+  const teacherIdSet = new Set(teacherIds);
+  const result = {};
+
+  for (const [rawUserId, rawModuleId] of Object.entries(map)) {
+    const userId = parseInt(rawUserId, 10);
+    if (!Number.isInteger(userId) || !teacherIdSet.has(userId)) continue;
+
+    if (rawModuleId === null || rawModuleId === '' || rawModuleId === undefined) {
+      result[userId] = null;
+      continue;
+    }
+
+    const moduleId = parseInt(rawModuleId, 10);
+    if (!Number.isInteger(moduleId)) continue;
+
+    const folder = await Content.findById(moduleId);
+    if (!folder || folder.type !== 'folder' || String(folder.course_id) !== String(courseId)) continue;
+
+    result[userId] = moduleId;
+  }
+
+  return result;
+}
+
+/**
  * Crear nuevo curso (solo admin)
  */
 export const createCourse = async (req, res) => {
@@ -214,7 +259,7 @@ function toBoolean(value) {
 export const updateCourse = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, is_active, teacher_ids, certificate_style } = req.body;
+    const { title, description, is_active, teacher_ids, teacher_modules, certificate_style } = req.body;
 
     const course = await Course.findById(id);
     if (!course) {
@@ -259,6 +304,18 @@ export const updateCourse = async (req, res) => {
     if (teacher_ids !== undefined) {
       const teacherIds = await resolveValidTeacherIds(teacher_ids);
       await Course.assignTeachers(id, teacherIds);
+
+      // Escopeo por módulo: solo tiene sentido junto con teacher_ids (un
+      // profesor recién asignado en esta misma petición ya puede
+      // escoparse de una vez). assignTeachers no toca module_id de un
+      // profesor que sigue asignado (INSERT IGNORE), así que esto es
+      // seguro de aplicar después sin pisar nada innecesariamente.
+      if (teacher_modules !== undefined) {
+        const scopes = await resolveTeacherModuleScopes(teacher_modules, id, teacherIds);
+        for (const [userId, moduleId] of Object.entries(scopes)) {
+          await Course.setTeacherModuleScope(id, userId, moduleId);
+        }
+      }
     }
 
     res.json({

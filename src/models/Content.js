@@ -37,7 +37,8 @@ class Content {
   static async findByCourse(courseId) {
     const [rows] = await pool.query(
       `SELECT co.*,
-              (SELECT COUNT(*) FROM content_questions cq WHERE cq.content_id = co.id) AS question_count
+              (SELECT COUNT(*) FROM content_questions cq WHERE cq.content_id = co.id) AS question_count,
+              (SELECT u.name FROM course_teachers ct INNER JOIN users u ON u.id = ct.user_id WHERE ct.module_id = co.id LIMIT 1) AS module_teacher_name
        FROM contents co WHERE co.course_id = ? ORDER BY co.order_index ASC`,
       [courseId]
     );
@@ -58,7 +59,8 @@ class Content {
         IF(cp.id IS NOT NULL, TRUE, FALSE) as completed,
         ts.id as submission_id, ts.submitted_at as submission_submitted_at,
         ts.feedback as submission_feedback, ts.reviewed_at as submission_reviewed_at,
-        ts.score_earned as submission_score_earned
+        ts.score_earned as submission_score_earned,
+        (SELECT u.name FROM course_teachers ct INNER JOIN users u ON u.id = ct.user_id WHERE ct.module_id = co.id LIMIT 1) AS module_teacher_name
        FROM contents co
        LEFT JOIN content_progress cp ON cp.content_id = co.id AND cp.user_id = ?
        LEFT JOIN task_submissions ts ON ts.content_id = co.id AND ts.user_id = ?

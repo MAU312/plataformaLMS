@@ -428,25 +428,64 @@ function renderCourseCardShell({ course, navigateToPath, heightClass = 'h-40', s
 // Selector de profesores (crear/editar curso)
 // =================================
 
-function renderTeacherCheckboxesHTML(teachers, selectedIds = []) {
+/**
+ * `modules` (las carpetas del curso) y `moduleScopeByTeacherId` (id →
+ * module_id|null, de Course.getCourseTeachers) son opcionales — un curso
+ * sin carpetas no muestra el selector de módulo en absoluto, así un curso
+ * "plano" se ve exactamente igual que antes de agregar módulos.
+ */
+function renderTeacherCheckboxesHTML(teachers, selectedIds = [], modules = [], moduleScopeByTeacherId = {}) {
     if (teachers.length === 0) {
         return `<p class="text-sm text-gray-400 dark:text-slate-500">No hay usuarios con rol "Profesor" todavía. Puedes crearlos desde Usuarios y asignarlos después.</p>`;
     }
-    return teachers.map(t => `
-        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300 py-1">
-            <input type="checkbox" name="teacher_ids" value="${t.id}" ${selectedIds.includes(t.id) ? 'checked' : ''}
-                class="rounded border-gray-300 text-cenat-green focus:ring-cenat-green">
-            ${escapeHtml(t.name)} <span class="text-gray-400 dark:text-slate-500">(${escapeHtml(t.email)})</span>
-        </label>
-    `).join('');
+    return teachers.map(t => {
+        const checked = selectedIds.includes(t.id);
+        const currentModule = moduleScopeByTeacherId[t.id];
+        return `
+        <div class="teacher-row flex items-center gap-2 py-1 flex-wrap">
+            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
+                <input type="checkbox" name="teacher_ids" value="${t.id}" data-teacher-id="${t.id}"
+                    class="teacher-checkbox rounded border-gray-300 text-cenat-green focus:ring-cenat-green" ${checked ? 'checked' : ''}>
+                ${escapeHtml(t.name)} <span class="text-gray-400 dark:text-slate-500">(${escapeHtml(t.email)})</span>
+            </label>
+            ${modules.length > 0 ? `
+                <select class="teacher-module-select text-xs border border-gray-300 rounded px-1 py-0.5" data-teacher-id="${t.id}" ${checked ? '' : 'disabled'} title="A qué módulo queda escopeado este profesor">
+                    <option value="">Todo el curso</option>
+                    ${modules.map(m => `<option value="${m.id}" ${String(currentModule) === String(m.id) ? 'selected' : ''}>${escapeHtml(m.title)}</option>`).join('')}
+                </select>
+            ` : ''}
+        </div>
+        `;
+    }).join('');
 }
 
-async function loadTeacherCheckboxes(containerId, selectedIds = []) {
+/**
+ * Habilita/deshabilita el select de módulo de cada fila según su checkbox
+ * — un profesor desmarcado no tiene sentido que quede escopeado a nada, así
+ * que al desmarcar se resetea a "Todo el curso" (vacío) además de
+ * deshabilitarse. Delegado en el contenedor: sigue funcionando después de
+ * reinyectar el HTML sin tener que re-enganchar listeners por fila.
+ */
+function initTeacherModuleToggle(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.addEventListener('change', (e) => {
+        const checkbox = e.target.closest('.teacher-checkbox');
+        if (!checkbox) return;
+        const select = checkbox.closest('.teacher-row')?.querySelector('.teacher-module-select');
+        if (!select) return;
+        select.disabled = !checkbox.checked;
+        if (!checkbox.checked) select.value = '';
+    });
+}
+
+async function loadTeacherCheckboxes(containerId, selectedIds = [], modules = [], moduleScopeByTeacherId = {}) {
     const container = document.getElementById(containerId);
     if (!container) return;
     try {
         const response = await usersAPI.getByRole('teacher');
-        container.innerHTML = renderTeacherCheckboxesHTML(response.data || [], selectedIds);
+        container.innerHTML = renderTeacherCheckboxesHTML(response.data || [], selectedIds, modules, moduleScopeByTeacherId);
+        initTeacherModuleToggle(containerId);
     } catch (error) {
         container.innerHTML = `<p class="text-sm text-red-500">Error al cargar la lista de profesores</p>`;
     }
@@ -456,6 +495,24 @@ function getSelectedTeacherIds(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return [];
     return Array.from(container.querySelectorAll('input[name="teacher_ids"]:checked')).map(el => parseInt(el.value, 10));
+}
+
+/**
+ * { userId: moduleId|null } — solo de los profesores actualmente marcados
+ * (a un profesor que se está desasignando en esta misma petición no tiene
+ * sentido escoparlo). Usado junto con getSelectedTeacherIds al armar el
+ * FormData de guardar curso.
+ */
+function getTeacherModuleScopes(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return {};
+    const result = {};
+    container.querySelectorAll('.teacher-checkbox:checked').forEach((checkbox) => {
+        const teacherId = checkbox.dataset.teacherId;
+        const select = container.querySelector(`.teacher-module-select[data-teacher-id="${teacherId}"]`);
+        result[teacherId] = (select && select.value) ? parseInt(select.value, 10) : null;
+    });
+    return result;
 }
 
 // Mismos ids/orden que CERTIFICATE_STYLES en src/utils/certificate.js — se
@@ -636,6 +693,7 @@ window.renderPagination = renderPagination;
 window.renderTeacherCheckboxesHTML = renderTeacherCheckboxesHTML;
 window.loadTeacherCheckboxes = loadTeacherCheckboxes;
 window.getSelectedTeacherIds = getSelectedTeacherIds;
+window.getTeacherModuleScopes = getTeacherModuleScopes;
 window.getYoutubeVideoId = getYoutubeVideoId;
 window.getYoutubeEmbedUrl = getYoutubeEmbedUrl;
 window.getVimeoEmbedUrl = getVimeoEmbedUrl;

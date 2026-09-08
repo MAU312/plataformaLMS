@@ -111,8 +111,11 @@ window.renderAdminEditCourse = async function(params) {
         });
 
         const teachersResponse = await coursesAPI.getTeachers(course.id);
-        const assignedTeacherIds = (teachersResponse.data?.teachers || []).map(t => t.id);
-        loadTeacherCheckboxes('teacher-checkboxes', assignedTeacherIds);
+        const assignedTeachers = teachersResponse.data?.teachers || [];
+        const assignedTeacherIds = assignedTeachers.map(t => t.id);
+        const moduleScopeByTeacherId = Object.fromEntries(assignedTeachers.map(t => [t.id, t.module_id]));
+        const modules = contents.filter(c => c.type === 'folder').map(c => ({ id: c.id, title: c.title }));
+        loadTeacherCheckboxes('teacher-checkboxes', assignedTeacherIds, modules, moduleScopeByTeacherId);
 
     } catch (error) {
         console.error('Error loading course:', error);
@@ -139,6 +142,7 @@ async function handleUpdateCourse(courseId) {
     formData.append('is_active', is_active);
     formData.append('certificate_style', document.getElementById('certificate_style').value);
     formData.append('teacher_ids', JSON.stringify(getSelectedTeacherIds('teacher-checkboxes')));
+    formData.append('teacher_modules', JSON.stringify(getTeacherModuleScopes('teacher-checkboxes')));
     if (thumbnailFile) {
         formData.append('thumbnail', thumbnailFile);
     }

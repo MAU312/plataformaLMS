@@ -84,6 +84,11 @@ function renderDraggableFolderItem(courseId, contents, folder) {
                                 <i class="fas fa-folder-open text-cenat-green"></i>
                                 <span class="font-bold text-gray-900 truncate">${escapeHtml(folder.title)}</span>
                                 <span class="text-xs text-gray-400 whitespace-nowrap">(${itemCount} ${itemCount === 1 ? 'elemento' : 'elementos'})</span>
+                                ${folder.module_teacher_name ? `
+                                    <span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full whitespace-nowrap" title="Módulo asignado a este profesor — solo él (o un admin) puede gestionar su contenido">
+                                        <i class="fas fa-user-tie mr-1"></i>${escapeHtml(folder.module_teacher_name)}
+                                    </span>
+                                ` : ''}
                             </div>
                             <div class="flex items-center gap-1 flex-shrink-0">
                                 <button onclick="event.preventDefault(); editContentHandler(${folder.id})" class="text-gray-400 hover:text-cenat-green px-2" title="Editar carpeta">

@@ -230,8 +230,8 @@ test('deletePost: un admin puede borrar la respuesta de otro (moderación), sin 
 
 test('deletePost: el profesor asignado al curso puede borrar la respuesta de un estudiante (moderación)', async (t) => {
   t.mock.method(ForumPost, 'findById', async () => ({ id: 10, user_id: 99, content_id: 1 }));
-  t.mock.method(Content, 'findById', async () => ({ id: 1, course_id: 5 }));
-  t.mock.method(Course, 'isUserTeacher', async () => true);
+  t.mock.method(Content, 'findById', async () => ({ id: 1, course_id: 5, folder_id: null }));
+  t.mock.method(Course, 'canManageContent', async () => true);
   t.mock.method(ForumPost, 'delete', async () => true);
   const req = mockReq({ params: { id: 10 }, session: { user: { id: 3, role: 'teacher' } } });
   const res = mockRes();

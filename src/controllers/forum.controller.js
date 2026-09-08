@@ -178,13 +178,13 @@ export const deletePost = async (req, res) => {
     const isOwner = post.user_id === req.session.user.id;
     const isAdminUser = req.session.user.role === 'admin' || req.session.user.admin_access;
 
-    let isTeacherOfCourse = false;
+    let canModerate = false;
     if (!isOwner && !isAdminUser && req.session.user.role === 'teacher') {
       const content = await Content.findById(post.content_id);
-      isTeacherOfCourse = !!content && await Course.isUserTeacher(content.course_id, req.session.user.id);
+      canModerate = !!content && await Course.canManageContent(content.course_id, req.session.user.id, content.folder_id);
     }
 
-    if (!isOwner && !isAdminUser && !isTeacherOfCourse) {
+    if (!isOwner && !isAdminUser && !canModerate) {
       return res.status(403).json({ success: false, message: 'No tienes permiso para borrar esta respuesta' });
     }
 

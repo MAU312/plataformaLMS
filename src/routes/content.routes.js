@@ -37,13 +37,43 @@ async function courseIdFromAnswerParam(req) {
 }
 
 /**
- * Guard compartido por las rutas de creación SIN archivo (text/url/quiz/
- * survey/forum/folder): admin, o el profesor asignado al curso del body.
- * Las que sí llevan archivo (video/file/image/task) no pueden reusar esto
- * tal cual — ahí multer debe correr ANTES, porque course_id es un campo
- * del multipart/form-data y no existe en req.body hasta que se parsea.
+ * Resuelve el folder_id (módulo) de un contenido EXISTENTE a partir de su
+ * :id de ruta — usado junto con courseIdFromContentParam para que un
+ * profesor escopeado a un módulo (course_teachers.module_id) solo pueda
+ * gestionar contenido de SU módulo. Una carpeta siempre tiene folder_id
+ * null, así que renombrar/borrar una carpeta sigue siendo de-todo-el-curso
+ * automáticamente, sin caso especial.
  */
-const courseManagerFromBody = [isAuthenticated, requireCourseManager((req) => req.body.course_id)];
+async function folderIdFromContentParam(req) {
+  const content = await Content.findById(req.params.id);
+  return content ? content.folder_id : null;
+}
+
+/**
+ * Igual que folderIdFromContentParam, pero resolviendo desde el :answerId
+ * de PUT /answers/:answerId/grade (answer -> question -> content -> módulo).
+ */
+async function folderIdFromAnswerParam(req) {
+  const answer = await ContentAnswer.findById(req.params.answerId);
+  if (!answer) return null;
+  const question = await ContentQuestion.findById(answer.question_id);
+  if (!question) return null;
+  const content = await Content.findById(question.content_id);
+  return content ? content.folder_id : null;
+}
+
+/**
+ * Guard compartido por las rutas de creación SIN archivo (text/url/quiz/
+ * survey/forum): admin, o el profesor asignado al curso del body (de todo
+ * el curso, o escopeado al módulo indicado en body.folder_id). Las que sí
+ * llevan archivo (video/file/image/task) no pueden reusar esto tal cual —
+ * ahí multer debe correr ANTES, porque course_id/folder_id son campos del
+ * multipart/form-data y no existen en req.body hasta que se parsea.
+ */
+const courseManagerFromBody = [
+  isAuthenticated,
+  requireCourseManager((req) => req.body.course_id, (req) => req.body.folder_id || null)
+];
 
 // ==============================================
 // RUTAS ESPECÍFICAS PRIMERO (antes de /:id)
@@ -76,7 +106,7 @@ router.post(
   '/video',
   isAuthenticated,
   uploadVideo.single('video'),
-  requireCourseManager((req) => req.body.course_id),
+  requireCourseManager((req) => req.body.course_id, (req) => req.body.folder_id || null),
   verifyFileSignature('video'),
   contentController.createVideoContent
 );
@@ -90,7 +120,7 @@ router.post(
   '/file',
   isAuthenticated,
   uploadFile.single('file'),
-  requireCourseManager((req) => req.body.course_id),
+  requireCourseManager((req) => req.body.course_id, (req) => req.body.folder_id || null),
   verifyFileSignature('file'),
   contentController.createFileContent
 );
@@ -104,7 +134,7 @@ router.post(
   '/image',
   isAuthenticated,
   uploadContentImage.single('image'),
-  requireCourseManager((req) => req.body.course_id),
+  requireCourseManager((req) => req.body.course_id, (req) => req.body.folder_id || null),
   verifyFileSignature('image'),
   contentController.createImageContent
 );
@@ -147,7 +177,7 @@ router.post('/survey', ...courseManagerFromBody, quizController.createSurveyCont
 router.put(
   '/answers/:answerId/grade',
   isAuthenticated,
-  requireCourseManager(courseIdFromAnswerParam),
+  requireCourseManager(courseIdFromAnswerParam, folderIdFromAnswerParam),
   quizController.gradeAnswer
 );
 
@@ -162,7 +192,7 @@ router.post(
   '/task',
   isAuthenticated,
   uploadFile.single('file'),
-  requireCourseManager((req) => req.body.course_id),
+  requireCourseManager((req) => req.body.course_id, (req) => req.body.folder_id || null),
   (req, res, next) => {
     if (!req.file) return next();
     verifyFileSignature('file')(req, res, next);
@@ -257,7 +287,7 @@ router.get('/:id/submission', isAuthenticated, submissionController.getMySubmiss
 router.get(
   '/:id/submissions',
   isAuthenticated,
-  requireCourseManager(courseIdFromContentParam),
+  requireCourseManager(courseIdFromContentParam, folderIdFromContentParam),
   submissionController.listSubmissions
 );
 
@@ -313,7 +343,7 @@ router.post(
 router.get(
   '/:id/results',
   isAuthenticated,
-  requireCourseManager(courseIdFromContentParam),
+  requireCourseManager(courseIdFromContentParam, folderIdFromContentParam),
   quizController.getResults
 );
 
@@ -326,7 +356,7 @@ router.get(
 router.get(
   '/:id/questions/manage',
   isAuthenticated,
-  requireCourseManager(courseIdFromContentParam),
+  requireCourseManager(courseIdFromContentParam, folderIdFromContentParam),
   quizController.getQuestionsForManage
 );
 
@@ -339,7 +369,7 @@ router.get(
 router.put(
   '/:id/questions',
   isAuthenticated,
-  requireCourseManager(courseIdFromContentParam),
+  requireCourseManager(courseIdFromContentParam, folderIdFromContentParam),
   quizController.updateQuestions
 );
 
@@ -369,7 +399,7 @@ router.get('/:id', contentController.getContentById);
 router.put(
   '/:id',
   isAuthenticated,
-  requireCourseManager(courseIdFromContentParam),
+  requireCourseManager(courseIdFromContentParam, folderIdFromContentParam),
   (req, res, next) => {
     const handleUpload = async (req, res, next) => {
       try {
@@ -413,6 +443,6 @@ router.put(
  * DELETE /api/contents/:id
  * Admin, o el profesor asignado al curso dueño de este contenido
  */
-router.delete('/:id', isAuthenticated, requireCourseManager(courseIdFromContentParam), contentController.deleteContent);
+router.delete('/:id', isAuthenticated, requireCourseManager(courseIdFromContentParam, folderIdFromContentParam), contentController.deleteContent);
 
 export default router;
