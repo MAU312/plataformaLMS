@@ -37,9 +37,8 @@ test('createQuizContent: crea el content y las preguntas/opciones dentro de una 
     body: {
       course_id: 1,
       title: 'Quiz 1',
-      question_type: 'true_false',
       questions: [
-        { text: 'Pregunta 1', options: [{ text: 'Verdadero', is_correct: true }, { text: 'Falso', is_correct: false }] }
+        { text: 'Pregunta 1', question_type: 'true_false', options: [{ text: 'Verdadero', is_correct: true }, { text: 'Falso', is_correct: false }] }
       ]
     }
   });
@@ -53,8 +52,40 @@ test('createQuizContent: crea el content y las preguntas/opciones dentro de una 
   assert.equal(calls.rollback, 0);
   assert.equal(calls.release, 1);
   assert.equal(createContentCall.mock.calls[0].arguments[1], connection, 'Content.create debe recibir la connection de la transacción, no usar el pool por defecto');
-  assert.equal(createQuestionCall.mock.calls[0].arguments[4], connection);
+  assert.equal(createQuestionCall.mock.calls[0].arguments[4], 'true_false', 'cada pregunta manda su propio question_type a ContentQuestion.create');
+  assert.equal(createQuestionCall.mock.calls[0].arguments[5], connection);
   assert.equal(createOptionsCall.mock.calls[0].arguments[2], connection);
+});
+
+test('createQuizContent: acepta tipos mezclados en el mismo cuestionario (opción múltiple + verdadero/falso + respuesta corta)', async (t) => {
+  const { connection, calls } = mockConnection();
+  t.mock.method(pool, 'getConnection', async () => connection);
+  t.mock.method(Content, 'create', async () => 50);
+  const createQuestionCall = t.mock.method(ContentQuestion, 'create', async () => 1);
+  t.mock.method(ContentQuestion, 'createOptions', async () => {});
+
+  const req = mockReq({
+    body: {
+      course_id: 1,
+      title: 'Quiz mixto',
+      questions: [
+        { text: '¿Capital de Costa Rica?', question_type: 'multiple_choice', options: [{ text: 'San José', is_correct: true }, { text: 'Alajuela', is_correct: false }] },
+        { text: '¿El sol es una estrella?', question_type: 'true_false', options: [{ text: 'Verdadero', is_correct: true }, { text: 'Falso', is_correct: false }] },
+        { text: 'Explica la fotosíntesis', question_type: 'short_answer' }
+      ]
+    }
+  });
+  const res = mockRes();
+
+  await quizController.createQuizContent(req, res);
+
+  assert.equal(res.statusCode, 201);
+  assert.equal(calls.commit, 1);
+  assert.deepEqual(
+    createQuestionCall.mock.calls.map((c) => c.arguments[4]),
+    ['multiple_choice', 'true_false', 'short_answer'],
+    'cada pregunta conserva su propio tipo, no se fuerza uno solo para todo el cuestionario'
+  );
 });
 
 test('createQuizContent: si una pregunta falla a mitad del loop, hace rollback (no queda un quiz a medias en BD)', async (t) => {
@@ -73,8 +104,7 @@ test('createQuizContent: si una pregunta falla a mitad del loop, hace rollback (
     body: {
       course_id: 1,
       title: 'Quiz 1',
-      question_type: 'short_answer',
-      questions: [{ text: 'Pregunta 1' }, { text: 'Pregunta 2' }]
+      questions: [{ text: 'Pregunta 1', question_type: 'short_answer' }, { text: 'Pregunta 2', question_type: 'short_answer' }]
     }
   });
   const res = mockRes();
@@ -98,9 +128,8 @@ test('createSurveyContent: ignora is_correct del cliente y siempre guarda 0 en u
     body: {
       course_id: 1,
       title: 'Encuesta 1',
-      question_type: 'multiple_choice',
       questions: [
-        { text: 'Pregunta 1', options: [{ text: 'A', is_correct: true }, { text: 'B', is_correct: false }] }
+        { text: 'Pregunta 1', question_type: 'multiple_choice', options: [{ text: 'A', is_correct: true }, { text: 'B', is_correct: false }] }
       ]
     }
   });
@@ -114,14 +143,21 @@ test('createSurveyContent: ignora is_correct del cliente y siempre guarda 0 en u
 });
 
 test('createQuizContent: 400 si falta el título', async (t) => {
-  const req = mockReq({ body: { course_id: 1, question_type: 'short_answer', questions: [{ text: 'x' }] } });
+  const req = mockReq({ body: { course_id: 1, questions: [{ text: 'x', question_type: 'short_answer' }] } });
   const res = mockRes();
   await quizController.createQuizContent(req, res);
   assert.equal(res.statusCode, 400);
 });
 
 test('createQuizContent: 400 si no hay preguntas', async (t) => {
-  const req = mockReq({ body: { course_id: 1, title: 'Quiz', question_type: 'short_answer', questions: [] } });
+  const req = mockReq({ body: { course_id: 1, title: 'Quiz', questions: [] } });
+  const res = mockRes();
+  await quizController.createQuizContent(req, res);
+  assert.equal(res.statusCode, 400);
+});
+
+test('createQuizContent: 400 si el tipo de una pregunta no es válido', async (t) => {
+  const req = mockReq({ body: { course_id: 1, title: 'Quiz', questions: [{ text: 'x', question_type: 'inventado' }] } });
   const res = mockRes();
   await quizController.createQuizContent(req, res);
   assert.equal(res.statusCode, 400);
@@ -132,8 +168,7 @@ test('createQuizContent: 400 si multiple_choice no tiene exactamente una opción
     body: {
       course_id: 1,
       title: 'Quiz',
-      question_type: 'multiple_choice',
-      questions: [{ text: 'x', options: [{ text: 'A', is_correct: true }, { text: 'B', is_correct: true }] }]
+      questions: [{ text: 'x', question_type: 'multiple_choice', options: [{ text: 'A', is_correct: true }, { text: 'B', is_correct: true }] }]
     }
   });
   const res = mockRes();
@@ -141,11 +176,14 @@ test('createQuizContent: 400 si multiple_choice no tiene exactamente una opción
   assert.equal(res.statusCode, 400);
 });
 
-test('getQuestionsForManage: devuelve question_type, preguntas CON is_correct, y el conteo de respondentes', async (t) => {
-  t.mock.method(Content, 'findById', async () => ({ id: 40, type: 'quiz', question_type: 'multiple_choice' }));
+test('getQuestionsForManage: devuelve las preguntas (cada una con su propio question_type) CON is_correct, y el conteo de respondentes', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 40, type: 'quiz' }));
   t.mock.method(ContentQuestion, 'findByContent', async (id, opts) => {
     assert.deepEqual(opts, { includeCorrect: true }, 'el profesor siempre debe ver la respuesta correcta al editar');
-    return [{ id: 1, question_text: 'P1', options: [{ id: 10, option_text: 'A', is_correct: 1 }] }];
+    return [
+      { id: 1, question_text: 'P1', question_type: 'multiple_choice', options: [{ id: 10, option_text: 'A', is_correct: 1 }] },
+      { id: 2, question_text: 'P2', question_type: 'short_answer', options: [] }
+    ];
   });
   t.mock.method(ContentAnswer, 'countRespondents', async () => 0);
 
@@ -154,9 +192,10 @@ test('getQuestionsForManage: devuelve question_type, preguntas CON is_correct, y
   await quizController.getQuestionsForManage(req, res);
 
   assert.equal(res.statusCode, 200);
-  assert.equal(res.body.data.question_type, 'multiple_choice');
   assert.equal(res.body.data.respondent_count, 0);
+  assert.equal(res.body.data.questions[0].question_type, 'multiple_choice');
   assert.equal(res.body.data.questions[0].options[0].is_correct, 1);
+  assert.equal(res.body.data.questions[1].question_type, 'short_answer');
 });
 
 test('getQuestionsForManage: 400 si el content no es quiz ni survey', async (t) => {
@@ -189,8 +228,7 @@ test('updateQuestions: reemplaza título/tipo/preguntas dentro de una transacci�
     params: { id: 40 },
     body: {
       title: 'Quiz editado',
-      question_type: 'true_false',
-      questions: [{ text: 'Pregunta 1', options: [{ text: 'Verdadero', is_correct: true }, { text: 'Falso', is_correct: false }] }]
+      questions: [{ text: 'Pregunta 1', question_type: 'true_false', options: [{ text: 'Verdadero', is_correct: true }, { text: 'Falso', is_correct: false }] }]
     }
   });
   const res = mockRes();
@@ -217,7 +255,7 @@ test('updateQuestions: 400 y NO toca la base de datos si ya hay respondentes reg
 
   const req = mockReq({
     params: { id: 40 },
-    body: { title: 'Quiz editado', question_type: 'short_answer', questions: [{ text: 'Pregunta 1' }] }
+    body: { title: 'Quiz editado', questions: [{ text: 'Pregunta 1', question_type: 'short_answer' }] }
   });
   const res = mockRes();
 
@@ -239,7 +277,7 @@ test('updateQuestions: si falla a mitad de la transacción, hace rollback y no d
 
   const req = mockReq({
     params: { id: 40 },
-    body: { title: 'Quiz editado', question_type: 'short_answer', questions: [{ text: 'Pregunta 1' }] }
+    body: { title: 'Quiz editado', questions: [{ text: 'Pregunta 1', question_type: 'short_answer' }] }
   });
   const res = mockRes();
 
@@ -255,7 +293,7 @@ test('updateQuestions: 400 si falta el título', async (t) => {
   t.mock.method(Content, 'findById', async () => ({ id: 40, type: 'quiz', description: '' }));
   const req = mockReq({
     params: { id: 40 },
-    body: { question_type: 'short_answer', questions: [{ text: 'x' }] }
+    body: { questions: [{ text: 'x', question_type: 'short_answer' }] }
   });
   const res = mockRes();
   await quizController.updateQuestions(req, res);
@@ -267,8 +305,7 @@ test('createQuizContent: 400 si el puntaje de una pregunta no es un entero >= 1'
     body: {
       course_id: 1,
       title: 'Quiz',
-      question_type: 'multiple_choice',
-      questions: [{ text: '¿?', points: 0, options: [{ text: 'A', is_correct: true }, { text: 'B', is_correct: false }] }]
+      questions: [{ text: '¿?', question_type: 'multiple_choice', points: 0, options: [{ text: 'A', is_correct: true }, { text: 'B', is_correct: false }] }]
     }
   });
   const res = mockRes();
@@ -284,8 +321,8 @@ test('createQuizContent: 400 si el puntaje de una pregunta no es un entero >= 1'
 test('submitAnswers: el puntaje pondera por los puntos de cada pregunta, no por cantidad de correctas', async (t) => {
   t.mock.method(ContentAnswer, 'hasAnswered', async () => false);
   t.mock.method(ContentQuestion, 'findByContent', async () => ([
-    { id: 1, points: 5, options: [{ id: 10, is_correct: true }, { id: 11, is_correct: false }] },
-    { id: 2, points: 1, options: [{ id: 20, is_correct: false }, { id: 21, is_correct: true }] }
+    { id: 1, points: 5, question_type: 'multiple_choice', options: [{ id: 10, is_correct: true }, { id: 11, is_correct: false }] },
+    { id: 2, points: 1, question_type: 'multiple_choice', options: [{ id: 20, is_correct: false }, { id: 21, is_correct: true }] }
   ]));
   t.mock.method(ContentAnswer, 'submitAnswers', async () => true);
   t.mock.method(Content, 'markCompleted', async () => true);
@@ -295,7 +332,7 @@ test('submitAnswers: el puntaje pondera por los puntos de cada pregunta, no por 
     body: { answers: [{ question_id: 1, option_id: 10 }, { question_id: 2, option_id: 20 }] },
     session: { user: { id: 7 } }
   });
-  req.quizContent = { id: 100, course_id: 1, type: 'quiz', question_type: 'multiple_choice' };
+  req.quizContent = { id: 100, course_id: 1, type: 'quiz' };
   const res = mockRes();
 
   await quizController.submitAnswers(req, res);
@@ -311,8 +348,8 @@ test('submitAnswers: el puntaje pondera por los puntos de cada pregunta, no por 
 test('submitAnswers: todas correctas suma el total de puntos posibles', async (t) => {
   t.mock.method(ContentAnswer, 'hasAnswered', async () => false);
   t.mock.method(ContentQuestion, 'findByContent', async () => ([
-    { id: 1, points: 3, options: [{ id: 10, is_correct: true }, { id: 11, is_correct: false }] },
-    { id: 2, points: 2, options: [{ id: 20, is_correct: false }, { id: 21, is_correct: true }] }
+    { id: 1, points: 3, question_type: 'multiple_choice', options: [{ id: 10, is_correct: true }, { id: 11, is_correct: false }] },
+    { id: 2, points: 2, question_type: 'multiple_choice', options: [{ id: 20, is_correct: false }, { id: 21, is_correct: true }] }
   ]));
   t.mock.method(ContentAnswer, 'submitAnswers', async () => true);
   t.mock.method(Content, 'markCompleted', async () => true);
@@ -322,7 +359,7 @@ test('submitAnswers: todas correctas suma el total de puntos posibles', async (t
     body: { answers: [{ question_id: 1, option_id: 10 }, { question_id: 2, option_id: 21 }] },
     session: { user: { id: 7 } }
   });
-  req.quizContent = { id: 100, course_id: 1, type: 'quiz', question_type: 'multiple_choice' };
+  req.quizContent = { id: 100, course_id: 1, type: 'quiz' };
   const res = mockRes();
 
   await quizController.submitAnswers(req, res);
@@ -331,14 +368,46 @@ test('submitAnswers: todas correctas suma el total de puntos posibles', async (t
   assert.equal(res.body.data.max_score, 5);
 });
 
+test('submitAnswers: con tipos mezclados, autocalifica la de opción múltiple y deja la de respuesta corta pendiente de revisión', async (t) => {
+  t.mock.method(ContentAnswer, 'hasAnswered', async () => false);
+  t.mock.method(ContentQuestion, 'findByContent', async () => ([
+    { id: 1, points: 2, question_type: 'multiple_choice', options: [{ id: 10, is_correct: true }, { id: 11, is_correct: false }] },
+    { id: 2, points: 3, question_type: 'short_answer', options: [] }
+  ]));
+  t.mock.method(ContentAnswer, 'submitAnswers', async () => true);
+  t.mock.method(Content, 'markCompleted', async () => true);
+  t.mock.method(Content, 'recalculateCourseProgress', async () => ({ progress: 100, total: 4, completed: 4 }));
+
+  const req = mockReq({
+    body: {
+      answers: [
+        { question_id: 1, option_id: 10 },
+        { question_id: 2, answer_text: 'porque sí' }
+      ]
+    },
+    session: { user: { id: 7 } }
+  });
+  req.quizContent = { id: 100, course_id: 1, type: 'quiz' };
+  const res = mockRes();
+
+  await quizController.submitAnswers(req, res);
+
+  assert.equal(res.statusCode, 201);
+  // Solo la opción múltiple (2 puntos) se autocalifica al enviar; la
+  // respuesta corta (3 puntos) queda pendiente, no cuenta como incorrecta.
+  assert.equal(res.body.data.score, 2);
+  assert.equal(res.body.data.max_score, 5);
+  assert.equal(res.body.data.pending_review, 1);
+});
+
 // =================================
 // getResults
 // =================================
 
 test('getResults: incluye los puntos de cada pregunta en el resultado (quiz de opción múltiple)', async (t) => {
-  t.mock.method(Content, 'findById', async () => ({ id: 40, type: 'quiz', question_type: 'multiple_choice' }));
+  t.mock.method(Content, 'findById', async () => ({ id: 40, type: 'quiz' }));
   t.mock.method(ContentQuestion, 'findByContent', async () => ([
-    { id: 1, question_text: '¿?', points: 4, options: [{ id: 10, option_text: 'A', is_correct: true }] }
+    { id: 1, question_text: '¿?', question_type: 'multiple_choice', points: 4, options: [{ id: 10, option_text: 'A', is_correct: true }] }
   ]));
   t.mock.method(ContentAnswer, 'findAllByContent', async () => ([
     { question_id: 1, user_id: 7, option_id: 10, is_correct: 1 }
@@ -350,4 +419,50 @@ test('getResults: incluye los puntos de cada pregunta en el resultado (quiz de o
 
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.data.questions[0].points, 4);
+});
+
+test('getResults: desglosa correctamente cada pregunta según su propio tipo cuando el cuestionario mezcla tipos', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 40, type: 'quiz' }));
+  t.mock.method(ContentQuestion, 'findByContent', async () => ([
+    { id: 1, question_text: '¿Capital?', question_type: 'multiple_choice', points: 2, options: [{ id: 10, option_text: 'San José', is_correct: true }] },
+    { id: 2, question_text: 'Explica X', question_type: 'short_answer', points: 3 }
+  ]));
+  t.mock.method(ContentAnswer, 'findAllByContent', async () => ([
+    { id: 900, question_id: 1, user_id: 7, option_id: 10, is_correct: 1 },
+    { id: 901, question_id: 2, user_id: 7, answer_text: 'porque sí', is_correct: null, student_name: 'Ana' }
+  ]));
+
+  const req = mockReq({ params: { id: 40 } });
+  const res = mockRes();
+  await quizController.getResults(req, res);
+
+  assert.equal(res.statusCode, 200);
+  // Pregunta de opción múltiple: conteo de correctas/incorrectas.
+  assert.equal(res.body.data.questions[0].correct_count, 1);
+  assert.equal(res.body.data.questions[0].incorrect_count, 0);
+  // Pregunta de respuesta corta: lista de respuestas para calificar a mano, no un conteo.
+  assert.equal(res.body.data.questions[1].answers[0].answer_text, 'porque sí');
+  assert.equal(res.body.data.questions[1].answers[0].is_correct, null);
+  // El frontend usa question_type (no content.question_type, que ya no existe)
+  // para decidir cómo renderizar cada pregunta — debe viajar en CADA una.
+  assert.equal(res.body.data.questions[0].question_type, 'multiple_choice');
+  assert.equal(res.body.data.questions[1].question_type, 'short_answer');
+});
+
+test('getResults: una encuesta de opción múltiple también manda question_type por pregunta (conteo por opción)', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 47, type: 'survey' }));
+  t.mock.method(ContentQuestion, 'findByContent', async () => ([
+    { id: 1, question_text: '¿Te gustó?', question_type: 'multiple_choice', options: [{ id: 10, option_text: 'Sí' }, { id: 11, option_text: 'No' }] }
+  ]));
+  t.mock.method(ContentAnswer, 'findAllByContent', async () => ([
+    { question_id: 1, user_id: 7, option_id: 10 }
+  ]));
+
+  const req = mockReq({ params: { id: 47 } });
+  const res = mockRes();
+  await quizController.getResults(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.data.questions[0].question_type, 'multiple_choice');
+  assert.equal(res.body.data.questions[0].options[0].count, 1);
 });

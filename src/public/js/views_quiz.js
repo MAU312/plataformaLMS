@@ -18,7 +18,7 @@ window.renderTakeQuiz = async function(params) {
             contentsAPI.getQuestions(params.id)
         ]);
         const content = contentResponse.data;
-        const { question_type, already_answered, questions } = questionsResponse.data;
+        const { already_answered, questions } = questionsResponse.data;
         const isQuiz = content.type === 'quiz';
 
         // Un solo intento: si ya respondió, no tiene sentido mostrar el
@@ -41,7 +41,7 @@ window.renderTakeQuiz = async function(params) {
                 ${content.description ? `<p class="text-gray-500 mb-6 whitespace-pre-line">${escapeHtml(content.description)}</p>` : '<div class="mb-6"></div>'}
 
                 <form id="quiz-take-form" class="space-y-4">
-                    ${questions.map((q, index) => renderQuestionField(q, index, question_type, isQuiz)).join('')}
+                    ${questions.map((q, index) => renderQuestionField(q, index, isQuiz)).join('')}
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
                         <button type="submit" class="submit-quiz-answers-btn btn-cenat w-full">
                             <i class="fas fa-paper-plane mr-2"></i> Enviar ${isQuiz ? 'cuestionario' : 'encuesta'}
@@ -54,7 +54,7 @@ window.renderTakeQuiz = async function(params) {
 
         document.getElementById('quiz-take-form').addEventListener('submit', (e) => {
             e.preventDefault();
-            submitQuizAnswers(content, questions, question_type);
+            submitQuizAnswers(content, questions);
         });
 
     } catch (error) {
@@ -71,11 +71,11 @@ window.renderTakeQuiz = async function(params) {
     }
 };
 
-function renderQuestionField(question, index, questionType, isQuiz) {
+function renderQuestionField(question, index, isQuiz) {
     return `
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
             <p class="font-medium text-gray-900 mb-3">${index + 1}. ${escapeHtml(question.question_text)} ${isQuiz ? `<span class="text-xs font-normal text-gray-400">(${question.points} ${question.points === 1 ? 'punto' : 'puntos'})</span>` : ''}</p>
-            ${questionType === 'short_answer' ? `
+            ${question.question_type === 'short_answer' ? `
                 <textarea class="answer-input w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" data-question-id="${question.id}" rows="3" required placeholder="Escribe tu respuesta..."></textarea>
             ` : `
                 <div class="space-y-2">
@@ -91,11 +91,11 @@ function renderQuestionField(question, index, questionType, isQuiz) {
     `;
 }
 
-async function submitQuizAnswers(content, questions, questionType) {
+async function submitQuizAnswers(content, questions) {
     const submitBtn = document.querySelector('.submit-quiz-answers-btn');
 
     const answers = questions.map((q) => {
-        if (questionType === 'short_answer') {
+        if (q.question_type === 'short_answer') {
             const textarea = document.querySelector(`textarea[data-question-id="${q.id}"]`);
             return { question_id: q.id, answer_text: textarea.value.trim() };
         }
@@ -103,7 +103,8 @@ async function submitQuizAnswers(content, questions, questionType) {
         return { question_id: q.id, option_id: checked ? Number(checked.value) : null };
     });
 
-    const missingAnswer = answers.some((a) => (questionType === 'short_answer' ? !a.answer_text : !a.option_id));
+    const answersByQuestionId = new Map(questions.map((q) => [q.id, q]));
+    const missingAnswer = answers.some((a) => (answersByQuestionId.get(a.question_id).question_type === 'short_answer' ? !a.answer_text : !a.option_id));
     if (missingAnswer) {
         showToast('Debes responder todas las preguntas', 'error');
         return;
@@ -144,7 +145,7 @@ window.renderQuizResults = async function(params) {
             contentsAPI.getResults(params.id)
         ]);
         const content = contentResponse.data;
-        const { type, question_type, total_respondents, questions } = resultsResponse.data;
+        const { type, total_respondents, questions } = resultsResponse.data;
         const isQuiz = type === 'quiz';
 
         app.innerHTML = `
@@ -160,7 +161,7 @@ window.renderQuizResults = async function(params) {
 
                 ${questions.length > 0 ? `
                     <div class="space-y-4">
-                        ${questions.map((q, index) => renderResultQuestion(q, index, isQuiz, question_type)).join('')}
+                        ${questions.map((q, index) => renderResultQuestion(q, index, isQuiz)).join('')}
                     </div>
                 ` : `
                     <div class="empty-state bg-white rounded-xl border border-gray-100">
@@ -184,8 +185,8 @@ window.renderQuizResults = async function(params) {
     }
 };
 
-function renderResultQuestion(q, index, isQuiz, questionType) {
-    if (questionType === 'short_answer') {
+function renderResultQuestion(q, index, isQuiz) {
+    if (q.question_type === 'short_answer') {
         return `
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
                 <p class="font-medium text-gray-900 mb-3">${index + 1}. ${escapeHtml(q.question_text)} ${isQuiz ? `<span class="text-xs font-normal text-gray-400">(${q.points} ${q.points === 1 ? 'punto' : 'puntos'})</span>` : ''}</p>

@@ -2,18 +2,18 @@ import pool from '../config/db.js';
 
 /**
  * Preguntas (y sus opciones) de un cuestionario o encuesta. Un content de
- * tipo 'quiz'/'survey' tiene varias preguntas, todas del mismo
- * question_type (columna en `contents`, no acá) — ver Content.js.
+ * tipo 'quiz'/'survey' tiene varias preguntas, cada una con su propio
+ * question_type — se pueden mezclar tipos dentro del mismo cuestionario.
  */
 class ContentQuestion {
   /**
    * `executor` (pool por defecto) permite pasar una connection ya abierta
    * dentro de una transacción — ver Content.create para el mismo criterio.
    */
-  static async create(contentId, questionText, orderIndex = 0, points = 1, executor = pool) {
+  static async create(contentId, questionText, orderIndex = 0, points = 1, questionType, executor = pool) {
     const [result] = await executor.query(
-      'INSERT INTO content_questions (content_id, question_text, order_index, points) VALUES (?, ?, ?, ?)',
-      [contentId, questionText, orderIndex, points]
+      'INSERT INTO content_questions (content_id, question_text, order_index, points, question_type) VALUES (?, ?, ?, ?, ?)',
+      [contentId, questionText, orderIndex, points, questionType]
     );
     return result.insertId;
   }
@@ -61,7 +61,7 @@ class ContentQuestion {
    */
   static async findByContent(contentId, { includeCorrect = false } = {}) {
     const [questions] = await pool.query(
-      'SELECT id, content_id, question_text, points, order_index FROM content_questions WHERE content_id = ? ORDER BY order_index ASC, id ASC',
+      'SELECT id, content_id, question_text, question_type, points, order_index FROM content_questions WHERE content_id = ? ORDER BY order_index ASC, id ASC',
       [contentId]
     );
     if (questions.length === 0) return [];

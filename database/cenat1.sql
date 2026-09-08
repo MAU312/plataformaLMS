@@ -42,7 +42,7 @@ CREATE TABLE `content_answers` (
   CONSTRAINT `content_answers_ibfk_2` FOREIGN KEY (`question_id`) REFERENCES `content_questions` (`id`) ON DELETE CASCADE,
   CONSTRAINT `content_answers_ibfk_3` FOREIGN KEY (`option_id`) REFERENCES `content_question_options` (`id`) ON DELETE SET NULL,
   CONSTRAINT `content_answers_ibfk_4` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -73,7 +73,7 @@ CREATE TABLE `content_progress` (
   KEY `idx_content` (`content_id`),
   CONSTRAINT `content_progress_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `content_progress_ibfk_2` FOREIGN KEY (`content_id`) REFERENCES `contents` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=104 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=105 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -102,7 +102,7 @@ CREATE TABLE `content_question_options` (
   PRIMARY KEY (`id`),
   KEY `idx_question` (`question_id`),
   CONSTRAINT `content_question_options_ibfk_1` FOREIGN KEY (`question_id`) REFERENCES `content_questions` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=48 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=52 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -126,13 +126,14 @@ CREATE TABLE `content_questions` (
   `id` int NOT NULL AUTO_INCREMENT,
   `content_id` int NOT NULL,
   `question_text` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `question_type` enum('short_answer','multiple_choice','true_false') COLLATE utf8mb4_unicode_ci NOT NULL,
   `points` int NOT NULL DEFAULT '1',
   `order_index` int DEFAULT '0',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_content` (`content_id`),
   CONSTRAINT `content_questions_ibfk_1` FOREIGN KEY (`content_id`) REFERENCES `contents` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -141,7 +142,7 @@ CREATE TABLE `content_questions` (
 
 LOCK TABLES `content_questions` WRITE;
 /*!40000 ALTER TABLE `content_questions` DISABLE KEYS */;
-INSERT INTO `content_questions` VALUES (6,41,'hola',1,0,'2026-08-18 17:33:07'),(7,41,'adios',1,1,'2026-08-18 17:33:07'),(8,41,'pato',1,2,'2026-08-18 17:33:07'),(9,42,'como te llamas?',1,0,'2026-08-18 17:33:35'),(10,42,'que edad tienes?',1,1,'2026-08-18 17:33:35'),(11,42,'eres hombre?',1,2,'2026-08-18 17:33:35'),(12,47,'que tal te parecio el curso',1,0,'2026-08-18 19:13:07'),(19,40,'pregunta 1',1,0,'2026-08-28 10:51:21'),(20,40,'hola',1,1,'2026-08-28 10:51:21');
+INSERT INTO `content_questions` VALUES (6,41,'hola','true_false',1,0,'2026-08-18 17:33:07'),(7,41,'adios','true_false',1,1,'2026-08-18 17:33:07'),(8,41,'pato','true_false',1,2,'2026-08-18 17:33:07'),(9,42,'como te llamas?','short_answer',1,0,'2026-08-18 17:33:35'),(10,42,'que edad tienes?','short_answer',1,1,'2026-08-18 17:33:35'),(11,42,'eres hombre?','short_answer',1,2,'2026-08-18 17:33:35'),(12,47,'que tal te parecio el curso','multiple_choice',1,0,'2026-08-18 19:13:07'),(19,40,'pregunta 1','multiple_choice',1,0,'2026-08-28 10:51:21'),(20,40,'hola','multiple_choice',1,1,'2026-08-28 10:51:21');
 /*!40000 ALTER TABLE `content_questions` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -157,7 +158,6 @@ CREATE TABLE `contents` (
   `course_id` int NOT NULL,
   `folder_id` int DEFAULT NULL,
   `type` enum('video','file','text','url','task','forum','folder','quiz','survey','image') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `question_type` enum('short_answer','multiple_choice','true_false') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `weight_percent` decimal(5,2) DEFAULT NULL,
   `title` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
@@ -173,7 +173,7 @@ CREATE TABLE `contents` (
   KEY `idx_folder` (`folder_id`),
   CONSTRAINT `contents_folder_fk` FOREIGN KEY (`folder_id`) REFERENCES `contents` (`id`),
   CONSTRAINT `contents_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=73 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=74 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -182,7 +182,7 @@ CREATE TABLE `contents` (
 
 LOCK TABLES `contents` WRITE;
 /*!40000 ALTER TABLE `contents` DISABLE KEYS */;
-INSERT INTO `contents` VALUES (11,4,NULL,'text',NULL,NULL,'dadsad','sdsadsa',NULL,NULL,1,'2026-08-13 10:06:59','2026-08-22 11:51:38'),(12,4,NULL,'url',NULL,NULL,'musica','video musical','https://www.youtube.com/watch?v=qz6_ETehLpQ',NULL,2,'2026-08-13 10:12:18','2026-08-22 11:51:38'),(13,4,NULL,'file',NULL,NULL,'dada','dada','/uploads/files/20260515-REGLAMENTO_POKEMON_CHAMPIONS_vf-1786615954650-547301046.pdf',169027,3,'2026-08-13 10:12:34','2026-08-13 10:12:34'),(14,4,NULL,'task',NULL,NULL,'tarea','tarea','/uploads/files/BIG-DATA-GUION-DE-EXPOSICIÃN-EXTENSO-Y-CODIGO-1786615978390-294165536.docx',33332,4,'2026-08-13 10:12:58','2026-08-22 11:51:38'),(15,4,NULL,'video',NULL,NULL,'dada','dada','/uploads/videos/no-joda-1786615995296-952925826.mp4',9064665,5,'2026-08-13 10:13:15','2026-08-13 10:13:15'),(17,4,NULL,'forum',NULL,NULL,'foro 1','primer foro',NULL,NULL,6,'2026-08-13 10:44:50','2026-08-28 10:03:44'),(24,1,NULL,'folder',NULL,NULL,'Unidad 1',NULL,NULL,NULL,2,'2026-08-18 07:48:08','2026-09-07 16:30:09'),(25,1,NULL,'folder',NULL,NULL,'Unidad 2',NULL,NULL,NULL,4,'2026-08-18 07:48:16','2026-09-07 16:30:00'),(26,1,NULL,'folder',NULL,NULL,'Unidad 3',NULL,NULL,NULL,5,'2026-08-18 07:48:27','2026-09-07 16:29:59'),(27,1,24,'video',NULL,NULL,'video 1','hola','/uploads/videos/YTDown.com_YouTube_Samsung-Galaxy-Z-Fold-8-I-Unboxing-_-Cam_Media_0mWy2Vr8YHo_001_1080p-1786748414866-771704190-1787039398024-788598740.mp4',344744669,1,'2026-08-18 07:50:04','2026-08-22 11:54:36'),(28,1,24,'text',NULL,NULL,'Bienvenidos al curso','etc etc etc etc etc etc ect ect',NULL,NULL,1,'2026-08-18 07:50:35','2026-09-07 16:30:26'),(29,1,24,'file',NULL,NULL,'guia de curso',NULL,'/uploads/files/CuadroSinÃ³pticoTecnologia-1787039467932-263913221.pdf',1087774,2,'2026-08-18 07:51:07','2026-09-07 16:30:26'),(30,1,25,'task',NULL,NULL,'aaaa','hola','/uploads/files/ORDEN-DE-PRODUCCION-AC-1787064644086-314714759.pdf',463323,1,'2026-08-18 14:50:44','2026-08-22 11:55:20'),(31,1,25,'task',NULL,NULL,'tarea 1','para la tarea tiene que hacer esto aquello y aja','/uploads/files/Caso-prÃ¡ctico-PelÃ­culas-Web-1787064922936-574098792.pdf',320272,2,'2026-08-18 14:55:22','2026-08-18 14:55:22'),(32,1,25,'forum',NULL,NULL,'foro sobre el cenat','la pregunta del foro es esta, respondan',NULL,NULL,3,'2026-08-18 14:56:24','2026-08-18 14:56:24'),(38,1,NULL,'image',NULL,NULL,'imagen1a','','/uploads/content-images/imagen1-1787074088639-815344633.jpg',31680,1,'2026-08-18 17:28:08','2026-09-07 16:30:09'),(40,1,26,'quiz','multiple_choice',NULL,'quiz 1','',NULL,NULL,1,'2026-08-18 17:32:40','2026-08-28 11:06:27'),(41,1,26,'quiz','true_false',NULL,'quiz1',NULL,NULL,NULL,2,'2026-08-18 17:33:07','2026-08-28 11:06:27'),(42,1,26,'quiz','short_answer',NULL,'quiz 3',NULL,NULL,NULL,3,'2026-08-18 17:33:35','2026-08-28 11:06:27'),(44,1,26,'url',NULL,NULL,'video',NULL,'https://www.youtube.com/watch?v=xSn66Am1GbU',NULL,5,'2026-08-18 18:57:37','2026-09-07 16:30:32'),(46,1,26,'url',NULL,NULL,'video',NULL,'https://www.youtube.com/watch?v=4DBy1-BdcsE',NULL,4,'2026-08-18 18:59:45','2026-09-07 16:30:32'),(47,1,26,'survey','multiple_choice',NULL,'encuesta de satisfaccion',NULL,NULL,NULL,6,'2026-08-18 19:13:07','2026-08-28 11:06:28'),(68,1,NULL,'file',NULL,NULL,'hola','holaaa','/uploads/files/2025_2C_SC-807_Lab2---RecolecciÃ³n-de-InformaciÃ³n-(version-usando-Metagoofil)-1788798586676-268789942.pdf',1926355,3,'2026-09-07 16:29:46','2026-09-07 16:30:09');
+INSERT INTO `contents` VALUES (11,4,NULL,'text',NULL,'dadsad','sdsadsa',NULL,NULL,1,'2026-08-13 10:06:59','2026-08-22 11:51:38'),(12,4,NULL,'url',NULL,'musica','video musical','https://www.youtube.com/watch?v=qz6_ETehLpQ',NULL,2,'2026-08-13 10:12:18','2026-08-22 11:51:38'),(13,4,NULL,'file',NULL,'dada','dada','/uploads/files/20260515-REGLAMENTO_POKEMON_CHAMPIONS_vf-1786615954650-547301046.pdf',169027,3,'2026-08-13 10:12:34','2026-08-13 10:12:34'),(14,4,NULL,'task',NULL,'tarea','tarea','/uploads/files/BIG-DATA-GUION-DE-EXPOSICIÃN-EXTENSO-Y-CODIGO-1786615978390-294165536.docx',33332,4,'2026-08-13 10:12:58','2026-08-22 11:51:38'),(15,4,NULL,'video',NULL,'dada','dada','/uploads/videos/no-joda-1786615995296-952925826.mp4',9064665,5,'2026-08-13 10:13:15','2026-08-13 10:13:15'),(17,4,NULL,'forum',NULL,'foro 1','primer foro',NULL,NULL,6,'2026-08-13 10:44:50','2026-08-28 10:03:44'),(24,1,NULL,'folder',NULL,'Unidad 1',NULL,NULL,NULL,2,'2026-08-18 07:48:08','2026-09-07 16:30:09'),(25,1,NULL,'folder',NULL,'Unidad 2',NULL,NULL,NULL,4,'2026-08-18 07:48:16','2026-09-07 16:30:00'),(26,1,NULL,'folder',NULL,'Unidad 3',NULL,NULL,NULL,5,'2026-08-18 07:48:27','2026-09-07 16:29:59'),(27,1,24,'video',NULL,'video 1','hola','/uploads/videos/YTDown.com_YouTube_Samsung-Galaxy-Z-Fold-8-I-Unboxing-_-Cam_Media_0mWy2Vr8YHo_001_1080p-1786748414866-771704190-1787039398024-788598740.mp4',344744669,1,'2026-08-18 07:50:04','2026-08-22 11:54:36'),(28,1,24,'text',NULL,'Bienvenidos al curso','etc etc etc etc etc etc ect ect',NULL,NULL,1,'2026-08-18 07:50:35','2026-09-07 16:30:26'),(29,1,24,'file',NULL,'guia de curso',NULL,'/uploads/files/CuadroSinÃ³pticoTecnologia-1787039467932-263913221.pdf',1087774,2,'2026-08-18 07:51:07','2026-09-07 16:30:26'),(30,1,25,'task',NULL,'aaaa','hola','/uploads/files/ORDEN-DE-PRODUCCION-AC-1787064644086-314714759.pdf',463323,1,'2026-08-18 14:50:44','2026-08-22 11:55:20'),(31,1,25,'task',NULL,'tarea 1','para la tarea tiene que hacer esto aquello y aja','/uploads/files/Caso-prÃ¡ctico-PelÃ­culas-Web-1787064922936-574098792.pdf',320272,2,'2026-08-18 14:55:22','2026-08-18 14:55:22'),(32,1,25,'forum',NULL,'foro sobre el cenat','la pregunta del foro es esta, respondan',NULL,NULL,3,'2026-08-18 14:56:24','2026-08-18 14:56:24'),(38,1,NULL,'image',NULL,'imagen1a','','/uploads/content-images/imagen1-1787074088639-815344633.jpg',31680,1,'2026-08-18 17:28:08','2026-09-07 16:30:09'),(40,1,26,'quiz',NULL,'quiz 1','',NULL,NULL,1,'2026-08-18 17:32:40','2026-08-28 11:06:27'),(41,1,26,'quiz',NULL,'quiz1',NULL,NULL,NULL,2,'2026-08-18 17:33:07','2026-08-28 11:06:27'),(42,1,26,'quiz',NULL,'quiz 3',NULL,NULL,NULL,3,'2026-08-18 17:33:35','2026-08-28 11:06:27'),(44,1,26,'url',NULL,'video',NULL,'https://www.youtube.com/watch?v=xSn66Am1GbU',NULL,5,'2026-08-18 18:57:37','2026-09-07 16:30:32'),(46,1,26,'url',NULL,'video',NULL,'https://www.youtube.com/watch?v=4DBy1-BdcsE',NULL,4,'2026-08-18 18:59:45','2026-09-07 16:30:32'),(47,1,26,'survey',NULL,'encuesta de satisfaccion',NULL,NULL,NULL,6,'2026-08-18 19:13:07','2026-08-28 11:06:28'),(68,1,NULL,'file',NULL,'hola','holaaa','/uploads/files/2025_2C_SC-807_Lab2---RecolecciÃ³n-de-InformaciÃ³n-(version-usando-Metagoofil)-1788798586676-268789942.pdf',1926355,3,'2026-09-07 16:29:46','2026-09-07 16:30:09');
 /*!40000 ALTER TABLE `contents` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -271,7 +271,7 @@ CREATE TABLE `enrollments` (
   KEY `idx_course` (`course_id`),
   CONSTRAINT `enrollments_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `enrollments_ibfk_2` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=30 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -364,6 +364,7 @@ CREATE TABLE `site_settings` (
 
 LOCK TABLES `site_settings` WRITE;
 /*!40000 ALTER TABLE `site_settings` DISABLE KEYS */;
+INSERT INTO `site_settings` VALUES ('catalog_subtitle','Explora nuestros cursos educativos y fortalece tus conocimientos en biotecnología ambiental y ciencia abierta.','2026-09-07 20:25:36'),('catalog_title','Cursos del LANBA - CeNAT','2026-09-07 20:25:36'),('courses_bg_image',NULL,'2026-09-07 20:26:43'),('login_bg_image',NULL,'2026-09-07 20:26:43');
 /*!40000 ALTER TABLE `site_settings` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -429,7 +430,7 @@ CREATE TABLE `users` (
   UNIQUE KEY `username` (`username`),
   KEY `idx_email` (`email`),
   KEY `idx_role` (`role`)
-) ENGINE=InnoDB AUTO_INCREMENT=61 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=64 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -438,7 +439,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'Administrador LANBA',NULL,'adminlms@cenat.com','$2a$10$.N7s0OE2s3iqbL4tsWC7mOnZmyfnrIWYn4PJZ3aYTEeLyWm8rAIR.','admin',0,NULL,1,'2026-08-11 02:06:18','2026-09-07 17:38:37','2026-09-07 17:38:37',NULL,NULL),(2,'Estudiante LANBA',NULL,'estudiantelms@cenat.com','$2a$10$uY59Lw.t0Ng4NBiuJeHThu7bw51QG88hl/9ewPuiSp8yiASHLBtvC','student',0,NULL,1,'2026-08-11 02:06:18','2026-08-14 08:09:49','2026-08-14 08:09:49',NULL,NULL),(3,'Jazmin Calderon Quiros',NULL,'jazmin@gmail.com','$2a$10$Xw39AhgrDRMVoDJrycnXTebL1b8OjOunQ0.GkBnfzJDTYf128iYEC','teacher',0,NULL,1,'2026-08-12 16:06:19','2026-08-13 10:15:00','2026-08-13 10:15:00',NULL,NULL),(11,'Mauricio Hidalgo Garzon','mau312','mauhidalgo312@gmail.com','$2a$10$xLJ75Pzxq0HCyJjOB.Z9aemhaZQodtD0hHt/0b/2ZcU7TKcDrvjC.','student',0,NULL,1,'2026-08-13 03:42:25','2026-09-07 16:42:01','2026-08-28 11:04:54',NULL,NULL),(12,'Ana Rojas Méndez','ana.rojas','ana.rojas@correo.com','$2a$10$bHW8xylfPMw4HVJPGsiWv.2cap57Tpq1eQStAhpX/z.o4lhIAqCsK','student',0,NULL,1,'2026-08-13 03:46:10','2026-08-27 08:26:44','2026-08-22 11:24:39',NULL,NULL),(13,'Carlos Vindas Solís','carlos.vindas','carlos.vindas@correo.com','$2a$10$5xlUPzXrhkFNQITypzdypuvqh.oNjSiyEc88W/CNdUUDVMG44pf02','student',0,NULL,1,'2026-08-13 03:46:10','2026-09-07 16:49:43','2026-09-07 16:49:43',NULL,NULL),(14,'Sofía Chacón Brenes','sofia.chacon','sofia.chacon@correo.com','$2a$10$ym0hKHtYgmLqAL37I9Tl6.d3/n0vvjDODcIBqeNxCfyB5CGssvIMa','teacher',0,NULL,1,'2026-08-13 03:46:10','2026-09-07 16:20:32','2026-08-18 19:13:30',NULL,NULL),(15,'Luis Fernández Araya','luis.fernandez','luis.fernandez@correo.com','$2a$10$YukGqYucgOrdnU6uwS.RTe8dz1sXftdmNcmZhUCu5t11l.gO/3b3a','teacher',0,NULL,1,'2026-08-13 03:46:10','2026-08-22 11:12:14','2026-08-22 11:12:14',NULL,NULL),(16,'Marcela Gómez Solano','marcela.gomez','marcela.gomez@correo.com','$2a$10$Nt3Oqg2XPAF/hCZ3P6UYM.371fIwpzzpt0UJQpNkFCtVGhreQAUn.','teacher',0,NULL,1,'2026-08-13 03:46:49','2026-09-07 17:36:23','2026-09-07 17:36:23',NULL,NULL);
+INSERT INTO `users` VALUES (1,'Administrador LANBA',NULL,'adminlms@cenat.com','$2a$10$.N7s0OE2s3iqbL4tsWC7mOnZmyfnrIWYn4PJZ3aYTEeLyWm8rAIR.','admin',0,NULL,1,'2026-08-11 02:06:18','2026-09-07 20:23:42','2026-09-07 20:23:42',NULL,NULL),(2,'Estudiante LANBA',NULL,'estudiantelms@cenat.com','$2a$10$uY59Lw.t0Ng4NBiuJeHThu7bw51QG88hl/9ewPuiSp8yiASHLBtvC','student',0,NULL,1,'2026-08-11 02:06:18','2026-08-14 08:09:49','2026-08-14 08:09:49',NULL,NULL),(3,'Jazmin Calderon Quiros',NULL,'jazmin@gmail.com','$2a$10$Xw39AhgrDRMVoDJrycnXTebL1b8OjOunQ0.GkBnfzJDTYf128iYEC','teacher',0,NULL,1,'2026-08-12 16:06:19','2026-08-13 10:15:00','2026-08-13 10:15:00',NULL,NULL),(11,'Mauricio Hidalgo Garzon','mau312','mauhidalgo312@gmail.com','$2a$10$xLJ75Pzxq0HCyJjOB.Z9aemhaZQodtD0hHt/0b/2ZcU7TKcDrvjC.','student',0,NULL,1,'2026-08-13 03:42:25','2026-09-07 20:27:51','2026-09-07 20:27:51',NULL,NULL),(12,'Ana Rojas Méndez','ana.rojas','ana.rojas@correo.com','$2a$10$bHW8xylfPMw4HVJPGsiWv.2cap57Tpq1eQStAhpX/z.o4lhIAqCsK','student',0,NULL,1,'2026-08-13 03:46:10','2026-08-27 08:26:44','2026-08-22 11:24:39',NULL,NULL),(13,'Carlos Vindas Solís','carlos.vindas','carlos.vindas@correo.com','$2a$10$5xlUPzXrhkFNQITypzdypuvqh.oNjSiyEc88W/CNdUUDVMG44pf02','student',0,NULL,1,'2026-08-13 03:46:10','2026-09-07 16:49:43','2026-09-07 16:49:43',NULL,NULL),(14,'Sofía Chacón Brenes','sofia.chacon','sofia.chacon@correo.com','$2a$10$ym0hKHtYgmLqAL37I9Tl6.d3/n0vvjDODcIBqeNxCfyB5CGssvIMa','teacher',0,NULL,1,'2026-08-13 03:46:10','2026-09-07 16:20:32','2026-08-18 19:13:30',NULL,NULL),(15,'Luis Fernández Araya','luis.fernandez','luis.fernandez@correo.com','$2a$10$YukGqYucgOrdnU6uwS.RTe8dz1sXftdmNcmZhUCu5t11l.gO/3b3a','teacher',0,NULL,1,'2026-08-13 03:46:10','2026-08-22 11:12:14','2026-08-22 11:12:14',NULL,NULL),(16,'Marcela Gómez Solano','marcela.gomez','marcela.gomez@correo.com','$2a$10$Nt3Oqg2XPAF/hCZ3P6UYM.371fIwpzzpt0UJQpNkFCtVGhreQAUn.','teacher',0,NULL,1,'2026-08-13 03:46:49','2026-09-07 20:20:06','2026-09-07 20:20:06',NULL,NULL);
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -451,4 +452,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-07 14:13:01
+-- Dump completed on 2026-09-07 19:47:09

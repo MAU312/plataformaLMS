@@ -448,20 +448,15 @@ function renderTaskItem(content) {
     `;
 }
 
-const QUESTION_TYPE_LABELS = {
-    short_answer: 'Respuesta corta',
-    multiple_choice: 'Opción múltiple',
-    true_false: 'Verdadero o falso'
-};
-
 function renderQuizManagerItem(content) {
     const isQuiz = content.type === 'quiz';
+    const questionCount = content.question_count || 0;
     return `
         <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition">
             <i class="fas ${isQuiz ? 'fa-question-circle' : 'fa-poll'} text-xl text-cenat-green"></i>
             <div class="flex-1 min-w-0">
                 <p class="font-medium text-gray-900 truncate">${escapeHtml(content.title)}</p>
-                <p class="text-xs text-gray-500">${QUESTION_TYPE_LABELS[content.question_type] || ''}</p>
+                <p class="text-xs text-gray-500">${questionCount} ${questionCount === 1 ? 'pregunta' : 'preguntas'}</p>
             </div>
             <a href="#/contents/${content.id}/results" class="text-cenat-green hover:text-cenat-green-hover text-sm whitespace-nowrap" title="Ver resultados">
                 <i class="fas fa-chart-bar mr-1"></i> Resultados
@@ -1064,11 +1059,29 @@ function showAddTaskForm(courseId, folderId) {
 // el submit (eso lo decide quien llama, vía `apiCall`).
 // =================================
 
+const QUESTION_TYPE_OPTIONS = [
+    { value: 'multiple_choice', label: 'Opción múltiple' },
+    { value: 'true_false', label: 'Verdadero o falso' },
+    { value: 'short_answer', label: 'Respuesta corta' }
+];
+
+// El tipo de pregunta se elige por pregunta, no una sola vez para todo el
+// cuestionario/encuesta — cada fila puede ser de un tipo distinto (ej. una
+// opción múltiple, otra verdadero/falso, otra respuesta corta).
+function blankOptionsForType(questionType) {
+    if (questionType === 'true_false') {
+        return [{ text: 'Verdadero', is_correct: true }, { text: 'Falso', is_correct: false }];
+    }
+    if (questionType === 'multiple_choice') {
+        return [{ text: '', is_correct: true }, { text: '', is_correct: false }];
+    }
+    return null; // short_answer no lleva opciones
+}
+
 function renderQuestionForm(container, {
     kind,
     initialTitle = '',
     initialDescription = '',
-    initialQuestionType = 'multiple_choice',
     initialQuestions = null,
     initialWeightPercent = null,
     idleLabel,
@@ -1079,23 +1092,9 @@ function renderQuestionForm(container, {
 }) {
     const isQuiz = kind === 'quiz';
 
-    // question_type aplica a TODAS las preguntas del cuestionario/encuesta
-    // (se elige una sola vez), por eso vive acá arriba y no por pregunta.
-    let questionType = initialQuestionType;
-
-    function blankOptions() {
-        if (questionType === 'true_false') {
-            return [{ text: 'Verdadero', is_correct: true }, { text: 'Falso', is_correct: false }];
-        }
-        if (questionType === 'multiple_choice') {
-            return [{ text: '', is_correct: true }, { text: '', is_correct: false }];
-        }
-        return null; // short_answer no lleva opciones
-    }
-
     let questions = (initialQuestions && initialQuestions.length > 0)
         ? initialQuestions
-        : [{ text: '', options: blankOptions(), points: 1 }];
+        : [{ text: '', question_type: 'multiple_choice', options: blankOptionsForType('multiple_choice'), points: 1 }];
 
     // Lee el estado ACTUAL desde el DOM (no desde `questions`) antes de
     // cualquier re-render estructural (agregar/quitar pregunta u opción,
@@ -1103,10 +1102,11 @@ function renderQuestionForm(container, {
     function readCurrentQuestions() {
         return Array.from(listEl.querySelectorAll('.question-row')).map((row) => {
             const text = row.querySelector('.question-text').value;
+            const question_type = row.querySelector('.question-type-select').value;
             const pointsInput = row.querySelector('.question-points');
             const points = pointsInput ? Math.max(1, parseInt(pointsInput.value, 10) || 1) : 1;
             const optionRows = row.querySelectorAll('.option-row');
-            if (optionRows.length === 0) return { text, options: null, points };
+            if (optionRows.length === 0) return { text, question_type, options: null, points };
             const options = Array.from(optionRows).map((optRow) => {
                 const textInput = optRow.querySelector('.option-text');
                 const radio = optRow.querySelector('.option-correct-radio');
@@ -1115,11 +1115,11 @@ function renderQuestionForm(container, {
                     is_correct: radio ? radio.checked : false
                 };
             });
-            return { text, options, points };
+            return { text, question_type, options, points };
         });
     }
 
-    function optionRowHTML(opt, qIndex, oIndex, options) {
+    function optionRowHTML(opt, qIndex, oIndex, options, questionType) {
         const isTrueFalse = questionType === 'true_false';
         return `
             <div class="option-row flex items-center gap-2" ${isTrueFalse ? `data-fixed-text="${escapeAttr(opt.text)}"` : ''}>
@@ -1138,12 +1138,16 @@ function renderQuestionForm(container, {
     }
 
     function questionRowHTML(q, qIndex) {
+        const questionType = q.question_type;
         const showOptions = questionType !== 'short_answer';
         return `
             <div class="question-row border border-gray-200 rounded-lg p-3 space-y-2" data-q-index="${qIndex}">
-                <div class="flex items-start gap-2">
+                <div class="flex items-start gap-2 flex-wrap">
                     <span class="text-sm font-semibold text-gray-500 mt-2">${qIndex + 1}.</span>
-                    <input type="text" class="question-text flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Escribe la pregunta..." value="${escapeAttr(q.text || '')}">
+                    <input type="text" class="question-text flex-1 min-w-[10rem] px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Escribe la pregunta..." value="${escapeAttr(q.text || '')}">
+                    <select class="question-type-select px-2 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" title="Tipo de esta pregunta">
+                        ${QUESTION_TYPE_OPTIONS.map((opt) => `<option value="${opt.value}" ${questionType === opt.value ? 'selected' : ''}>${opt.label}</option>`).join('')}
+                    </select>
                     ${isQuiz ? `
                         <input type="number" class="question-points w-16 px-2 py-2 border border-gray-300 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-cenat-green" min="1" step="1" title="Puntos que vale esta pregunta" value="${q.points || 1}">
                     ` : ''}
@@ -1153,7 +1157,7 @@ function renderQuestionForm(container, {
                 </div>
                 ${showOptions ? `
                     <div class="pl-6 space-y-1">
-                        ${(q.options || []).map((opt, oIndex) => optionRowHTML(opt, qIndex, oIndex, q.options)).join('')}
+                        ${(q.options || []).map((opt, oIndex) => optionRowHTML(opt, qIndex, oIndex, q.options, questionType)).join('')}
                         ${questionType === 'multiple_choice' ? `
                             <button type="button" class="add-option-btn text-xs text-cenat-green hover:underline mt-1">
                                 <i class="fas fa-plus mr-1"></i> Agregar opción
@@ -1179,15 +1183,6 @@ function renderQuestionForm(container, {
                 <label class="block text-xs font-medium text-gray-700 mb-1">Descripción (opcional)</label>
                 <input type="text" class="quiz-description w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" value="${escapeAttr(initialDescription)}">
             </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Tipo de pregunta *</label>
-                <select class="quiz-question-type w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green">
-                    <option value="multiple_choice">Opción múltiple</option>
-                    <option value="true_false">Verdadero o falso</option>
-                    <option value="short_answer">Respuesta corta</option>
-                </select>
-                <p class="text-xs text-gray-500 mt-1">Todas las preguntas de ${isQuiz ? 'este cuestionario' : 'esta encuesta'} serán de este tipo.</p>
-            </div>
             ${isQuiz ? `
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">% del curso (opcional)</label>
@@ -1210,23 +1205,27 @@ function renderQuestionForm(container, {
 
     const formEl = container.querySelector('form');
     const listEl = formEl.querySelector('.questions-list');
-    const typeSelect = formEl.querySelector('.quiz-question-type');
 
-    typeSelect.value = questionType;
     rerender();
 
     formEl.querySelector('.cancel-quiz-btn').addEventListener('click', onCancel);
 
-    typeSelect.addEventListener('change', () => {
-        const current = readCurrentQuestions();
-        questionType = typeSelect.value;
-        questions = current.map(({ text, points }) => ({ text, options: blankOptions(), points }));
+    formEl.querySelector('.add-question-btn').addEventListener('click', () => {
+        questions = readCurrentQuestions();
+        questions.push({ text: '', question_type: 'multiple_choice', options: blankOptionsForType('multiple_choice'), points: 1 });
         rerender();
     });
 
-    formEl.querySelector('.add-question-btn').addEventListener('click', () => {
+    // Cambiar el tipo de UNA pregunta reinicia solo sus opciones (el resto
+    // de preguntas del formulario no se toca) — delegado en listEl por el
+    // mismo motivo que el resto de listeners de esta lista.
+    listEl.addEventListener('change', (e) => {
+        const typeSelect = e.target.closest('.question-type-select');
+        if (!typeSelect) return;
         questions = readCurrentQuestions();
-        questions.push({ text: '', options: blankOptions(), points: 1 });
+        const qIndex = Number(typeSelect.closest('.question-row').dataset.qIndex);
+        questions[qIndex].question_type = typeSelect.value;
+        questions[qIndex].options = blankOptionsForType(typeSelect.value);
         rerender();
     });
 
@@ -1285,27 +1284,26 @@ function renderQuestionForm(container, {
             showToast('Todas las preguntas necesitan un texto', 'error');
             return;
         }
-        if (questionType !== 'short_answer') {
-            if (currentQuestions.some((q) => (q.options || []).some((o) => !o.text.trim()))) {
-                showToast('Todas las opciones necesitan un texto', 'error');
-                return;
-            }
-            if (isQuiz && currentQuestions.some((q) => !(q.options || []).some((o) => o.is_correct))) {
-                showToast('Marca la opción correcta de cada pregunta', 'error');
-                return;
-            }
+        const withOptions = currentQuestions.filter((q) => q.question_type !== 'short_answer');
+        if (withOptions.some((q) => (q.options || []).some((o) => !o.text.trim()))) {
+            showToast('Todas las opciones necesitan un texto', 'error');
+            return;
+        }
+        if (isQuiz && withOptions.some((q) => !(q.options || []).some((o) => o.is_correct))) {
+            showToast('Marca la opción correcta de cada pregunta', 'error');
+            return;
         }
 
         const weightInput = formEl.querySelector('.quiz-weight');
         const payload = {
             title,
             description,
-            question_type: questionType,
             weight_percent: (isQuiz && weightInput && weightInput.value.trim()) ? weightInput.value.trim() : undefined,
             questions: currentQuestions.map((q) => ({
                 text: q.text.trim(),
+                question_type: q.question_type,
                 points: isQuiz ? (q.points || 1) : 1,
-                options: questionType === 'short_answer'
+                options: q.question_type === 'short_answer'
                     ? undefined
                     : q.options.map((o) => ({ text: o.text.trim(), is_correct: !!o.is_correct }))
             }))
@@ -1419,10 +1417,10 @@ async function editQuestionContentHandler(content, display, editContainer) {
         kind: content.type,
         initialTitle: content.title,
         initialDescription: content.description || '',
-        initialQuestionType: data.question_type,
         initialWeightPercent: data.weight_percent,
         initialQuestions: data.questions.map((q) => ({
             text: q.question_text,
+            question_type: q.question_type,
             points: q.points || 1,
             options: (q.options || []).length > 0
                 ? q.options.map((o) => ({ text: o.option_text, is_correct: !!o.is_correct }))

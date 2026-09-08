@@ -105,15 +105,15 @@ test('findAllByContent: hace JOIN con users y content_questions (vista de revisi
   assert.deepEqual(params, [10]);
 });
 
-test('gradeAnswer: solo califica si la pregunta es short_answer (JOIN contra contents.question_type)', async (t) => {
+test('gradeAnswer: solo califica si la pregunta es short_answer (JOIN contra content_questions.question_type — el tipo es por pregunta)', async (t) => {
   const queryCall = t.mock.method(pool, 'query', async () => ([{ affectedRows: 1 }]));
 
   const result = await ContentAnswer.gradeAnswer(7, true);
 
   assert.equal(result, true);
   const [sql, params] = queryCall.mock.calls[0].arguments;
-  assert.match(sql, /INNER JOIN contents c ON c\.id = ca\.content_id/);
-  assert.match(sql, /WHERE ca\.id = \? AND c\.question_type = 'short_answer'/);
+  assert.match(sql, /INNER JOIN content_questions cq ON cq\.id = ca\.question_id/);
+  assert.match(sql, /WHERE ca\.id = \? AND cq\.question_type = 'short_answer'/);
   assert.deepEqual(params, [1, 7]);
 });
 

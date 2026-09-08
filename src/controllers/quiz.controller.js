@@ -42,37 +42,39 @@ async function resolveFolderId(folderIdInput, courseId) {
 }
 
 /**
- * Valida question_type + el array de preguntas/opciones — compartido entre
- * crear (createQuestionContent) y reemplazar (updateQuestions) un set de
- * preguntas, misma regla en los dos casos:
+ * Valida el array de preguntas/opciones — compartido entre crear
+ * (createQuestionContent) y reemplazar (updateQuestions) un set de
+ * preguntas. El tipo se elige por pregunta (se pueden mezclar
+ * multiple_choice/true_false/short_answer en el mismo cuestionario), misma
+ * regla para cada una:
  * - quiz: exactamente una opción correcta por pregunta (multiple_choice/
  *   true_false). short_answer no lleva opciones, la revisa el profesor.
  * - survey: nunca hay respuesta correcta (is_correct del cliente se ignora
  *   al insertar, ver insertQuestions).
  */
-function validateQuestions(question_type, questions, isQuiz) {
-  if (!QUESTION_TYPES.includes(question_type)) {
-    return { ok: false, message: 'El tipo de pregunta no es válido' };
-  }
+function validateQuestions(questions, isQuiz) {
   if (!Array.isArray(questions) || questions.length === 0) {
     return { ok: false, message: 'Se requiere al menos una pregunta' };
   }
 
-  const needsOptions = question_type === 'multiple_choice' || question_type === 'true_false';
-
   for (const q of questions) {
+    if (!QUESTION_TYPES.includes(q.question_type)) {
+      return { ok: false, message: 'El tipo de pregunta no es válido' };
+    }
     if (!q.text || !String(q.text).trim()) {
       return { ok: false, message: 'Cada pregunta necesita un texto' };
     }
     if (q.points !== undefined && (!Number.isInteger(q.points) || q.points < 1)) {
       return { ok: false, message: 'El puntaje de cada pregunta debe ser un entero de al menos 1' };
     }
+
+    const needsOptions = q.question_type === 'multiple_choice' || q.question_type === 'true_false';
     if (needsOptions) {
       const options = Array.isArray(q.options) ? q.options : [];
       if (options.length < 2) {
         return { ok: false, message: 'Cada pregunta necesita al menos 2 opciones' };
       }
-      if (question_type === 'true_false' && options.length !== 2) {
+      if (q.question_type === 'true_false' && options.length !== 2) {
         return { ok: false, message: 'Verdadero/falso necesita exactamente 2 opciones' };
       }
       if (!options.every((o) => o.text && String(o.text).trim())) {
@@ -90,14 +92,14 @@ function validateQuestions(question_type, questions, isQuiz) {
 /**
  * Inserta las preguntas (y opciones) de un quiz/survey ya validado, dentro
  * de la connection de una transacción — compartido entre crear y
- * reemplazar un set de preguntas.
+ * reemplazar un set de preguntas. Cada pregunta lleva su propio
+ * question_type.
  */
-async function insertQuestions(contentId, question_type, questions, isQuiz, connection) {
-  const needsOptions = question_type === 'multiple_choice' || question_type === 'true_false';
-
+async function insertQuestions(contentId, questions, isQuiz, connection) {
   for (let i = 0; i < questions.length; i++) {
     const q = questions[i];
-    const questionId = await ContentQuestion.create(contentId, String(q.text).trim(), i, q.points || 1, connection);
+    const needsOptions = q.question_type === 'multiple_choice' || q.question_type === 'true_false';
+    const questionId = await ContentQuestion.create(contentId, String(q.text).trim(), i, q.points || 1, q.question_type, connection);
     if (needsOptions) {
       const options = q.options.map((o, idx) => ({
         text: String(o.text).trim(),
@@ -121,13 +123,13 @@ async function createQuestionContent(req, res, type) {
   const label = isQuiz ? 'el cuestionario' : 'la encuesta';
 
   try {
-    const { course_id, title, description, folder_id, question_type, questions, weight_percent } = req.body;
+    const { course_id, title, description, folder_id, questions, weight_percent } = req.body;
 
     if (!course_id || !title) {
       return res.status(400).json({ success: false, message: 'El ID del curso y el título son requeridos' });
     }
 
-    const validation = validateQuestions(question_type, questions, isQuiz);
+    const validation = validateQuestions(questions, isQuiz);
     if (!validation.ok) {
       return res.status(400).json({ success: false, message: validation.message });
     }
@@ -159,11 +161,10 @@ async function createQuestionContent(req, res, type) {
         description,
         url: null,
         folder_id: folderCheck.folderId,
-        question_type,
         weight_percent: weightCheck.value
       }, connection);
 
-      await insertQuestions(contentId, question_type, questions, isQuiz, connection);
+      await insertQuestions(contentId, questions, isQuiz, connection);
 
       await connection.commit();
     } catch (error) {
@@ -213,7 +214,7 @@ export const getQuestionsForManage = async (req, res) => {
 
     res.json({
       success: true,
-      data: { question_type: content.question_type, weight_percent: content.weight_percent, questions, respondent_count: respondentCount }
+      data: { weight_percent: content.weight_percent, questions, respondent_count: respondentCount }
     });
   } catch (error) {
     console.error('Error al obtener las preguntas para editar:', error);
@@ -242,14 +243,14 @@ export const updateQuestions = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Este contenido no es un cuestionario ni una encuesta' });
     }
 
-    const { title, description, question_type, questions, weight_percent } = req.body;
+    const { title, description, questions, weight_percent } = req.body;
     const isQuiz = content.type === 'quiz';
 
     if (!title || !String(title).trim()) {
       return res.status(400).json({ success: false, message: 'El título es requerido' });
     }
 
-    const validation = validateQuestions(question_type, questions, isQuiz);
+    const validation = validateQuestions(questions, isQuiz);
     if (!validation.ok) {
       return res.status(400).json({ success: false, message: validation.message });
     }
@@ -274,12 +275,11 @@ export const updateQuestions = async (req, res) => {
       await Content.update(id, {
         title: String(title).trim(),
         description: description !== undefined ? description : content.description,
-        question_type,
         weight_percent: weightCheck.value
       }, connection);
 
       await ContentQuestion.deleteByContent(id, connection);
-      await insertQuestions(id, question_type, questions, isQuiz, connection);
+      await insertQuestions(id, questions, isQuiz, connection);
 
       await connection.commit();
     } catch (error) {
@@ -332,14 +332,14 @@ export const getQuestions = async (req, res) => {
       ]);
       return res.json({
         success: true,
-        data: { question_type: content.question_type, already_answered: true, questions, my_answers: myAnswers }
+        data: { already_answered: true, questions, my_answers: myAnswers }
       });
     }
 
     const questions = await ContentQuestion.findByContent(id, { includeCorrect: false });
     res.json({
       success: true,
-      data: { question_type: content.question_type, already_answered: false, questions }
+      data: { already_answered: false, questions }
     });
   } catch (error) {
     console.error('Error al obtener preguntas:', error);
@@ -381,12 +381,12 @@ export const submitAnswers = async (req, res) => {
     }
 
     const isQuiz = content.type === 'quiz';
-    const needsOptions = content.question_type === 'multiple_choice' || content.question_type === 'true_false';
 
     let rows;
     try {
       rows = questions.map((question) => {
         const answer = answersByQuestion.get(question.id);
+        const needsOptions = question.question_type === 'multiple_choice' || question.question_type === 'true_false';
 
         if (needsOptions) {
           const option = question.options.find((o) => o.id === answer.option_id);
@@ -486,10 +486,11 @@ export const getResults = async (req, res) => {
     const questionResults = questions.map((q) => {
       const questionAnswers = answers.filter((a) => a.question_id === q.id);
 
-      if (content.question_type === 'short_answer') {
+      if (q.question_type === 'short_answer') {
         return {
           question_id: q.id,
           question_text: q.question_text,
+          question_type: q.question_type,
           points: q.points,
           answers: questionAnswers.map((a) => ({
             answer_id: a.id,
@@ -507,6 +508,7 @@ export const getResults = async (req, res) => {
         return {
           question_id: q.id,
           question_text: q.question_text,
+          question_type: q.question_type,
           points: q.points,
           correct_count: correctCount,
           incorrect_count: questionAnswers.length - correctCount
@@ -520,14 +522,13 @@ export const getResults = async (req, res) => {
         const percent = questionAnswers.length > 0 ? Math.round((count / questionAnswers.length) * 100) : 0;
         return { option_id: o.id, option_text: o.option_text, count, percent };
       });
-      return { question_id: q.id, question_text: q.question_text, options };
+      return { question_id: q.id, question_text: q.question_text, question_type: q.question_type, options };
     });
 
     res.json({
       success: true,
       data: {
         type: content.type,
-        question_type: content.question_type,
         total_respondents: totalRespondents,
         questions: questionResults
       }

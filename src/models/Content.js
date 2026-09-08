@@ -36,7 +36,9 @@ class Content {
    */
   static async findByCourse(courseId) {
     const [rows] = await pool.query(
-      'SELECT * FROM contents WHERE course_id = ? ORDER BY order_index ASC',
+      `SELECT co.*,
+              (SELECT COUNT(*) FROM content_questions cq WHERE cq.content_id = co.id) AS question_count
+       FROM contents co WHERE co.course_id = ? ORDER BY co.order_index ASC`,
       [courseId]
     );
     return rows;
@@ -90,7 +92,7 @@ class Content {
    * creación del content y la de todas sus preguntas/opciones sean una
    * sola unidad atómica.
    */
-  static async create({ course_id, type, title, description, url, file_size, order_index, folder_id, question_type, weight_percent }, executor = pool) {
+  static async create({ course_id, type, title, description, url, file_size, order_index, folder_id, weight_percent }, executor = pool) {
     const folderId = folder_id || null;
 
     if (order_index === undefined) {
@@ -102,9 +104,9 @@ class Content {
     }
 
     const [result] = await executor.query(
-      `INSERT INTO contents (course_id, type, title, description, url, file_size, order_index, folder_id, question_type, weight_percent)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [course_id, type, title, description || null, url, file_size || null, order_index, folderId, question_type || null, weight_percent ?? null]
+      `INSERT INTO contents (course_id, type, title, description, url, file_size, order_index, folder_id, weight_percent)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [course_id, type, title, description || null, url, file_size || null, order_index, folderId, weight_percent ?? null]
     );
     return result.insertId;
   }
@@ -115,9 +117,9 @@ class Content {
    * puede mandar `folder_id: null` explícito para sacar algo de su carpeta.
    * `executor` (pool por defecto) permite pasar una connection ya abierta
    * dentro de una transacción — usado por quiz.controller.js al reemplazar
-   * question_type junto con las preguntas de un quiz/survey.
+   * las preguntas de un quiz/survey.
    */
-  static async update(id, { title, description, url, order_index, folder_id, question_type, weight_percent }, executor = pool) {
+  static async update(id, { title, description, url, order_index, folder_id, weight_percent }, executor = pool) {
     const fields = [];
     const values = [];
 
@@ -140,10 +142,6 @@ class Content {
     if (folder_id !== undefined) {
       fields.push('folder_id = ?');
       values.push(folder_id);
-    }
-    if (question_type !== undefined) {
-      fields.push('question_type = ?');
-      values.push(question_type);
     }
     if (weight_percent !== undefined) {
       fields.push('weight_percent = ?');

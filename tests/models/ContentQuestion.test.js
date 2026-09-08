@@ -3,15 +3,15 @@ import assert from 'node:assert/strict';
 import pool from '../../src/config/db.js';
 import ContentQuestion from '../../src/models/ContentQuestion.js';
 
-test('create: inserta la pregunta (con su puntaje) y devuelve el id, usando pool por defecto', async (t) => {
+test('create: inserta la pregunta (con su puntaje y tipo) y devuelve el id, usando pool por defecto', async (t) => {
   const queryCall = t.mock.method(pool, 'query', async () => ([{ insertId: 5 }]));
 
-  const result = await ContentQuestion.create(1, '¿Cuánto es 2+2?', 0, 2);
+  const result = await ContentQuestion.create(1, '¿Cuánto es 2+2?', 0, 2, 'multiple_choice');
 
   assert.equal(result, 5);
   const [sql, params] = queryCall.mock.calls[0].arguments;
   assert.match(sql, /INSERT INTO content_questions/);
-  assert.deepEqual(params, [1, '¿Cuánto es 2+2?', 0, 2]);
+  assert.deepEqual(params, [1, '¿Cuánto es 2+2?', 0, 2, 'multiple_choice']);
 });
 
 test('create: points por defecto es 1 si no se indica', async (t) => {
@@ -28,7 +28,7 @@ test('create: acepta un executor alternativo (ej. una connection de transacción
   const calls = [];
   const fakeConnection = { query: async (sql, params) => { calls.push([sql, params]); return [{ insertId: 9 }]; } };
 
-  const result = await ContentQuestion.create(1, 'Pregunta', 0, 3, fakeConnection);
+  const result = await ContentQuestion.create(1, 'Pregunta', 0, 3, 'true_false', fakeConnection);
 
   assert.equal(result, 9);
   assert.equal(calls.length, 1);
@@ -59,7 +59,7 @@ test('createOptions: is_correct siempre se guarda como 0/1, e infiere order_inde
 
 test('findByContent: includeCorrect=false (default) NO trae is_correct — no filtra la respuesta antes de tiempo', async (t) => {
   const queryCall = t.mock.method(pool, 'query', async (sql) => {
-    if (/FROM content_questions/.test(sql)) return [[{ id: 1, content_id: 10, question_text: 'P1', order_index: 0 }]];
+    if (/FROM content_questions/.test(sql)) return [[{ id: 1, content_id: 10, question_text: 'P1', question_type: 'multiple_choice', order_index: 0 }]];
     return [[{ id: 100, question_id: 1, option_text: 'A', order_index: 0 }]];
   });
 
@@ -72,13 +72,30 @@ test('findByContent: includeCorrect=false (default) NO trae is_correct — no fi
 
 test('findByContent: includeCorrect=true SÍ trae is_correct por opción', async (t) => {
   t.mock.method(pool, 'query', async (sql) => {
-    if (/FROM content_questions/.test(sql)) return [[{ id: 1, content_id: 10, question_text: 'P1', order_index: 0 }]];
+    if (/FROM content_questions/.test(sql)) return [[{ id: 1, content_id: 10, question_text: 'P1', question_type: 'multiple_choice', order_index: 0 }]];
     return [[{ id: 100, question_id: 1, option_text: 'A', is_correct: 1, order_index: 0 }]];
   });
 
   const result = await ContentQuestion.findByContent(10, { includeCorrect: true });
 
   assert.equal(result[0].options[0].is_correct, 1);
+});
+
+test('findByContent: trae el question_type propio de cada pregunta — se pueden mezclar tipos en el mismo content', async (t) => {
+  t.mock.method(pool, 'query', async (sql) => {
+    if (/FROM content_questions/.test(sql)) {
+      return [[
+        { id: 1, content_id: 10, question_text: 'P1', question_type: 'multiple_choice', order_index: 0 },
+        { id: 2, content_id: 10, question_text: 'P2', question_type: 'short_answer', order_index: 1 }
+      ]];
+    }
+    return [[{ id: 100, question_id: 1, option_text: 'A' }]];
+  });
+
+  const result = await ContentQuestion.findByContent(10);
+
+  assert.equal(result[0].question_type, 'multiple_choice');
+  assert.equal(result[1].question_type, 'short_answer');
 });
 
 test('findByContent: sin preguntas, no consulta las opciones (evita un IN () vacío)', async (t) => {
