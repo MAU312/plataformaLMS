@@ -64,7 +64,9 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", 'https://cdnjs.cloudflare.com'],
       fontSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'data:'],
       imgSrc: ["'self'", 'data:'],
-      mediaSrc: ["'self'"],
+      // 'blob:' es necesario para la previsualización local del video antes
+      // de subirlo (URL.createObjectURL en el formulario de agregar video).
+      mediaSrc: ["'self'", 'blob:'],
       connectSrc: ["'self'"],
       frameSrc: ['https://www.youtube.com', 'https://player.vimeo.com'],
       objectSrc: ["'none'"],
