@@ -32,7 +32,7 @@ window.renderTakeQuiz = async function(params) {
         app.innerHTML = `
             <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <a href="#/course/${content.course_id}" class="text-cenat-green hover:underline text-sm mb-4 inline-block">
-                    <i class="fas fa-arrow-left mr-1"></i> Volver al curso
+                    <i class="fas fa-arrow-left mr-1"></i> ${t('quiz.back_to_course')}
                 </a>
 
                 <h1 class="text-2xl font-bold text-gray-900 mb-1">
@@ -44,9 +44,9 @@ window.renderTakeQuiz = async function(params) {
                     ${questions.map((q, index) => renderQuestionField(q, index, isQuiz)).join('')}
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
                         <button type="submit" class="submit-quiz-answers-btn btn-cenat w-full">
-                            <i class="fas fa-paper-plane mr-2"></i> Enviar ${isQuiz ? 'cuestionario' : 'encuesta'}
+                            <i class="fas fa-paper-plane mr-2"></i> ${isQuiz ? t('quiz.submit_quiz') : t('quiz.submit_survey')}
                         </button>
-                        <p class="text-xs text-gray-400 text-center mt-2">Solo puedes responder una vez — revisa tus respuestas antes de enviar.</p>
+                        <p class="text-xs text-gray-400 text-center mt-2">${t('quiz.submit_once_notice')}</p>
                     </div>
                 </form>
             </div>
@@ -63,8 +63,8 @@ window.renderTakeQuiz = async function(params) {
             <div class="min-h-screen flex items-center justify-center">
                 <div class="text-center">
                     <i class="fas fa-exclamation-triangle text-5xl text-red-500 mb-4"></i>
-                    <p class="text-xl text-gray-600">${escapeHtml(error.message || 'Error al cargar el cuestionario')}</p>
-                    <a href="#/" class="btn-cenat mt-4 inline-block">Volver al inicio</a>
+                    <p class="text-xl text-gray-600">${escapeHtml(error.message || t('quiz.load_failed'))}</p>
+                    <a href="#/" class="btn-cenat mt-4 inline-block">${t('quiz.back_to_home')}</a>
                 </div>
             </div>
         `;
@@ -74,9 +74,9 @@ window.renderTakeQuiz = async function(params) {
 function renderQuestionField(question, index, isQuiz) {
     return `
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <p class="font-medium text-gray-900 mb-3">${index + 1}. ${escapeHtml(question.question_text)} ${isQuiz ? `<span class="text-xs font-normal text-gray-400">(${question.points} ${question.points === 1 ? 'punto' : 'puntos'})</span>` : ''}</p>
+            <p class="font-medium text-gray-900 mb-3">${index + 1}. ${escapeHtml(question.question_text)} ${isQuiz ? `<span class="text-xs font-normal text-gray-400">(${t(question.points === 1 ? 'quiz.point_singular' : 'quiz.point_plural', { count: question.points })})</span>` : ''}</p>
             ${question.question_type === 'short_answer' ? `
-                <textarea class="answer-input w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" data-question-id="${question.id}" rows="3" required placeholder="Escribe tu respuesta..."></textarea>
+                <textarea class="answer-input w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" data-question-id="${question.id}" rows="3" required placeholder="${escapeAttr(t('quiz.answer_placeholder'))}"></textarea>
             ` : `
                 <div class="space-y-2">
                     ${question.options.map(opt => `
@@ -106,7 +106,7 @@ async function submitQuizAnswers(content, questions) {
     const answersByQuestionId = new Map(questions.map((q) => [q.id, q]));
     const missingAnswer = answers.some((a) => (answersByQuestionId.get(a.question_id).question_type === 'short_answer' ? !a.answer_text : !a.option_id));
     if (missingAnswer) {
-        showToast('Debes responder todas las preguntas', 'error');
+        showToast(t('quiz.all_questions_required'), 'error');
         return;
     }
 
@@ -114,23 +114,23 @@ async function submitQuizAnswers(content, questions) {
 
     try {
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Enviando...';
+        submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> ${t('quiz.sending')}`;
 
         const response = await contentsAPI.submitAnswers(content.id, { answers });
 
         if (isQuiz) {
             const { score, max_score, pending_review } = response.data;
-            const pendingNote = pending_review > 0 ? ` (${pending_review} pendiente${pending_review === 1 ? '' : 's'} de revisión)` : '';
-            showToast(`Enviado — ${score}/${max_score} puntos${pendingNote}`, 'success');
+            const pendingNote = pending_review > 0 ? t(pending_review === 1 ? 'quiz.pending_review_singular' : 'quiz.pending_review_plural', { count: pending_review }) : '';
+            showToast(`${t('quiz.submitted_score', { score, max: max_score })}${pendingNote}`, 'success');
         } else {
-            showToast('¡Gracias por responder la encuesta!', 'success');
+            showToast(t('quiz.survey_thanks'), 'success');
         }
 
         navigateTo(`/course/${content.course_id}`);
     } catch (error) {
-        showToast(error.message || 'Error al enviar las respuestas', 'error');
+        showToast(error.message || t('quiz.submit_failed'), 'error');
         submitBtn.disabled = false;
-        submitBtn.innerHTML = `<i class="fas fa-paper-plane mr-2"></i> Enviar ${isQuiz ? 'cuestionario' : 'encuesta'}`;
+        submitBtn.innerHTML = `<i class="fas fa-paper-plane mr-2"></i> ${isQuiz ? t('quiz.submit_quiz') : t('quiz.submit_survey')}`;
     }
 }
 
@@ -151,13 +151,13 @@ window.renderQuizResults = async function(params) {
         app.innerHTML = `
             <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <a href="javascript:history.back()" class="text-cenat-green hover:underline text-sm mb-4 inline-block">
-                    <i class="fas fa-arrow-left mr-1"></i> Volver
+                    <i class="fas fa-arrow-left mr-1"></i> ${t('quiz.results_back')}
                 </a>
 
                 <h1 class="text-2xl font-bold text-gray-900 mb-1">
-                    <i class="fas fa-chart-bar text-cenat-green mr-2"></i> Resultados
+                    <i class="fas fa-chart-bar text-cenat-green mr-2"></i> ${t('quiz.results_title')}
                 </h1>
-                <p class="text-gray-500 mb-6">${escapeHtml(content.title)} — ${total_respondents} ${total_respondents === 1 ? 'respuesta' : 'respuestas'}</p>
+                <p class="text-gray-500 mb-6">${escapeHtml(content.title)} — ${t(total_respondents === 1 ? 'quiz.respondents_singular' : 'quiz.respondents_plural', { count: total_respondents })}</p>
 
                 ${questions.length > 0 ? `
                     <div class="space-y-4">
@@ -166,7 +166,7 @@ window.renderQuizResults = async function(params) {
                 ` : `
                     <div class="empty-state bg-white rounded-xl border border-gray-100">
                         <i class="fas fa-inbox"></i>
-                        <p class="text-xl text-gray-600 font-medium">Este ${isQuiz ? 'cuestionario' : 'esta encuesta'} todavía no tiene preguntas</p>
+                        <p class="text-xl text-gray-600 font-medium">${isQuiz ? t('quiz.no_questions_quiz') : t('quiz.no_questions_survey')}</p>
                     </div>
                 `}
             </div>
@@ -178,7 +178,7 @@ window.renderQuizResults = async function(params) {
             <div class="min-h-screen flex items-center justify-center">
                 <div class="text-center">
                     <i class="fas fa-exclamation-triangle text-5xl text-red-500 mb-4"></i>
-                    <p class="text-xl text-gray-600">${escapeHtml(error.message || 'Error al cargar los resultados')}</p>
+                    <p class="text-xl text-gray-600">${escapeHtml(error.message || t('quiz.results_load_failed'))}</p>
                 </div>
             </div>
         `;
@@ -189,12 +189,12 @@ function renderResultQuestion(q, index, isQuiz) {
     if (q.question_type === 'short_answer') {
         return `
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-                <p class="font-medium text-gray-900 mb-3">${index + 1}. ${escapeHtml(q.question_text)} ${isQuiz ? `<span class="text-xs font-normal text-gray-400">(${q.points} ${q.points === 1 ? 'punto' : 'puntos'})</span>` : ''}</p>
+                <p class="font-medium text-gray-900 mb-3">${index + 1}. ${escapeHtml(q.question_text)} ${isQuiz ? `<span class="text-xs font-normal text-gray-400">(${t(q.points === 1 ? 'quiz.point_singular' : 'quiz.point_plural', { count: q.points })})</span>` : ''}</p>
                 ${q.answers.length > 0 ? `
                     <div class="space-y-2">
                         ${q.answers.map((a) => renderShortAnswerRow(a, isQuiz)).join('')}
                     </div>
-                ` : `<p class="text-sm text-gray-400">Nadie ha respondido esta pregunta todavía</p>`}
+                ` : `<p class="text-sm text-gray-400">${t('quiz.no_answers_yet')}</p>`}
             </div>
         `;
     }
@@ -204,9 +204,9 @@ function renderResultQuestion(q, index, isQuiz) {
         const percent = total > 0 ? Math.round((q.correct_count / total) * 100) : 0;
         return `
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-                <p class="font-medium text-gray-900 mb-2">${index + 1}. ${escapeHtml(q.question_text)} <span class="text-xs font-normal text-gray-400">(${q.points} ${q.points === 1 ? 'punto' : 'puntos'})</span></p>
+                <p class="font-medium text-gray-900 mb-2">${index + 1}. ${escapeHtml(q.question_text)} <span class="text-xs font-normal text-gray-400">(${t(q.points === 1 ? 'quiz.point_singular' : 'quiz.point_plural', { count: q.points })})</span></p>
                 <div class="progress-bar mb-1"><div class="progress-fill" style="width: ${percent}%"></div></div>
-                <p class="text-xs text-gray-500">${q.correct_count} correctas, ${q.incorrect_count} incorrectas (${percent}%)</p>
+                <p class="text-xs text-gray-500">${t('quiz.correct_incorrect_percent', { correct: q.correct_count, incorrect: q.incorrect_count, percent })}</p>
             </div>
         `;
     }
@@ -232,7 +232,7 @@ function renderResultQuestion(q, index, isQuiz) {
 }
 
 function renderShortAnswerRow(a, isQuiz) {
-    const statusLabel = a.is_correct == null ? 'Pendiente' : (a.is_correct == 1 ? 'Correcta' : 'Incorrecta');
+    const statusLabel = a.is_correct == null ? t('quiz.status_pending') : (a.is_correct == 1 ? t('quiz.status_correct') : t('quiz.status_incorrect'));
     const statusClass = a.is_correct == null ? 'text-gray-400' : (a.is_correct == 1 ? 'text-green-600' : 'text-red-600');
     return `
         <div class="border border-gray-100 rounded-lg p-3">
@@ -244,10 +244,10 @@ function renderShortAnswerRow(a, isQuiz) {
             ${isQuiz && a.is_correct == null ? `
                 <div class="flex gap-2 mt-2">
                     <button onclick="gradeAnswerHandler(${a.answer_id}, true, this)" class="text-xs bg-green-50 text-green-700 px-3 py-1 rounded-lg hover:bg-green-100">
-                        <i class="fas fa-check mr-1"></i> Correcta
+                        <i class="fas fa-check mr-1"></i> ${t('quiz.status_correct')}
                     </button>
                     <button onclick="gradeAnswerHandler(${a.answer_id}, false, this)" class="text-xs bg-red-50 text-red-700 px-3 py-1 rounded-lg hover:bg-red-100">
-                        <i class="fas fa-times mr-1"></i> Incorrecta
+                        <i class="fas fa-times mr-1"></i> ${t('quiz.status_incorrect')}
                     </button>
                 </div>
             ` : ''}
@@ -264,10 +264,10 @@ async function gradeAnswerHandler(answerId, isCorrect, btn) {
 
     try {
         await contentsAPI.gradeAnswer(answerId, { is_correct: isCorrect });
-        showToast('Respuesta calificada exitosamente', 'success');
+        showToast(t('quiz.grade_success'), 'success');
         renderQuizResults({ id: currentQuizContentId });
     } catch (error) {
-        showToast(error.message || 'Error al calificar la respuesta', 'error');
+        showToast(error.message || t('quiz.grade_failed'), 'error');
         buttons.forEach(b => { b.disabled = false; });
     }
 }

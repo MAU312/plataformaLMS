@@ -3,6 +3,7 @@ import ContentQuestion from '../models/ContentQuestion.js';
 import ContentAnswer from '../models/ContentAnswer.js';
 import Course from '../models/Course.js';
 import pool from '../config/db.js';
+import { t } from '../utils/i18n.js';
 
 const QUESTION_TYPES = ['short_answer', 'multiple_choice', 'true_false'];
 
@@ -19,13 +20,13 @@ const QUESTION_TYPES = ['short_answer', 'multiple_choice', 'true_false'];
  * puede tener peso — una encuesta nunca se califica, así que no tiene
  * sentido que cuente para la nota.
  */
-function parseWeightPercent(input) {
+function parseWeightPercent(input, locale) {
   if (input === undefined || input === null || input === '') {
     return { ok: true, value: null };
   }
   const value = Number(input);
   if (!Number.isFinite(value) || value < 0 || value > 100) {
-    return { ok: false, message: 'El porcentaje debe ser un número entre 0 y 100' };
+    return { ok: false, message: t(locale, 'errors.weight_percent_invalid') };
   }
   return { ok: true, value };
 }
@@ -52,36 +53,36 @@ async function resolveFolderId(folderIdInput, courseId) {
  * - survey: nunca hay respuesta correcta (is_correct del cliente se ignora
  *   al insertar, ver insertQuestions).
  */
-function validateQuestions(questions, isQuiz) {
+function validateQuestions(questions, isQuiz, locale) {
   if (!Array.isArray(questions) || questions.length === 0) {
-    return { ok: false, message: 'Se requiere al menos una pregunta' };
+    return { ok: false, message: t(locale, 'errors.at_least_one_question') };
   }
 
   for (const q of questions) {
     if (!QUESTION_TYPES.includes(q.question_type)) {
-      return { ok: false, message: 'El tipo de pregunta no es válido' };
+      return { ok: false, message: t(locale, 'errors.invalid_question_type') };
     }
     if (!q.text || !String(q.text).trim()) {
-      return { ok: false, message: 'Cada pregunta necesita un texto' };
+      return { ok: false, message: t(locale, 'errors.question_text_required') };
     }
     if (q.points !== undefined && (!Number.isInteger(q.points) || q.points < 1)) {
-      return { ok: false, message: 'El puntaje de cada pregunta debe ser un entero de al menos 1' };
+      return { ok: false, message: t(locale, 'errors.question_points_invalid') };
     }
 
     const needsOptions = q.question_type === 'multiple_choice' || q.question_type === 'true_false';
     if (needsOptions) {
       const options = Array.isArray(q.options) ? q.options : [];
       if (options.length < 2) {
-        return { ok: false, message: 'Cada pregunta necesita al menos 2 opciones' };
+        return { ok: false, message: t(locale, 'errors.min_two_options') };
       }
       if (q.question_type === 'true_false' && options.length !== 2) {
-        return { ok: false, message: 'Verdadero/falso necesita exactamente 2 opciones' };
+        return { ok: false, message: t(locale, 'errors.true_false_two_options') };
       }
       if (!options.every((o) => o.text && String(o.text).trim())) {
-        return { ok: false, message: 'Cada opción necesita un texto' };
+        return { ok: false, message: t(locale, 'errors.option_text_required') };
       }
       if (isQuiz && options.filter((o) => o.is_correct).length !== 1) {
-        return { ok: false, message: 'Cada pregunta debe tener exactamente una opción correcta' };
+        return { ok: false, message: t(locale, 'errors.exactly_one_correct_option') };
       }
     }
   }
@@ -126,22 +127,22 @@ async function createQuestionContent(req, res, type) {
     const { course_id, title, description, folder_id, questions, weight_percent } = req.body;
 
     if (!course_id || !title) {
-      return res.status(400).json({ success: false, message: 'El ID del curso y el título son requeridos' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.course_id_title_required') });
     }
 
-    const validation = validateQuestions(questions, isQuiz);
+    const validation = validateQuestions(questions, isQuiz, req.locale);
     if (!validation.ok) {
       return res.status(400).json({ success: false, message: validation.message });
     }
 
-    const weightCheck = parseWeightPercent(isQuiz ? weight_percent : undefined);
+    const weightCheck = parseWeightPercent(isQuiz ? weight_percent : undefined, req.locale);
     if (!weightCheck.ok) {
       return res.status(400).json({ success: false, message: weightCheck.message });
     }
 
     const folderCheck = await resolveFolderId(folder_id, course_id);
     if (!folderCheck.ok) {
-      return res.status(400).json({ success: false, message: 'La carpeta indicada no existe en este curso' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.folder_not_in_course') });
     }
 
     // El content y todas sus preguntas/opciones se crean en una sola
@@ -176,12 +177,12 @@ async function createQuestionContent(req, res, type) {
 
     res.status(201).json({
       success: true,
-      message: isQuiz ? 'Cuestionario agregado exitosamente' : 'Encuesta agregada exitosamente',
+      message: isQuiz ? t(req.locale, 'success.quiz_created') : t(req.locale, 'success.survey_created'),
       data: { id: contentId }
     });
   } catch (error) {
     console.error(`Error al crear ${label}:`, error);
-    res.status(500).json({ success: false, message: `Error al agregar ${label}` });
+    res.status(500).json({ success: false, message: isQuiz ? t(req.locale, 'errors.add_quiz_failed') : t(req.locale, 'errors.add_survey_failed') });
   }
 }
 
@@ -201,10 +202,10 @@ export const getQuestionsForManage = async (req, res) => {
     const content = await Content.findById(id);
 
     if (!content) {
-      return res.status(404).json({ success: false, message: 'Contenido no encontrado' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.content_not_found') });
     }
     if (!['quiz', 'survey'].includes(content.type)) {
-      return res.status(400).json({ success: false, message: 'Este contenido no es un cuestionario ni una encuesta' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.not_quiz_or_survey') });
     }
 
     const [questions, respondentCount] = await Promise.all([
@@ -218,7 +219,7 @@ export const getQuestionsForManage = async (req, res) => {
     });
   } catch (error) {
     console.error('Error al obtener las preguntas para editar:', error);
-    res.status(500).json({ success: false, message: 'Error al obtener las preguntas' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.get_questions_failed') });
   }
 };
 
@@ -237,25 +238,25 @@ export const updateQuestions = async (req, res) => {
 
   try {
     if (!content) {
-      return res.status(404).json({ success: false, message: 'Contenido no encontrado' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.content_not_found') });
     }
     if (!['quiz', 'survey'].includes(content.type)) {
-      return res.status(400).json({ success: false, message: 'Este contenido no es un cuestionario ni una encuesta' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.not_quiz_or_survey') });
     }
 
     const { title, description, questions, weight_percent } = req.body;
     const isQuiz = content.type === 'quiz';
 
     if (!title || !String(title).trim()) {
-      return res.status(400).json({ success: false, message: 'El título es requerido' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.title_required') });
     }
 
-    const validation = validateQuestions(questions, isQuiz);
+    const validation = validateQuestions(questions, isQuiz, req.locale);
     if (!validation.ok) {
       return res.status(400).json({ success: false, message: validation.message });
     }
 
-    const weightCheck = parseWeightPercent(isQuiz ? weight_percent : undefined);
+    const weightCheck = parseWeightPercent(isQuiz ? weight_percent : undefined, req.locale);
     if (!weightCheck.ok) {
       return res.status(400).json({ success: false, message: weightCheck.message });
     }
@@ -264,7 +265,7 @@ export const updateQuestions = async (req, res) => {
     if (respondentCount > 0) {
       return res.status(400).json({
         success: false,
-        message: 'No se pueden editar las preguntas: ya hay respuestas registradas. Borra y crea de nuevo si necesitas cambiarlas.'
+        message: t(req.locale, 'errors.cannot_edit_questions_has_answers')
       });
     }
 
@@ -291,11 +292,11 @@ export const updateQuestions = async (req, res) => {
 
     res.json({
       success: true,
-      message: isQuiz ? 'Cuestionario actualizado exitosamente' : 'Encuesta actualizada exitosamente'
+      message: isQuiz ? t(req.locale, 'success.quiz_updated') : t(req.locale, 'success.survey_updated')
     });
   } catch (error) {
     console.error('Error al actualizar las preguntas:', error);
-    res.status(500).json({ success: false, message: 'Error al actualizar las preguntas' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.update_questions_failed') });
   }
 };
 
@@ -311,15 +312,15 @@ export const getQuestions = async (req, res) => {
     const content = await Content.findById(id);
 
     if (!content) {
-      return res.status(404).json({ success: false, message: 'Contenido no encontrado' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.content_not_found') });
     }
     if (!['quiz', 'survey'].includes(content.type)) {
-      return res.status(400).json({ success: false, message: 'Este contenido no es un cuestionario ni una encuesta' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.not_quiz_or_survey') });
     }
 
     const canAccess = await Course.canAccessMedia(content.course_id, req.session?.user);
     if (!canAccess) {
-      return res.status(403).json({ success: false, message: 'Debes estar inscrito en este curso para verlo' });
+      return res.status(403).json({ success: false, message: t(req.locale, 'errors.quiz_view_access_required') });
     }
 
     const userId = req.session.user.id;
@@ -343,7 +344,7 @@ export const getQuestions = async (req, res) => {
     });
   } catch (error) {
     console.error('Error al obtener preguntas:', error);
-    res.status(500).json({ success: false, message: 'Error al obtener las preguntas' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.get_questions_failed') });
   }
 };
 
@@ -360,24 +361,24 @@ export const submitAnswers = async (req, res) => {
     const { answers } = req.body;
 
     if (!Array.isArray(answers) || answers.length === 0) {
-      return res.status(400).json({ success: false, message: 'Se requieren las respuestas' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.answers_required') });
     }
 
     const alreadyAnswered = await ContentAnswer.hasAnswered(content.id, userId);
     if (alreadyAnswered) {
-      return res.status(400).json({ success: false, message: 'Solo se permite una entrega.' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.single_submission_only') });
     }
 
     const questions = await ContentQuestion.findByContent(content.id, { includeCorrect: true });
     if (questions.length === 0) {
-      return res.status(400).json({ success: false, message: 'Este contenido no tiene preguntas' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.no_questions_in_content') });
     }
 
     const questionsById = new Map(questions.map((q) => [q.id, q]));
     const answersByQuestion = new Map(answers.map((a) => [a.question_id, a]));
     const answersAllQuestions = questions.every((q) => answersByQuestion.has(q.id));
     if (!answersAllQuestions || answers.length !== questions.length) {
-      return res.status(400).json({ success: false, message: 'Debes responder todas las preguntas' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.all_questions_required') });
     }
 
     const isQuiz = content.type === 'quiz';
@@ -391,7 +392,7 @@ export const submitAnswers = async (req, res) => {
         if (needsOptions) {
           const option = question.options.find((o) => o.id === answer.option_id);
           if (!option) {
-            throw Object.assign(new Error('Una de las opciones no pertenece a esta pregunta'), { status: 400 });
+            throw Object.assign(new Error(t(req.locale, 'errors.option_not_in_question')), { status: 400 });
           }
           return {
             question_id: question.id,
@@ -420,7 +421,7 @@ export const submitAnswers = async (req, res) => {
 
     const inserted = await ContentAnswer.submitAnswers(content.id, userId, rows);
     if (inserted === null) {
-      return res.status(400).json({ success: false, message: 'Solo se permite una entrega.' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.single_submission_only') });
     }
 
     await Content.markCompleted(content.id, userId);
@@ -448,12 +449,12 @@ export const submitAnswers = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: isQuiz ? 'Cuestionario enviado exitosamente' : '¡Gracias por responder la encuesta!',
+      message: isQuiz ? t(req.locale, 'success.quiz_submitted') : t(req.locale, 'success.survey_thanks'),
       data
     });
   } catch (error) {
     console.error('Error al enviar respuestas:', error);
-    res.status(500).json({ success: false, message: 'Error al enviar las respuestas' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.submit_answers_failed') });
   }
 };
 
@@ -469,10 +470,10 @@ export const getResults = async (req, res) => {
     const content = await Content.findById(id);
 
     if (!content) {
-      return res.status(404).json({ success: false, message: 'Contenido no encontrado' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.content_not_found') });
     }
     if (!['quiz', 'survey'].includes(content.type)) {
-      return res.status(400).json({ success: false, message: 'Este contenido no es un cuestionario ni una encuesta' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.not_quiz_or_survey') });
     }
 
     const [questions, answers] = await Promise.all([
@@ -535,7 +536,7 @@ export const getResults = async (req, res) => {
     });
   } catch (error) {
     console.error('Error al obtener resultados:', error);
-    res.status(500).json({ success: false, message: 'Error al obtener los resultados' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.get_results_failed') });
   }
 };
 
@@ -551,17 +552,17 @@ export const gradeAnswer = async (req, res) => {
     const { is_correct } = req.body;
 
     if (typeof is_correct !== 'boolean') {
-      return res.status(400).json({ success: false, message: 'is_correct debe ser true o false' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.is_correct_boolean_required') });
     }
 
     const updated = await ContentAnswer.gradeAnswer(answerId, is_correct);
     if (!updated) {
-      return res.status(404).json({ success: false, message: 'Respuesta no encontrada' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.answer_not_found') });
     }
 
-    res.json({ success: true, message: 'Respuesta calificada exitosamente' });
+    res.json({ success: true, message: t(req.locale, 'success.answer_graded') });
   } catch (error) {
     console.error('Error al calificar respuesta:', error);
-    res.status(500).json({ success: false, message: 'Error al calificar la respuesta' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.grade_answer_failed') });
   }
 };

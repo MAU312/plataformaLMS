@@ -21,8 +21,8 @@ window.renderCourseDetail = async function(params) {
                 <div class="min-h-screen flex items-center justify-center">
                     <div class="text-center">
                         <i class="fas fa-exclamation-triangle text-5xl text-yellow-500 mb-4"></i>
-                        <p class="text-xl text-gray-600">Curso no encontrado</p>
-                        <a href="#/" class="btn-cenat mt-4 inline-block">Volver al inicio</a>
+                        <p class="text-xl text-gray-600">${t('courseDetail.not_found')}</p>
+                        <a href="#/" class="btn-cenat mt-4 inline-block">${t('courseDetail.back_to_home')}</a>
                     </div>
                 </div>
             `;
@@ -153,7 +153,7 @@ window.renderCourseDetail = async function(params) {
             <div class="bg-white border-b">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                     <a href="#/" class="text-cenat-green hover:underline text-sm">
-                        <i class="fas fa-arrow-left mr-1"></i> Volver al catálogo
+                        <i class="fas fa-arrow-left mr-1"></i> ${t('courseDetail.back_to_catalog')}
                     </a>
                 </div>
             </div>
@@ -177,7 +177,7 @@ window.renderCourseDetail = async function(params) {
                     ${isLoggedIn && isEnrolled && displayTotal > 0 ? `
                         <div class="mt-6 bg-white/10 rounded-lg p-4">
                             <div class="flex justify-between text-sm text-white mb-1">
-                                <span><i class="fas fa-chart-line mr-1"></i> Tu progreso</span>
+                                <span><i class="fas fa-chart-line mr-1"></i> ${t('courseDetail.your_progress')}</span>
                                 <span id="course-progress-label">${displayProgressPercent}% (${displayCompleted}/${displayTotal})</span>
                             </div>
                             <div class="progress-bar bg-white/20">
@@ -197,7 +197,7 @@ window.renderCourseDetail = async function(params) {
                     <div class="lg:col-span-2 space-y-6">
                         <h2 id="videos-section" class="text-xl font-bold text-gray-900 flex items-center scroll-mt-4">
                             <i class="fas fa-play-circle text-cenat-green mr-2"></i>
-                            Videos del curso
+                            ${t('courseDetail.videos_of_course')}
                         </h2>
 
                         ${allVideos.length > 0 ? `
@@ -205,12 +205,12 @@ window.renderCourseDetail = async function(params) {
                                 ${hasAccess ? `
                                 <video id="main-video" controls>
                                     <source src="${escapeAttr(initialVideo.url)}" type="video/mp4">
-                                    Tu navegador no soporta la reproducción de video.
+                                    ${t('courseDetail.video_not_supported')}
                                 </video>
                                 ` : `
                                 <div class="flex flex-col items-center justify-center bg-gray-100 rounded-lg py-16 text-center">
                                     <i class="fas fa-lock text-4xl text-gray-400 mb-3"></i>
-                                    <p class="text-gray-600 font-medium">Inscríbete en este curso para ver los videos</p>
+                                    <p class="text-gray-600 font-medium">${t('courseDetail.enroll_to_watch')}</p>
                                 </div>
                                 `}
                             </div>
@@ -224,19 +224,19 @@ window.renderCourseDetail = async function(params) {
                                     ${videos.map((video, index) => renderContentRow(video, index === 0, isLoggedIn && isEnrolled, 'video', hasAccess)).join('')}
                                 </div>
                             ` : `
-                                <p class="text-sm text-gray-400">Los videos de este curso están agrupados en una carpeta — bajá hasta "Contenido" para verlos y elegir cuál reproducir.</p>
+                                <p class="text-sm text-gray-400">${t('courseDetail.videos_grouped_notice')}</p>
                             `}
                         ` : `
                             <div class="empty-state bg-white rounded-xl border border-gray-100">
                                 <i class="fas fa-video-slash"></i>
-                                <p class="text-gray-600">Este curso aún no tiene videos disponibles</p>
+                                <p class="text-gray-600">${t('courseDetail.no_videos_yet')}</p>
                             </div>
                         `}
 
                         ${mixedItems.length > 0 ? `
                             <h2 class="text-xl font-bold text-gray-900 flex items-center mt-8">
                                 <i class="fas fa-list text-cenat-green mr-2"></i>
-                                Contenido
+                                ${t('courseDetail.content_heading')}
                             </h2>
                             <div class="space-y-3">
                                 ${mixedItems.map(item => `
@@ -257,26 +257,26 @@ window.renderCourseDetail = async function(params) {
                         <div class="bg-green-50 rounded-xl p-4 border border-green-100">
                             <h3 class="font-semibold text-gray-900 mb-2">
                                 <i class="fas fa-info-circle text-cenat-green mr-1"></i>
-                                Información del curso
+                                ${t('courseDetail.course_info_heading')}
                             </h3>
                             <ul class="text-sm text-gray-600 space-y-1">
-                                ${renderCourseInfoLink('fa-video', allVideosCount, 'videos', 'videos-section')}
-                                ${renderCourseInfoLink('fa-file', allFilesCount, 'archivos', anchorForType(contents, 'file'))}
-                                ${allImagesCount > 0 ? renderCourseInfoLink('fa-image', allImagesCount, 'imágenes', anchorForType(contents, 'image')) : ''}
-                                ${allUrlsCount > 0 ? renderCourseInfoLink('fa-link', allUrlsCount, 'videos externos', anchorForType(contents, 'url')) : ''}
-                                ${allTextsCount > 0 ? renderCourseInfoLink('fa-align-left', allTextsCount, 'lecturas', anchorForType(contents, 'text')) : ''}
-                                ${allTasksCount > 0 ? renderCourseInfoLink('fa-tasks', allTasksCount, 'tareas', anchorForType(contents, 'task')) : ''}
-                                ${allQuizzesCount > 0 ? renderCourseInfoLink('fa-question-circle', allQuizzesCount, 'cuestionarios', anchorForType(contents, 'quiz')) : ''}
-                                ${allSurveysCount > 0 ? renderCourseInfoLink('fa-poll', allSurveysCount, 'encuestas', anchorForType(contents, 'survey')) : ''}
-                                ${allForumsCount > 0 ? renderCourseInfoLink('fa-comments', allForumsCount, 'foros', anchorForType(contents, 'forum')) : ''}
-                                ${folders.length > 0 ? renderCourseInfoLink('fa-folder', folders.length, 'carpetas', anchorForType(contents, 'folder')) : ''}
-                                <li><i class="fas fa-users mr-2 text-gray-400"></i>${course.enrolled_count || 0} inscritos</li>
+                                ${renderCourseInfoLink('fa-video', allVideosCount, t('courseDetail.info_videos'), 'videos-section')}
+                                ${renderCourseInfoLink('fa-file', allFilesCount, t('courseDetail.info_files'), anchorForType(contents, 'file'))}
+                                ${allImagesCount > 0 ? renderCourseInfoLink('fa-image', allImagesCount, t('courseDetail.info_images'), anchorForType(contents, 'image')) : ''}
+                                ${allUrlsCount > 0 ? renderCourseInfoLink('fa-link', allUrlsCount, t('courseDetail.info_external_videos'), anchorForType(contents, 'url')) : ''}
+                                ${allTextsCount > 0 ? renderCourseInfoLink('fa-align-left', allTextsCount, t('courseDetail.info_readings'), anchorForType(contents, 'text')) : ''}
+                                ${allTasksCount > 0 ? renderCourseInfoLink('fa-tasks', allTasksCount, t('courseDetail.info_tasks'), anchorForType(contents, 'task')) : ''}
+                                ${allQuizzesCount > 0 ? renderCourseInfoLink('fa-question-circle', allQuizzesCount, t('courseDetail.info_quizzes'), anchorForType(contents, 'quiz')) : ''}
+                                ${allSurveysCount > 0 ? renderCourseInfoLink('fa-poll', allSurveysCount, t('courseDetail.info_surveys'), anchorForType(contents, 'survey')) : ''}
+                                ${allForumsCount > 0 ? renderCourseInfoLink('fa-comments', allForumsCount, t('courseDetail.info_forums'), anchorForType(contents, 'forum')) : ''}
+                                ${folders.length > 0 ? renderCourseInfoLink('fa-folder', folders.length, t('courseDetail.info_folders'), anchorForType(contents, 'folder')) : ''}
+                                <li><i class="fas fa-users mr-2 text-gray-400"></i>${t('home.enrolled_count', { count: course.enrolled_count || 0 })}</li>
                             </ul>
                         </div>
 
                         ${isLoggedIn && isEnrolled && displayProgressPercent === 100 ? `
                             <button onclick="downloadCertificate(${enrollmentCourseId})" class="btn-cenat w-full">
-                                <i class="fas fa-certificate mr-2"></i> Descargar certificado
+                                <i class="fas fa-certificate mr-2"></i> ${t('courseDetail.download_certificate')}
                             </button>
                         ` : ''}
                     </div>
@@ -346,8 +346,8 @@ window.renderCourseDetail = async function(params) {
             <div class="min-h-screen flex items-center justify-center">
                 <div class="text-center">
                     <i class="fas fa-exclamation-triangle text-5xl text-red-500 mb-4"></i>
-                    <p class="text-xl text-gray-600">Error al cargar el curso</p>
-                    <a href="#/" class="btn-cenat mt-4 inline-block">Volver al inicio</a>
+                    <p class="text-xl text-gray-600">${t('courseDetail.load_failed')}</p>
+                    <a href="#/" class="btn-cenat mt-4 inline-block">${t('courseDetail.back_to_home')}</a>
                 </div>
             </div>
         `;
@@ -399,7 +399,7 @@ function renderContentRow(content, isActiveVideo, canTrackProgress, type, hasAcc
             
             ${canTrackProgress ? `
                 <button class="content-checkbox flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition ${completed ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-cenat-green'}"
-                    data-content-id="${content.id}" data-completed="${completed == 1 || completed === true ? 'true' : 'false'}" title="${completed ? 'Marcar como pendiente' : 'Marcar como completado'}">
+                    data-content-id="${content.id}" data-completed="${completed == 1 || completed === true ? 'true' : 'false'}" title="${escapeAttr(completed ? t('courseDetail.mark_as_pending') : t('courseDetail.mark_as_completed'))}">
                     ${completed ? '<i class="fas fa-check text-white text-xs"></i>' : ''}
                 </button>
             ` : ''}
@@ -414,7 +414,7 @@ function renderContentRow(content, isActiveVideo, canTrackProgress, type, hasAcc
                     <i class="fas fa-download"></i>
                 </button>
             ` : `
-                <span class="text-gray-400 text-xs" title="Inscríbete para descargar">
+                <span class="text-gray-400 text-xs" title="${escapeAttr(t('courseDetail.enroll_to_download'))}">
                     <i class="fas fa-lock"></i>
                 </span>
             `) : ''}
@@ -438,7 +438,7 @@ function renderUrlContentRow(content, canTrackProgress, hasAccess) {
         <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 transition">
             ${canTrackProgress ? `
                 <button class="content-checkbox flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition ${completed ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-cenat-green'}"
-                    data-content-id="${content.id}" data-completed="${completed == 1 || completed === true ? 'true' : 'false'}" title="${completed ? 'Marcar como pendiente' : 'Marcar como completado'}">
+                    data-content-id="${content.id}" data-completed="${completed == 1 || completed === true ? 'true' : 'false'}" title="${escapeAttr(completed ? t('courseDetail.mark_as_pending') : t('courseDetail.mark_as_completed'))}">
                     ${completed ? '<i class="fas fa-check text-white text-xs"></i>' : ''}
                 </button>
             ` : ''}
@@ -448,11 +448,11 @@ function renderUrlContentRow(content, canTrackProgress, hasAccess) {
                 ${content.description ? `<p class="text-xs text-gray-500 truncate">${escapeHtml(content.description)}</p>` : ''}
             </div>
             ${hasAccess ? `
-                <a href="${escapeAttr(content.url)}" target="_blank" rel="noopener noreferrer" class="text-cenat-green hover:text-cenat-green-hover" title="Abrir video externo">
+                <a href="${escapeAttr(content.url)}" target="_blank" rel="noopener noreferrer" class="text-cenat-green hover:text-cenat-green-hover" title="${escapeAttr(t('courseDetail.open_external_video'))}">
                     <i class="fas fa-external-link-alt"></i>
                 </a>
             ` : `
-                <span class="text-gray-400 text-xs" title="Inscríbete para ver">
+                <span class="text-gray-400 text-xs" title="${escapeAttr(t('courseDetail.enroll_to_watch_short'))}">
                     <i class="fas fa-lock"></i>
                 </span>
             `}
@@ -464,7 +464,7 @@ function renderUrlContentRow(content, canTrackProgress, hasAccess) {
                 </div>
                 <div data-embed-fallback class="hidden text-sm text-gray-500 bg-gray-50 rounded-lg p-3 mt-2 mb-1">
                     <i class="fas fa-triangle-exclamation text-yellow-500 mr-1"></i>
-                    Este video no se puede reproducir aquí — usá el botón de arriba para verlo directamente en YouTube.
+                    ${t('courseDetail.video_cannot_embed')}
                 </div>
             </div>
         ` : vimeoUrl ? `
@@ -482,7 +482,7 @@ function renderTextContentCard(content, canTrackProgress, hasAccess) {
             <div class="flex items-start gap-3">
                 ${canTrackProgress ? `
                     <button class="content-checkbox flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition mt-1 ${completed ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-cenat-green'}"
-                        data-content-id="${content.id}" data-completed="${completed == 1 || completed === true ? 'true' : 'false'}" title="${completed ? 'Marcar como pendiente' : 'Marcar como completado'}">
+                        data-content-id="${content.id}" data-completed="${completed == 1 || completed === true ? 'true' : 'false'}" title="${escapeAttr(completed ? t('courseDetail.mark_as_pending') : t('courseDetail.mark_as_completed'))}">
                         ${completed ? '<i class="fas fa-check text-white text-xs"></i>' : ''}
                     </button>
                 ` : ''}
@@ -490,7 +490,7 @@ function renderTextContentCard(content, canTrackProgress, hasAccess) {
                     <p class="font-medium text-gray-900 ${completed ? 'line-through text-gray-400' : ''}">${escapeHtml(content.title)}</p>
                     ${hasAccess
                         ? `<p class="text-sm text-gray-600 mt-2 whitespace-pre-line">${escapeHtml(content.description || '')}</p>`
-                        : `<p class="text-sm text-gray-400 mt-2"><i class="fas fa-lock mr-1"></i> Inscríbete en este curso para ver esta lectura</p>`
+                        : `<p class="text-sm text-gray-400 mt-2"><i class="fas fa-lock mr-1"></i> ${t('courseDetail.enroll_to_view_reading')}</p>`
                     }
                 </div>
             </div>
@@ -506,7 +506,7 @@ function renderImageContentCard(content, hasAccess) {
                     <i class="fas fa-lock text-xl text-gray-400"></i>
                     <div class="flex-1 min-w-0">
                         <p class="font-medium text-gray-900">${escapeHtml(content.title)}</p>
-                        <p class="text-sm text-gray-400 mt-1">Inscríbete en este curso para ver esta imagen</p>
+                        <p class="text-sm text-gray-400 mt-1">${t('courseDetail.enroll_to_view_image')}</p>
                     </div>
                 </div>
             </div>
@@ -534,7 +534,7 @@ function renderForumCard(forum, hasAccess) {
                     <i class="fas fa-lock text-xl text-gray-400"></i>
                     <div class="flex-1 min-w-0">
                         <p class="font-medium text-gray-900">${escapeHtml(forum.title)}</p>
-                        <p class="text-sm text-gray-400 mt-1">Inscríbete en este curso para participar en este foro</p>
+                        <p class="text-sm text-gray-400 mt-1">${t('courseDetail.enroll_to_join_forum')}</p>
                     </div>
                 </div>
             </div>
@@ -555,10 +555,10 @@ function renderForumCard(forum, hasAccess) {
                     <p class="font-medium text-gray-900">${escapeHtml(forum.title)}</p>
                     <p class="text-sm text-gray-600 mt-1 line-clamp-2 whitespace-pre-line">${escapeHtml(forum.description || '')}</p>
                     ${hasParticipated ? `
-                        <p class="text-sm text-green-700 font-medium mt-2"><i class="fas fa-check-circle mr-1"></i> Ya participaste en este foro</p>
+                        <p class="text-sm text-green-700 font-medium mt-2"><i class="fas fa-check-circle mr-1"></i> ${t('courseDetail.already_participated_forum')}</p>
                     ` : ''}
                     <a href="#/forum/${forum.id}" class="text-sm text-cenat-green hover:text-cenat-green-hover mt-2 inline-block">
-                        <i class="fas fa-comment-dots mr-1"></i> Participar en el foro
+                        <i class="fas fa-comment-dots mr-1"></i> ${t('courseDetail.participate_in_forum')}
                     </a>
                 </div>
             </div>
@@ -606,7 +606,7 @@ function renderCourseFolderCard(folder, allContents, hasAccess, canTrackProgress
                     <i class="fas fa-lock text-xl text-gray-400"></i>
                     <div class="flex-1 min-w-0">
                         <p class="font-medium text-gray-900">${escapeHtml(folder.title)}</p>
-                        <p class="text-sm text-gray-400 mt-1">Inscríbete en este curso para ver el contenido de esta carpeta</p>
+                        <p class="text-sm text-gray-400 mt-1">${t('courseDetail.enroll_to_view_folder')}</p>
                     </div>
                 </div>
             </div>
@@ -629,7 +629,7 @@ function renderCourseFolderCard(folder, allContents, hasAccess, canTrackProgress
                 <div class="flex-1 min-w-0">
                     <p class="font-medium text-gray-900">${escapeHtml(folder.title)}</p>
                     <p class="text-xs text-gray-400">
-                        ${items.length} ${items.length === 1 ? 'elemento' : 'elementos'}
+                        ${t(items.length === 1 ? 'courseDetail.item_singular' : 'courseDetail.item_plural', { count: items.length })}
                         ${folder.module_teacher_name ? ` — <i class="fas fa-user-tie"></i> ${escapeHtml(folder.module_teacher_name)}` : ''}
                     </p>
                 </div>
@@ -641,7 +641,7 @@ function renderCourseFolderCard(folder, allContents, hasAccess, canTrackProgress
                         ${renderContentItemByType(item, canTrackProgress, hasAccess, submissionsByTask[item.id], quizStatusById[item.id])}
                     </div>
                 `).join('') : `
-                    <p class="text-gray-500 text-sm text-center py-2">Esta carpeta todavía no tiene contenido</p>
+                    <p class="text-gray-500 text-sm text-center py-2">${t('courseDetail.folder_empty')}</p>
                 `}
             </div>
         </details>
@@ -660,12 +660,12 @@ function renderFolderBadgeContent(canTrackProgress, trackableCount, completedCou
     if (allCompleted) {
         return `
             <span class="flex items-center gap-1 text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                <i class="fas fa-check-circle"></i> Completada
+                <i class="fas fa-check-circle"></i> ${t('courseDetail.folder_completed')}
             </span>
         `;
     }
 
-    return `<span class="text-xs text-gray-400">${completedCount}/${trackableCount} completado${completedCount === 1 ? '' : 's'}</span>`;
+    return `<span class="text-xs text-gray-400">${t(completedCount === 1 ? 'courseDetail.folder_progress_singular' : 'courseDetail.folder_progress_plural', { completed: completedCount, total: trackableCount })}</span>`;
 }
 
 function renderTaskCard(task, submission, hasAccess) {
@@ -676,7 +676,7 @@ function renderTaskCard(task, submission, hasAccess) {
                     <i class="fas fa-lock text-xl text-gray-400"></i>
                     <div class="flex-1 min-w-0">
                         <p class="font-medium text-gray-900">${escapeHtml(task.title)}</p>
-                        <p class="text-sm text-gray-400 mt-1">Inscríbete en este curso para ver y entregar esta tarea</p>
+                        <p class="text-sm text-gray-400 mt-1">${t('courseDetail.enroll_to_view_submit_task')}</p>
                     </div>
                 </div>
             </div>
@@ -696,7 +696,7 @@ function renderTaskCard(task, submission, hasAccess) {
                     ${task.description ? `<p class="text-sm text-gray-600 mt-1 whitespace-pre-line">${escapeHtml(task.description)}</p>` : ''}
                     ${hasInstructionsFile ? `
                         <button onclick="downloadContent(${task.id})" class="text-sm text-cenat-green hover:text-cenat-green-hover mt-2 inline-block">
-                            <i class="fas fa-download mr-1"></i> Descargar instrucciones
+                            <i class="fas fa-download mr-1"></i> ${t('courseDetail.download_instructions')}
                         </button>
                     ` : ''}
 
@@ -705,24 +705,24 @@ function renderTaskCard(task, submission, hasAccess) {
                             <div class="bg-green-50 rounded-lg p-3">
                                 <p class="text-sm text-green-700 font-medium">
                                     <i class="fas fa-check-circle mr-1"></i>
-                                    ${isReviewed ? 'Entrega revisada' : 'Entregado — pendiente de revisión'}
+                                    ${isReviewed ? t('courseDetail.submission_reviewed') : t('courseDetail.submission_pending_review')}
                                 </p>
-                                <p class="text-xs text-gray-500 mt-1">Entregado el ${formatDateTime(submission.submitted_at)}</p>
+                                <p class="text-xs text-gray-500 mt-1">${t('courseDetail.submitted_on', { date: formatDateTime(submission.submitted_at) })}</p>
                                 ${isReviewed && task.weight_percent && submission.score_earned !== null && submission.score_earned !== undefined ? `
-                                    <p class="text-sm text-gray-700 mt-2"><strong>Calificación:</strong> ${submission.score_earned}/${task.weight_percent}</p>
+                                    <p class="text-sm text-gray-700 mt-2"><strong>${t('courseDetail.grade_prefix')}</strong> ${submission.score_earned}/${task.weight_percent}</p>
                                 ` : ''}
                                 ${isReviewed && submission.feedback ? `
-                                    <p class="text-sm text-gray-700 mt-2"><strong>Comentario del profesor:</strong> ${escapeHtml(submission.feedback)}</p>
+                                    <p class="text-sm text-gray-700 mt-2"><strong>${t('courseDetail.teacher_comment_prefix')}</strong> ${escapeHtml(submission.feedback)}</p>
                                 ` : ''}
                             </div>
                         ` : `
                             <form class="task-submit-form flex items-center gap-2" data-task-id="${task.id}">
                                 <input type="file" class="task-submit-file text-sm flex-1" required>
                                 <button type="submit" class="bg-cenat-green text-white px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap">
-                                    <i class="fas fa-upload mr-1"></i> Entregar
+                                    <i class="fas fa-upload mr-1"></i> ${t('courseDetail.submit_button')}
                                 </button>
                             </form>
-                            <p class="text-xs text-gray-400 mt-1">Solo puedes entregar una vez — revisa el archivo antes de subirlo.</p>
+                            <p class="text-xs text-gray-400 mt-1">${t('courseDetail.submit_once_notice')}</p>
                         `}
                     </div>
                 </div>
@@ -750,7 +750,7 @@ function renderQuizCard(content, quizStatus, hasAccess) {
                     <i class="fas fa-lock text-xl text-gray-400"></i>
                     <div class="flex-1 min-w-0">
                         <p class="font-medium text-gray-900">${escapeHtml(content.title)}</p>
-                        <p class="text-sm text-gray-400 mt-1">Inscríbete en este curso para responder ${isQuiz ? 'este cuestionario' : 'esta encuesta'}</p>
+                        <p class="text-sm text-gray-400 mt-1">${isQuiz ? t('courseDetail.enroll_to_answer_quiz') : t('courseDetail.enroll_to_answer_survey')}</p>
                     </div>
                 </div>
             </div>
@@ -771,25 +771,25 @@ function renderQuizCard(content, quizStatus, hasAccess) {
             const pending = myAnswers.filter(a => a.is_correct === null).length;
             statusHTML = `
                 <div class="bg-green-50 rounded-lg p-3">
-                    <p class="text-sm text-green-700 font-medium"><i class="fas fa-check-circle mr-1"></i> Ya respondiste este cuestionario</p>
+                    <p class="text-sm text-green-700 font-medium"><i class="fas fa-check-circle mr-1"></i> ${t('courseDetail.already_answered_quiz')}</p>
                     <p class="text-xs text-gray-500 mt-1">
-                        ${score}/${maxScore} puntos${pending > 0 ? ` — ${pending} pendiente${pending === 1 ? '' : 's'} de revisión` : ''}
+                        ${t('courseDetail.score_points', { score, max: maxScore })}${pending > 0 ? t(pending === 1 ? 'courseDetail.pending_review_singular' : 'courseDetail.pending_review_plural', { count: pending }) : ''}
                     </p>
                 </div>
             `;
         } else {
             statusHTML = `
                 <div class="bg-green-50 rounded-lg p-3">
-                    <p class="text-sm text-green-700 font-medium"><i class="fas fa-check-circle mr-1"></i> ¡Gracias por responder esta encuesta!</p>
+                    <p class="text-sm text-green-700 font-medium"><i class="fas fa-check-circle mr-1"></i> ${t('courseDetail.survey_thanks')}</p>
                 </div>
             `;
         }
     } else {
         statusHTML = `
             <a href="#/contents/${content.id}/take" class="inline-block bg-cenat-green text-white px-3 py-1.5 rounded-lg text-sm font-semibold">
-                <i class="fas fa-pen mr-1"></i> ${isQuiz ? 'Responder cuestionario' : 'Responder encuesta'}
+                <i class="fas fa-pen mr-1"></i> ${isQuiz ? t('courseDetail.answer_quiz_button') : t('courseDetail.answer_survey_button')}
             </a>
-            <p class="text-xs text-gray-400 mt-1">Solo puedes responder una vez.</p>
+            <p class="text-xs text-gray-400 mt-1">${t('courseDetail.answer_once_notice')}</p>
         `;
     }
 
@@ -823,7 +823,7 @@ function setupTaskSubmitForms(courseId, enrollmentCourseId = courseId) {
             const file = fileInput.files[0];
 
             if (!file) {
-                showToast('Selecciona un archivo para entregar', 'error');
+                showToast(t('courseDetail.select_file_required'), 'error');
                 return;
             }
 
@@ -836,7 +836,7 @@ function setupTaskSubmitForms(courseId, enrollmentCourseId = courseId) {
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
                 const response = await contentsAPI.submit(taskId, formData);
-                showToast('Tarea entregada exitosamente', 'success');
+                showToast(t('courseDetail.task_submitted_success'), 'success');
                 await renderCourseDetail({ id: courseId });
 
                 // Igual que al tildar un checkbox (ver toggleContentCompleted):
@@ -853,9 +853,9 @@ function setupTaskSubmitForms(courseId, enrollmentCourseId = courseId) {
                 }
 
             } catch (error) {
-                showToast(error.message || 'Error al entregar la tarea', 'error');
+                showToast(error.message || t('courseDetail.submit_task_failed'), 'error');
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-upload mr-1"></i> Entregar';
+                submitBtn.innerHTML = `<i class="fas fa-upload mr-1"></i> ${t('courseDetail.submit_button')}`;
             }
         });
     });
@@ -884,14 +884,14 @@ async function toggleContentCompleted(contentId, markAsCompleted, courseId, enro
                 checkbox.classList.remove('border-gray-300', 'hover:border-cenat-green');
                 checkbox.classList.add('bg-green-500', 'border-green-500');
                 checkbox.innerHTML = '<i class="fas fa-check text-white text-xs"></i>';
-                checkbox.title = 'Marcar como pendiente';
+                checkbox.title = t('courseDetail.mark_as_pending');
                 const titleEl = checkbox.closest('div').querySelector('p');
                 if (titleEl) titleEl.classList.add('line-through', 'text-gray-400');
             } else {
                 checkbox.classList.add('border-gray-300', 'hover:border-cenat-green');
                 checkbox.classList.remove('bg-green-500', 'border-green-500');
                 checkbox.innerHTML = '';
-                checkbox.title = 'Marcar como completado';
+                checkbox.title = t('courseDetail.mark_as_completed');
                 const titleEl = checkbox.closest('div').querySelector('p');
                 if (titleEl) titleEl.classList.remove('line-through', 'text-gray-400');
             }
@@ -921,11 +921,11 @@ async function toggleContentCompleted(contentId, markAsCompleted, courseId, enro
         if (markAsCompleted && newProgress === 100) {
             showCourseCompletionModal(enrollmentCourseId);
         } else {
-            showToast(markAsCompleted ? 'Contenido marcado como completado' : 'Contenido marcado como pendiente', 'success');
+            showToast(markAsCompleted ? t('courseDetail.mark_completed_success') : t('courseDetail.mark_pending_success'), 'success');
         }
 
     } catch (error) {
-        showToast(error.message || 'Error al actualizar el progreso', 'error');
+        showToast(error.message || t('courseDetail.update_progress_failed'), 'error');
     }
 }
 
@@ -986,7 +986,7 @@ function renderPublicCourseModulesHTML(modules) {
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                 <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
                     <label for="course-module-select" class="text-sm font-semibold text-gray-700 flex-shrink-0">
-                        <i class="fas fa-layer-group text-cenat-green mr-1"></i> Módulo:
+                        <i class="fas fa-layer-group text-cenat-green mr-1"></i> ${t('courseDetail.module_label')}
                     </label>
                     <select id="course-module-select" onchange="switchCourseModule(this.value)" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent w-full sm:w-auto">
                         ${modules.map((m, i) => `<option value="${m.id}" ${i === 0 ? 'selected' : ''}>${escapeHtml(m.title)}</option>`).join('')}
@@ -995,7 +995,7 @@ function renderPublicCourseModulesHTML(modules) {
                 ${modules.map((m, i) => `
                     <div id="module-course-grid-${m.id}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 ${i === 0 ? '' : 'hidden'}">
                         ${m.courses.length === 0
-                            ? `<p class="text-gray-400 text-sm col-span-full text-center py-4">Este módulo todavía no tiene cursos.</p>`
+                            ? `<p class="text-gray-400 text-sm col-span-full text-center py-4">${t('courseDetail.module_empty')}</p>`
                             : m.courses.map(c => renderCourseCard(c)).join('')}
                     </div>
                 `).join('')}
@@ -1021,7 +1021,7 @@ function renderEnrollButton(isLoggedIn, isEnrolled, courseId, parentCourseTitle)
     if (!isLoggedIn) {
         return `
             <a href="#/login" class="btn-cenat">
-                <i class="fas fa-sign-in-alt mr-2"></i> Inicia sesión para inscribirte
+                <i class="fas fa-sign-in-alt mr-2"></i> ${t('courseDetail.login_to_enroll')}
             </a>
         `;
     }
@@ -1033,14 +1033,14 @@ function renderEnrollButton(isLoggedIn, isEnrolled, courseId, parentCourseTitle)
     if (isEnrolled) {
         return `
             <button id="unenroll-btn" class="bg-white text-cenat-green px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition">
-                <i class="fas fa-check-circle mr-2"></i> ${parentCourseTitle ? `Inscrito vía «${escapeHtml(parentCourseTitle)}»` : 'Inscrito'}
+                <i class="fas fa-check-circle mr-2"></i> ${parentCourseTitle ? t('courseDetail.enrolled_via', { title: escapeHtml(parentCourseTitle) }) : t('courseDetail.enrolled_label')}
             </button>
         `;
     }
 
     return `
         <button id="enroll-btn" class="bg-white text-cenat-green px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition">
-            <i class="fas fa-plus-circle mr-2"></i> ${parentCourseTitle ? `Inscribirme en «${escapeHtml(parentCourseTitle)}»` : 'Inscribirme'}
+            <i class="fas fa-plus-circle mr-2"></i> ${parentCourseTitle ? t('courseDetail.enroll_in_button', { title: escapeHtml(parentCourseTitle) }) : t('courseDetail.enroll_button')}
         </button>
     `;
 }
@@ -1062,23 +1062,23 @@ function setupEnrollButton(enrollmentCourseId, displayCourseId = enrollmentCours
         enrollBtn.addEventListener('click', async () => {
             try {
                 await coursesAPI.enroll(enrollmentCourseId);
-                showToast('Te has inscrito exitosamente', 'success');
+                showToast(t('courseDetail.enroll_success'), 'success');
                 renderCourseDetail({ id: displayCourseId });
             } catch (error) {
-                showToast(error.message || 'Error al inscribirse', 'error');
+                showToast(error.message || t('courseDetail.enroll_failed'), 'error');
             }
         });
     }
 
     if (unenrollBtn) {
         unenrollBtn.addEventListener('click', async () => {
-            if (await confirmAction('¿Estás seguro de que deseas desinscribirte de este curso?')) {
+            if (await confirmAction(t('courseDetail.unenroll_confirm'))) {
                 try {
                     await coursesAPI.unenroll(enrollmentCourseId);
-                    showToast('Te has desinscrito del curso', 'info');
+                    showToast(t('courseDetail.unenroll_success'), 'info');
                     renderCourseDetail({ id: displayCourseId });
                 } catch (error) {
-                    showToast(error.message || 'Error al desinscribirse', 'error');
+                    showToast(error.message || t('courseDetail.unenroll_failed'), 'error');
                 }
             }
         });
@@ -1104,7 +1104,7 @@ function getFileIcon(url) {
 
 async function downloadContent(id) {
     if (!isAuthenticated()) {
-        showToast('Debes iniciar sesión para descargar archivos', 'warning');
+        showToast(t('courseDetail.login_required_download'), 'warning');
         navigateTo('/login');
         return;
     }
@@ -1115,7 +1115,7 @@ async function downloadCertificate(courseId) {
     try {
         await coursesAPI.downloadCertificate(courseId);
     } catch (error) {
-        showToast(error.message || 'Error al descargar el certificado', 'error');
+        showToast(error.message || t('courseDetail.download_certificate_failed'), 'error');
     }
 }
 
@@ -1142,10 +1142,10 @@ function showCourseCompletionModal(courseId) {
             <div class="text-6xl mb-4 animate-bounce">🎉</div>
 
             <h2 class="text-2xl font-extrabold text-gray-900 dark:text-white mb-2">
-                ¡Curso completado!
+                ${t('courseDetail.completion_title')}
             </h2>
             <p class="text-gray-600 dark:text-slate-400 mb-6">
-                Felicidades, has completado todos los contenidos de este curso. ¡Excelente trabajo!
+                ${t('courseDetail.completion_message')}
             </p>
 
             <!-- Barra de progreso al 100% -->
@@ -1156,19 +1156,19 @@ function showCourseCompletionModal(courseId) {
             <!-- Badge -->
             <div class="inline-flex items-center gap-2 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-4 py-2 rounded-full font-semibold text-sm mb-6">
                 <i class="fas fa-award text-lg"></i>
-                100% Completado
+                ${t('courseDetail.completion_badge')}
             </div>
 
             <div class="flex flex-col gap-3">
                 <button onclick="downloadCertificate(${courseId})" class="btn-cenat">
-                    <i class="fas fa-certificate mr-2"></i> Descargar certificado
+                    <i class="fas fa-certificate mr-2"></i> ${t('courseDetail.download_certificate')}
                 </button>
                 <div class="flex gap-3 justify-center">
                     <button onclick="closeCompletionModal()" class="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 transition">
-                        <i class="fas fa-check mr-2"></i> ¡Entendido!
+                        <i class="fas fa-check mr-2"></i> ${t('courseDetail.completion_understood')}
                     </button>
                     <a href="#/" onclick="closeCompletionModal()" class="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 transition">
-                        Ver más cursos
+                        ${t('courseDetail.completion_see_more')}
                     </a>
                 </div>
             </div>

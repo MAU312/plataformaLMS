@@ -3,6 +3,7 @@ import Course from '../models/Course.js';
 import TaskSubmission from '../models/TaskSubmission.js';
 import { deleteFile } from '../middlewares/upload.middleware.js';
 import { UPLOADS_ROOT } from '../config/uploads.js';
+import { t } from '../utils/i18n.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -23,7 +24,7 @@ export const submitTask = async (req, res) => {
     const content = req.taskContent;
 
     if (!req.file) {
-      return res.status(400).json({ success: false, message: 'El archivo de entrega es requerido' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.submission_file_required') });
     }
 
     const fileUrl = `/uploads/submissions/${req.file.filename}`;
@@ -33,7 +34,7 @@ export const submitTask = async (req, res) => {
       deleteFile(fileUrl);
       return res.status(400).json({
         success: false,
-        message: 'Ya entregaste esta tarea. Solo se permite una entrega.'
+        message: t(req.locale, 'errors.already_submitted_task')
       });
     }
 
@@ -42,7 +43,7 @@ export const submitTask = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Tarea entregada exitosamente',
+      message: t(req.locale, 'success.task_submitted'),
       data: { id: submissionId, ...progress }
     });
   } catch (error) {
@@ -50,7 +51,7 @@ export const submitTask = async (req, res) => {
     if (req.file) {
       deleteFile(`/uploads/submissions/${req.file.filename}`);
     }
-    res.status(500).json({ success: false, message: 'Error al entregar la tarea' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.submit_task_failed') });
   }
 };
 
@@ -66,7 +67,7 @@ export const getMySubmission = async (req, res) => {
     res.json({ success: true, data: submission || null });
   } catch (error) {
     console.error('Error al obtener la entrega:', error);
-    res.status(500).json({ success: false, message: 'Error al obtener la entrega' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.get_submission_failed') });
   }
 };
 

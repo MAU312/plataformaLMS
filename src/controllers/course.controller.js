@@ -67,7 +67,7 @@ export const getCourseById = async (req, res) => {
     if (!course) {
       return res.status(404).json({
         success: false,
-        message: 'Curso no encontrado'
+        message: t(req.locale, 'errors.course_not_found')
       });
     }
 
@@ -121,7 +121,7 @@ export const getCourseById = async (req, res) => {
     console.error('Error al obtener curso:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al obtener curso'
+      message: t(req.locale, 'errors.get_course_failed')
     });
   }
 };
@@ -450,7 +450,7 @@ export const enrollCourse = async (req, res) => {
     if (!course) {
       return res.status(404).json({
         success: false,
-        message: 'Curso no encontrado'
+        message: t(req.locale, 'errors.course_not_found')
       });
     }
 
@@ -460,7 +460,7 @@ export const enrollCourse = async (req, res) => {
     if (!course.is_active) {
       return res.status(403).json({
         success: false,
-        message: 'Este curso no está disponible actualmente'
+        message: t(req.locale, 'errors.course_not_active')
       });
     }
 
@@ -474,8 +474,8 @@ export const enrollCourse = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: course.parent_course_title
-          ? `Debes inscribirte en el curso principal («${course.parent_course_title}»)`
-          : 'Debes inscribirte en el curso principal'
+          ? t(req.locale, 'errors.enroll_in_parent_required_titled', { title: course.parent_course_title })
+          : t(req.locale, 'errors.enroll_in_parent_required')
       });
     }
 
@@ -484,19 +484,19 @@ export const enrollCourse = async (req, res) => {
     if (enrollmentId === null) {
       return res.status(400).json({
         success: false,
-        message: 'Ya estás inscrito en este curso'
+        message: t(req.locale, 'errors.already_enrolled')
       });
     }
 
     res.status(201).json({
       success: true,
-      message: 'Inscripción exitosa'
+      message: t(req.locale, 'success.enrollment_success')
     });
   } catch (error) {
     console.error('Error al inscribir usuario:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al inscribir en el curso'
+      message: t(req.locale, 'errors.enroll_in_course_failed')
     });
   }
 };
@@ -514,19 +514,19 @@ export const unenrollCourse = async (req, res) => {
     if (deleted) {
       res.json({
         success: true,
-        message: 'Te has desinscrito del curso'
+        message: t(req.locale, 'success.unenroll_success')
       });
     } else {
       res.status(400).json({
         success: false,
-        message: 'No estás inscrito en este curso'
+        message: t(req.locale, 'errors.not_enrolled')
       });
     }
   } catch (error) {
     console.error('Error al desinscribir usuario:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al desinscribir del curso'
+      message: t(req.locale, 'errors.unenroll_failed')
     });
   }
 };
@@ -550,7 +550,7 @@ export const getEnrolledCourses = async (req, res) => {
     console.error('Error al obtener cursos inscritos:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al obtener cursos inscritos'
+      message: t(req.locale, 'errors.get_enrolled_courses_failed')
     });
   }
 };
@@ -567,14 +567,14 @@ export const getCertificate = async (req, res) => {
 
     const course = await Course.findById(id);
     if (!course) {
-      return res.status(404).json({ success: false, message: 'Curso no encontrado' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.course_not_found') });
     }
 
     const enrollment = await Course.getEnrollment(id, userId);
     if (!enrollment || !enrollment.completed_at) {
       return res.status(403).json({
         success: false,
-        message: 'Debes completar el curso al 100% para descargar el certificado'
+        message: t(req.locale, 'errors.certificate_not_completed')
       });
     }
 
@@ -591,7 +591,7 @@ export const getCertificate = async (req, res) => {
   } catch (error) {
     console.error('Error al generar certificado:', error);
     if (!res.headersSent) {
-      res.status(500).json({ success: false, message: 'Error al generar el certificado' });
+      res.status(500).json({ success: false, message: t(req.locale, 'errors.generate_certificate_failed') });
     }
   }
 };

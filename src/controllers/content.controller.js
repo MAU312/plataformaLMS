@@ -3,6 +3,7 @@ import Course from '../models/Course.js';
 import TaskSubmission from '../models/TaskSubmission.js';
 import { deleteFile } from '../middlewares/upload.middleware.js';
 import { UPLOADS_ROOT } from '../config/uploads.js';
+import { t } from '../utils/i18n.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -36,12 +37,12 @@ function uploadedFileUrl(contentType, filename) {
  * (discusión abierta / agrupador / decoración), así que ninguno de estos
  * debe contar para el progreso del curso.
  */
-function uncompletableReason(type) {
-  if (type === 'task') return 'El progreso de una tarea se actualiza automáticamente al entregarla';
-  if (type === 'quiz' || type === 'survey') return 'El progreso se actualiza automáticamente al responder';
-  if (type === 'forum') return 'El progreso de un foro se actualiza automáticamente al participar';
-  if (type === 'folder') return 'Una carpeta no cuenta para el progreso del curso';
-  if (type === 'image') return 'Una imagen no cuenta para el progreso del curso';
+function uncompletableReason(type, locale) {
+  if (type === 'task') return t(locale, 'errors.task_progress_auto');
+  if (type === 'quiz' || type === 'survey') return t(locale, 'errors.quiz_progress_auto');
+  if (type === 'forum') return t(locale, 'errors.forum_progress_auto');
+  if (type === 'folder') return t(locale, 'errors.folder_no_progress');
+  if (type === 'image') return t(locale, 'errors.image_no_progress');
   return null;
 }
 
@@ -104,7 +105,7 @@ export const getContentsByCourse = async (req, res) => {
     console.error('Error al obtener contenidos:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al obtener contenidos'
+      message: t(req.locale, 'errors.get_contents_failed')
     });
   }
 };
@@ -120,7 +121,7 @@ export const getContentById = async (req, res) => {
     if (!content) {
       return res.status(404).json({
         success: false,
-        message: 'Contenido no encontrado'
+        message: t(req.locale, 'errors.content_not_found')
       });
     }
 
@@ -139,7 +140,7 @@ export const getContentById = async (req, res) => {
     console.error('Error al obtener contenido:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al obtener contenido'
+      message: t(req.locale, 'errors.get_content_failed')
     });
   }
 };
@@ -801,7 +802,7 @@ export const downloadFile = async (req, res) => {
     if (!content) {
       return res.status(404).json({
         success: false,
-        message: 'Contenido no encontrado'
+        message: t(req.locale, 'errors.content_not_found')
       });
     }
 
@@ -812,7 +813,7 @@ export const downloadFile = async (req, res) => {
     if (!isDownloadable) {
       return res.status(400).json({
         success: false,
-        message: 'Este contenido no es un archivo descargable'
+        message: t(req.locale, 'errors.not_downloadable_content')
       });
     }
 
@@ -824,7 +825,7 @@ export const downloadFile = async (req, res) => {
     if (!canAccess) {
       return res.status(403).json({
         success: false,
-        message: 'Debes estar inscrito en este curso para descargar este archivo'
+        message: t(req.locale, 'errors.download_access_required')
       });
     }
 
@@ -833,7 +834,7 @@ export const downloadFile = async (req, res) => {
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({
         success: false,
-        message: 'Archivo no encontrado en el servidor'
+        message: t(req.locale, 'errors.file_not_found_server')
       });
     }
 
@@ -845,7 +846,7 @@ export const downloadFile = async (req, res) => {
     console.error('Error al descargar archivo:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al descargar archivo'
+      message: t(req.locale, 'errors.download_file_failed')
     });
   }
 };
@@ -867,11 +868,11 @@ export const markContentCompleted = async (req, res) => {
     if (!content) {
       return res.status(404).json({
         success: false,
-        message: 'Contenido no encontrado'
+        message: t(req.locale, 'errors.content_not_found')
       });
     }
 
-    const blockedReason = uncompletableReason(content.type);
+    const blockedReason = uncompletableReason(content.type, req.locale);
     if (blockedReason) {
       return res.status(400).json({ success: false, message: blockedReason });
     }
@@ -885,7 +886,7 @@ export const markContentCompleted = async (req, res) => {
       if (!enrolled) {
         return res.status(403).json({
           success: false,
-          message: 'Debes estar inscrito en este curso para marcar contenido como completado'
+          message: t(req.locale, 'errors.mark_completed_access_required')
         });
       }
     }
@@ -895,14 +896,14 @@ export const markContentCompleted = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Contenido marcado como completado',
+      message: t(req.locale, 'success.content_marked_completed'),
       data: { progress: newProgress, total: totalContents, completed: completedContents }
     });
   } catch (error) {
     console.error('Error al marcar contenido como completado:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al marcar contenido como completado'
+      message: t(req.locale, 'errors.mark_completed_failed')
     });
   }
 };
@@ -920,12 +921,12 @@ export const markContentIncomplete = async (req, res) => {
     if (!content) {
       return res.status(404).json({
         success: false,
-        message: 'Contenido no encontrado'
+        message: t(req.locale, 'errors.content_not_found')
       });
     }
 
     // Misma regla que al marcar como completado.
-    const blockedReason = uncompletableReason(content.type);
+    const blockedReason = uncompletableReason(content.type, req.locale);
     if (blockedReason) {
       return res.status(400).json({ success: false, message: blockedReason });
     }
@@ -937,7 +938,7 @@ export const markContentIncomplete = async (req, res) => {
       if (!enrolled) {
         return res.status(403).json({
           success: false,
-          message: 'Debes estar inscrito en este curso para modificar su progreso'
+          message: t(req.locale, 'errors.mark_incomplete_access_required')
         });
       }
     }
@@ -947,14 +948,14 @@ export const markContentIncomplete = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Contenido desmarcado',
+      message: t(req.locale, 'success.content_unmarked'),
       data: { progress: newProgress, total: totalContents, completed: completedContents }
     });
   } catch (error) {
     console.error('Error al desmarcar contenido:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al desmarcar contenido'
+      message: t(req.locale, 'errors.mark_incomplete_failed')
     });
   }
 };

@@ -15,9 +15,9 @@ window.renderMyCourses = async function(params) {
             <div class="max-w-7xl mx-auto">
                 <h1 class="text-3xl font-extrabold text-gray-900">
                     <i class="fas fa-book text-cenat-green mr-2"></i>
-                    Mis Cursos
+                    ${t('myCourses.title')}
                 </h1>
-                <p class="text-gray-600 mt-1">Aquí están todos los cursos en los que estás inscrito</p>
+                <p class="text-gray-600 mt-1">${t('myCourses.subtitle')}</p>
             </div>
         </div>
 
@@ -50,10 +50,10 @@ async function loadMyCourses(page) {
         ` : `
             <div class="empty-state">
                 <i class="fas fa-book-open"></i>
-                <p class="text-xl text-gray-600 font-medium">Aún no estás inscrito en ningún curso</p>
-                <p class="text-gray-500 mb-4">Explora el catálogo y comienza a aprender</p>
+                <p class="text-xl text-gray-600 font-medium">${t('myCourses.empty_title')}</p>
+                <p class="text-gray-500 mb-4">${t('myCourses.empty_subtitle')}</p>
                 <a href="#/" class="btn-cenat">
-                    <i class="fas fa-search mr-2"></i> Explorar cursos
+                    <i class="fas fa-search mr-2"></i> ${t('myCourses.explore_courses')}
                 </a>
             </div>
         `;
@@ -64,7 +64,7 @@ async function loadMyCourses(page) {
 
     } catch (error) {
         console.error('Error loading enrolled courses:', error);
-        showToast('Error al cargar tus cursos', 'error');
+        showToast(t('myCourses.load_failed'), 'error');
     }
 }
 
@@ -81,7 +81,7 @@ function renderEnrolledCourseCard(course) {
         </h3>
         <div class="mb-2">
             <div class="flex justify-between text-xs text-gray-500 mb-1">
-                <span>Progreso</span>
+                <span>${t('myCourses.progress_label')}</span>
                 <span>${progress}%</span>
             </div>
             <div class="progress-bar">
@@ -90,7 +90,7 @@ function renderEnrolledCourseCard(course) {
         </div>
         <p class="text-xs text-gray-500 mt-3">
             <i class="fas fa-calendar-alt mr-1"></i>
-            Inscrito el ${formatDate(course.enrolled_at)}
+            ${t('myCourses.enrolled_on', { date: formatDate(course.enrolled_at) })}
         </p>
     `;
 

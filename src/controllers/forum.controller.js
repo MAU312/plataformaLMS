@@ -1,6 +1,7 @@
 import Content from '../models/Content.js';
 import Course from '../models/Course.js';
 import ForumPost from '../models/ForumPost.js';
+import { t } from '../utils/i18n.js';
 
 /**
  * Agrupa el listado plano de posts en árbol de 2 niveles: cada post de
@@ -44,14 +45,14 @@ export const listPosts = async (req, res) => {
 
     const content = await Content.findById(id);
     if (!content || content.type !== 'forum') {
-      return res.status(404).json({ success: false, message: 'Foro no encontrado' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.forum_not_found') });
     }
 
     const canAccess = await Course.canAccessMedia(content.course_id, req.session?.user);
     if (!canAccess) {
       return res.status(403).json({
         success: false,
-        message: 'Debes estar inscrito en este curso para ver este foro'
+        message: t(req.locale, 'errors.forum_view_access_required')
       });
     }
 
@@ -63,7 +64,7 @@ export const listPosts = async (req, res) => {
     });
   } catch (error) {
     console.error('Error al obtener el foro:', error);
-    res.status(500).json({ success: false, message: 'Error al obtener el foro' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.get_forum_failed') });
   }
 };
 
@@ -80,19 +81,19 @@ export const createPost = async (req, res) => {
     const { body, parent_id } = req.body;
 
     if (!body || !String(body).trim()) {
-      return res.status(400).json({ success: false, message: 'El texto de la respuesta es requerido' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.reply_body_required') });
     }
 
     const content = await Content.findById(id);
     if (!content || content.type !== 'forum') {
-      return res.status(404).json({ success: false, message: 'Foro no encontrado' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.forum_not_found') });
     }
 
     const canAccess = await Course.canAccessMedia(content.course_id, req.session?.user);
     if (!canAccess) {
       return res.status(403).json({
         success: false,
-        message: 'Debes estar inscrito en este curso para responder en este foro'
+        message: t(req.locale, 'errors.forum_reply_access_required')
       });
     }
 
@@ -100,7 +101,7 @@ export const createPost = async (req, res) => {
     if (parent_id !== undefined && parent_id !== null) {
       const parentPost = await ForumPost.findById(parent_id);
       if (!parentPost || parentPost.content_id !== content.id) {
-        return res.status(404).json({ success: false, message: 'La respuesta a la que intentas contestar no existe' });
+        return res.status(404).json({ success: false, message: t(req.locale, 'errors.parent_reply_not_found') });
       }
       effectiveParentId = parentPost.parent_id === null ? parentPost.id : parentPost.parent_id;
     }
@@ -122,10 +123,10 @@ export const createPost = async (req, res) => {
       await Content.recalculateCourseProgress(content.course_id, req.session.user.id);
     }
 
-    res.status(201).json({ success: true, message: 'Respuesta publicada', data: { id: postId } });
+    res.status(201).json({ success: true, message: t(req.locale, 'success.reply_published'), data: { id: postId } });
   } catch (error) {
     console.error('Error al publicar en el foro:', error);
-    res.status(500).json({ success: false, message: 'Error al publicar la respuesta' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.publish_reply_failed') });
   }
 };
 
@@ -139,24 +140,24 @@ export const updatePost = async (req, res) => {
     const { body } = req.body;
 
     if (!body || !String(body).trim()) {
-      return res.status(400).json({ success: false, message: 'El texto de la respuesta es requerido' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.reply_body_required') });
     }
 
     const post = await ForumPost.findById(id);
     if (!post) {
-      return res.status(404).json({ success: false, message: 'Respuesta no encontrada' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.reply_not_found') });
     }
 
     if (post.user_id !== req.session.user.id) {
-      return res.status(403).json({ success: false, message: 'Solo puedes editar tus propias respuestas' });
+      return res.status(403).json({ success: false, message: t(req.locale, 'errors.edit_own_replies_only') });
     }
 
     await ForumPost.update(id, String(body).trim());
 
-    res.json({ success: true, message: 'Respuesta actualizada' });
+    res.json({ success: true, message: t(req.locale, 'success.reply_updated') });
   } catch (error) {
     console.error('Error al editar la respuesta:', error);
-    res.status(500).json({ success: false, message: 'Error al editar la respuesta' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.edit_reply_failed') });
   }
 };
 
@@ -172,7 +173,7 @@ export const deletePost = async (req, res) => {
 
     const post = await ForumPost.findById(id);
     if (!post) {
-      return res.status(404).json({ success: false, message: 'Respuesta no encontrada' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.reply_not_found') });
     }
 
     const isOwner = post.user_id === req.session.user.id;
@@ -185,14 +186,14 @@ export const deletePost = async (req, res) => {
     }
 
     if (!isOwner && !isAdminUser && !canModerate) {
-      return res.status(403).json({ success: false, message: 'No tienes permiso para borrar esta respuesta' });
+      return res.status(403).json({ success: false, message: t(req.locale, 'errors.delete_reply_permission') });
     }
 
     await ForumPost.delete(id);
 
-    res.json({ success: true, message: 'Respuesta eliminada' });
+    res.json({ success: true, message: t(req.locale, 'success.reply_deleted') });
   } catch (error) {
     console.error('Error al borrar la respuesta:', error);
-    res.status(500).json({ success: false, message: 'Error al borrar la respuesta' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.delete_reply_failed') });
   }
 };
