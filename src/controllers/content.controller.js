@@ -52,13 +52,13 @@ function uncompletableReason(type, locale) {
  * cuenta para la nota del curso" (null en BD), no un error — asignarle un
  * peso es opcional, no todo contenido tiene por qué calificar.
  */
-function parseWeightPercent(input) {
+function parseWeightPercent(input, locale) {
   if (input === undefined || input === null || input === '') {
     return { ok: true, value: null };
   }
   const value = Number(input);
   if (!Number.isFinite(value) || value < 0 || value > 100) {
-    return { ok: false, message: 'El porcentaje debe ser un número entre 0 y 100' };
+    return { ok: false, message: t(locale, 'errors.weight_percent_invalid') };
   }
   return { ok: true, value };
 }
@@ -155,21 +155,21 @@ export const createVideoContent = async (req, res) => {
     if (!course_id || !title) {
       return res.status(400).json({
         success: false,
-        message: 'El ID del curso y el título son requeridos'
+        message: t(req.locale, 'errors.course_id_title_required')
       });
     }
 
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: 'El archivo de video es requerido'
+        message: t(req.locale, 'errors.video_file_required')
       });
     }
 
     const folderCheck = await resolveFolderId(folder_id, course_id);
     if (!folderCheck.ok) {
       deleteFile(`/uploads/videos/${req.file.filename}`);
-      return res.status(400).json({ success: false, message: 'La carpeta indicada no existe en este curso' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.folder_not_in_course') });
     }
 
     const url = `/uploads/videos/${req.file.filename}`;
@@ -187,7 +187,7 @@ export const createVideoContent = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Video agregado exitosamente',
+      message: t(req.locale, 'success.video_added'),
       data: { id: contentId }
     });
   } catch (error) {
@@ -198,7 +198,7 @@ export const createVideoContent = async (req, res) => {
     }
     res.status(500).json({
       success: false,
-      message: 'Error al agregar video'
+      message: t(req.locale, 'errors.add_video_failed')
     });
   }
 };
@@ -213,21 +213,21 @@ export const createFileContent = async (req, res) => {
     if (!course_id || !title) {
       return res.status(400).json({
         success: false,
-        message: 'El ID del curso y el título son requeridos'
+        message: t(req.locale, 'errors.course_id_title_required')
       });
     }
 
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: 'El archivo es requerido'
+        message: t(req.locale, 'errors.file_required')
       });
     }
 
     const folderCheck = await resolveFolderId(folder_id, course_id);
     if (!folderCheck.ok) {
       deleteFile(`/uploads/files/${req.file.filename}`);
-      return res.status(400).json({ success: false, message: 'La carpeta indicada no existe en este curso' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.folder_not_in_course') });
     }
 
     const url = `/uploads/files/${req.file.filename}`;
@@ -245,7 +245,7 @@ export const createFileContent = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Archivo agregado exitosamente',
+      message: t(req.locale, 'success.file_added'),
       data: { id: contentId }
     });
   } catch (error) {
@@ -256,7 +256,7 @@ export const createFileContent = async (req, res) => {
     }
     res.status(500).json({
       success: false,
-      message: 'Error al agregar archivo'
+      message: t(req.locale, 'errors.add_file_failed')
     });
   }
 };
@@ -273,21 +273,21 @@ export const createImageContent = async (req, res) => {
     if (!course_id || !title) {
       return res.status(400).json({
         success: false,
-        message: 'El ID del curso y el título son requeridos'
+        message: t(req.locale, 'errors.course_id_title_required')
       });
     }
 
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: 'La imagen es requerida'
+        message: t(req.locale, 'errors.image_required')
       });
     }
 
     const folderCheck = await resolveFolderId(folder_id, course_id);
     if (!folderCheck.ok) {
       deleteFile(`/uploads/content-images/${req.file.filename}`);
-      return res.status(400).json({ success: false, message: 'La carpeta indicada no existe en este curso' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.folder_not_in_course') });
     }
 
     const url = `/uploads/content-images/${req.file.filename}`;
@@ -305,7 +305,7 @@ export const createImageContent = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Imagen agregada exitosamente',
+      message: t(req.locale, 'success.image_added'),
       data: { id: contentId }
     });
   } catch (error) {
@@ -315,7 +315,7 @@ export const createImageContent = async (req, res) => {
     }
     res.status(500).json({
       success: false,
-      message: 'Error al agregar la imagen'
+      message: t(req.locale, 'errors.add_image_failed')
     });
   }
 };
@@ -331,20 +331,20 @@ export const createTextContent = async (req, res) => {
     if (!course_id || !title) {
       return res.status(400).json({
         success: false,
-        message: 'El ID del curso y el título son requeridos'
+        message: t(req.locale, 'errors.course_id_title_required')
       });
     }
 
     if (!description || !String(description).trim()) {
       return res.status(400).json({
         success: false,
-        message: 'El contenido de texto es requerido'
+        message: t(req.locale, 'errors.text_content_required')
       });
     }
 
     const folderCheck = await resolveFolderId(folder_id, course_id);
     if (!folderCheck.ok) {
-      return res.status(400).json({ success: false, message: 'La carpeta indicada no existe en este curso' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.folder_not_in_course') });
     }
 
     const contentId = await Content.create({
@@ -358,14 +358,14 @@ export const createTextContent = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Contenido de texto agregado exitosamente',
+      message: t(req.locale, 'success.text_content_added'),
       data: { id: contentId }
     });
   } catch (error) {
     console.error('Error al crear contenido de texto:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al agregar el contenido de texto'
+      message: t(req.locale, 'errors.add_text_content_failed')
     });
   }
 };
@@ -381,20 +381,20 @@ export const createUrlContent = async (req, res) => {
     if (!course_id || !title) {
       return res.status(400).json({
         success: false,
-        message: 'El ID del curso y el título son requeridos'
+        message: t(req.locale, 'errors.course_id_title_required')
       });
     }
 
     if (!url || !URL_REGEX.test(String(url).trim())) {
       return res.status(400).json({
         success: false,
-        message: 'La URL debe ser un enlace http o https válido'
+        message: t(req.locale, 'errors.invalid_url_format')
       });
     }
 
     const folderCheck = await resolveFolderId(folder_id, course_id);
     if (!folderCheck.ok) {
-      return res.status(400).json({ success: false, message: 'La carpeta indicada no existe en este curso' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.folder_not_in_course') });
     }
 
     const contentId = await Content.create({
@@ -408,14 +408,14 @@ export const createUrlContent = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'URL de video agregada exitosamente',
+      message: t(req.locale, 'success.url_content_added'),
       data: { id: contentId }
     });
   } catch (error) {
     console.error('Error al crear contenido de URL:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al agregar la URL de video'
+      message: t(req.locale, 'errors.add_url_content_failed')
     });
   }
 };
@@ -433,11 +433,11 @@ export const createTaskContent = async (req, res) => {
     if (!course_id || !title) {
       return res.status(400).json({
         success: false,
-        message: 'El ID del curso y el título son requeridos'
+        message: t(req.locale, 'errors.course_id_title_required')
       });
     }
 
-    const weightCheck = parseWeightPercent(weight_percent);
+    const weightCheck = parseWeightPercent(weight_percent, req.locale);
     if (!weightCheck.ok) {
       if (req.file) deleteFile(`/uploads/files/${req.file.filename}`);
       return res.status(400).json({ success: false, message: weightCheck.message });
@@ -446,7 +446,7 @@ export const createTaskContent = async (req, res) => {
     const folderCheck = await resolveFolderId(folder_id, course_id);
     if (!folderCheck.ok) {
       if (req.file) deleteFile(`/uploads/files/${req.file.filename}`);
-      return res.status(400).json({ success: false, message: 'La carpeta indicada no existe en este curso' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.folder_not_in_course') });
     }
 
     let url = null;
@@ -469,7 +469,7 @@ export const createTaskContent = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Tarea agregada exitosamente',
+      message: t(req.locale, 'success.task_added'),
       data: { id: contentId }
     });
   } catch (error) {
@@ -479,7 +479,7 @@ export const createTaskContent = async (req, res) => {
     }
     res.status(500).json({
       success: false,
-      message: 'Error al agregar la tarea'
+      message: t(req.locale, 'errors.add_task_failed')
     });
   }
 };
@@ -497,20 +497,20 @@ export const createForumContent = async (req, res) => {
     if (!course_id || !title) {
       return res.status(400).json({
         success: false,
-        message: 'El ID del curso y el título son requeridos'
+        message: t(req.locale, 'errors.course_id_title_required')
       });
     }
 
     if (!description || !String(description).trim()) {
       return res.status(400).json({
         success: false,
-        message: 'El texto principal del tema es requerido'
+        message: t(req.locale, 'errors.forum_topic_body_required')
       });
     }
 
     const folderCheck = await resolveFolderId(folder_id, course_id);
     if (!folderCheck.ok) {
-      return res.status(400).json({ success: false, message: 'La carpeta indicada no existe en este curso' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.folder_not_in_course') });
     }
 
     const contentId = await Content.create({
@@ -524,14 +524,14 @@ export const createForumContent = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Tema de foro creado exitosamente',
+      message: t(req.locale, 'success.forum_topic_created'),
       data: { id: contentId }
     });
   } catch (error) {
     console.error('Error al crear el tema de foro:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al crear el tema de foro'
+      message: t(req.locale, 'errors.create_forum_topic_failed')
     });
   }
 };
@@ -549,7 +549,7 @@ export const createFolderContent = async (req, res) => {
     if (!course_id || !title) {
       return res.status(400).json({
         success: false,
-        message: 'El ID del curso y el título son requeridos'
+        message: t(req.locale, 'errors.course_id_title_required')
       });
     }
 
@@ -564,14 +564,14 @@ export const createFolderContent = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Carpeta creada exitosamente',
+      message: t(req.locale, 'success.folder_created'),
       data: { id: contentId }
     });
   } catch (error) {
     console.error('Error al crear la carpeta:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al crear la carpeta'
+      message: t(req.locale, 'errors.create_folder_failed')
     });
   }
 };
@@ -588,7 +588,7 @@ export const updateContent = async (req, res) => {
     if (!content) {
       return res.status(404).json({
         success: false,
-        message: 'Contenido no encontrado'
+        message: t(req.locale, 'errors.content_not_found')
       });
     }
 
@@ -605,10 +605,10 @@ export const updateContent = async (req, res) => {
       if (!['task', 'quiz', 'survey'].includes(content.type)) {
         return res.status(400).json({
           success: false,
-          message: 'Solo una tarea o un cuestionario pueden tener un porcentaje del curso'
+          message: t(req.locale, 'errors.weight_percent_task_quiz_only')
         });
       }
-      const weightCheck = parseWeightPercent(weight_percent);
+      const weightCheck = parseWeightPercent(weight_percent, req.locale);
       if (!weightCheck.ok) {
         return res.status(400).json({ success: false, message: weightCheck.message });
       }
@@ -621,12 +621,12 @@ export const updateContent = async (req, res) => {
       if (content.type === 'folder') {
         return res.status(400).json({
           success: false,
-          message: 'Una carpeta no puede estar dentro de otra carpeta'
+          message: t(req.locale, 'errors.folder_cannot_nest')
         });
       }
       const folderCheck = await resolveFolderId(folder_id, content.course_id);
       if (!folderCheck.ok) {
-        return res.status(400).json({ success: false, message: 'La carpeta indicada no existe en este curso' });
+        return res.status(400).json({ success: false, message: t(req.locale, 'errors.folder_not_in_course') });
       }
       updateData.folder_id = folderCheck.folderId;
     }
@@ -637,7 +637,7 @@ export const updateContent = async (req, res) => {
       if (!URL_REGEX.test(String(url).trim())) {
         return res.status(400).json({
           success: false,
-          message: 'La URL debe ser un enlace http o https válido'
+          message: t(req.locale, 'errors.invalid_url_format')
         });
       }
       updateData.url = String(url).trim();
@@ -667,7 +667,7 @@ export const updateContent = async (req, res) => {
       if (newFileUrl) deleteFile(newFileUrl);
       return res.status(400).json({
         success: false,
-        message: 'No se pudo actualizar el contenido'
+        message: t(req.locale, 'errors.content_update_no_rows')
       });
     }
 
@@ -677,7 +677,7 @@ export const updateContent = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Contenido actualizado exitosamente'
+      message: t(req.locale, 'success.content_updated')
     });
   } catch (error) {
     console.error('Error al actualizar contenido:', error);
@@ -689,7 +689,7 @@ export const updateContent = async (req, res) => {
     }
     res.status(500).json({
       success: false,
-      message: 'Error al actualizar contenido'
+      message: t(req.locale, 'errors.update_content_failed')
     });
   }
 };
@@ -705,7 +705,7 @@ export const deleteContent = async (req, res) => {
     if (!content) {
       return res.status(404).json({
         success: false,
-        message: 'Contenido no encontrado'
+        message: t(req.locale, 'errors.content_not_found')
       });
     }
 
@@ -717,7 +717,7 @@ export const deleteContent = async (req, res) => {
       if (hasChildren) {
         return res.status(400).json({
           success: false,
-          message: 'La carpeta todavía tiene contenido adentro. Vacíala (muévelo o bórralo) antes de eliminarla.'
+          message: t(req.locale, 'errors.folder_not_empty')
         });
       }
     }
@@ -743,19 +743,19 @@ export const deleteContent = async (req, res) => {
       filesToDelete.forEach(deleteFile);
       res.json({
         success: true,
-        message: 'Contenido eliminado exitosamente'
+        message: t(req.locale, 'success.content_deleted')
       });
     } else {
       res.status(400).json({
         success: false,
-        message: 'No se pudo eliminar el contenido'
+        message: t(req.locale, 'errors.content_delete_no_rows')
       });
     }
   } catch (error) {
     console.error('Error al eliminar contenido:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al eliminar contenido'
+      message: t(req.locale, 'errors.delete_content_failed')
     });
   }
 };
@@ -771,7 +771,7 @@ export const reorderContents = async (req, res) => {
     if (!Array.isArray(contentIds) || contentIds.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Se requiere un array de IDs de contenidos'
+        message: t(req.locale, 'errors.content_ids_array_required')
       });
     }
 
@@ -779,13 +779,13 @@ export const reorderContents = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Contenidos reordenados exitosamente'
+      message: t(req.locale, 'success.contents_reordered')
     });
   } catch (error) {
     console.error('Error al reordenar contenidos:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al reordenar contenidos'
+      message: t(req.locale, 'errors.reorder_contents_failed')
     });
   }
 };

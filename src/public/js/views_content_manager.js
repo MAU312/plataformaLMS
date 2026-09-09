@@ -52,17 +52,17 @@ function renderCourseContentManagerHTML(course, contents) {
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-lg font-bold text-gray-900">
-                        <i class="fas fa-folder text-cenat-green mr-2"></i> Carpetas
+                        <i class="fas fa-folder text-cenat-green mr-2"></i> ${t('contentManager.folders.heading')}
                     </h2>
                     <button onclick="showAddFolderForm(${course.id})" class="text-sm bg-green-50 text-cenat-green px-3 py-1.5 rounded-lg hover:bg-green-100 transition">
-                        <i class="fas fa-plus mr-1"></i> Crear carpeta
+                        <i class="fas fa-plus mr-1"></i> ${t('contentManager.folders.create')}
                     </button>
                 </div>
                 <div id="add-folder-form-container"></div>
                 ${folders.length === 0 ? `
-                    <p class="text-gray-500 text-sm text-center py-4">No hay carpetas creadas aún. Crea una para agrupar contenido del curso (ej. varios archivos de un mismo tema).</p>
+                    <p class="text-gray-500 text-sm text-center py-4">${t('contentManager.folders.empty')}</p>
                 ` : `
-                    <p class="text-gray-400 text-xs">Las carpetas creadas aparecen mezcladas en "Contenido" abajo — arrástralas para ubicarlas donde quieras, incluso antes que un video.</p>
+                    <p class="text-gray-400 text-xs">${t('contentManager.folders.hint')}</p>
                 `}
             </div>
 
@@ -91,16 +91,16 @@ function renderCourseModulesSectionHTML(course) {
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-bold text-gray-900">
-                    <i class="fas fa-layer-group text-cenat-green mr-2"></i> Módulos
+                    <i class="fas fa-layer-group text-cenat-green mr-2"></i> ${t('contentManager.modules.heading')}
                 </h2>
                 <button onclick="showAddModuleForm(${course.id})" class="text-sm bg-green-50 text-cenat-green px-3 py-1.5 rounded-lg hover:bg-green-100 transition">
-                    <i class="fas fa-plus mr-1"></i> Crear módulo
+                    <i class="fas fa-plus mr-1"></i> ${t('contentManager.modules.create')}
                 </button>
             </div>
-            <p class="text-gray-400 text-xs mb-3">Un módulo agrupa cursos completos (con su propia portada, título y profesor) dentro de este curso — se muestran como tarjetas en la página pública del curso.</p>
+            <p class="text-gray-400 text-xs mb-3">${t('contentManager.modules.hint')}</p>
             <div id="add-module-form-container"></div>
             <div id="course-modules-list">
-                <p class="text-gray-400 text-sm text-center py-4"><i class="fas fa-spinner fa-spin mr-1"></i> Cargando módulos...</p>
+                <p class="text-gray-400 text-sm text-center py-4"><i class="fas fa-spinner fa-spin mr-1"></i> ${t('contentManager.modules.loading')}</p>
             </div>
         </div>
     `;
@@ -113,10 +113,10 @@ async function loadCourseModulesList(courseId) {
         const response = await courseModulesAPI.getByCourse(courseId);
         const modules = response.data || [];
         container.innerHTML = modules.length === 0
-            ? `<p class="text-gray-500 text-sm text-center py-4">Todavía no hay módulos. Crea uno para empezar a agrupar cursos dentro de este curso.</p>`
+            ? `<p class="text-gray-500 text-sm text-center py-4">${t('contentManager.modules.empty')}</p>`
             : modules.map(m => renderModuleCard(courseId, m)).join('');
     } catch (error) {
-        container.innerHTML = `<p class="text-sm text-red-500 text-center py-4">Error al cargar los módulos</p>`;
+        container.innerHTML = `<p class="text-sm text-red-500 text-center py-4">${t('contentManager.modules.load_failed')}</p>`;
     }
 }
 
@@ -129,16 +129,16 @@ function renderModuleCard(courseId, module) {
                     <i class="fas fa-chevron-right text-gray-400 text-xs module-chevron transition-transform"></i>
                     <i class="fas fa-layer-group text-cenat-green"></i>
                     <span class="font-semibold text-gray-900 truncate">${escapeHtml(module.title)}</span>
-                    <span class="text-xs text-gray-400 whitespace-nowrap">(${courseCount} ${courseCount === 1 ? 'curso' : 'cursos'})</span>
+                    <span class="text-xs text-gray-400 whitespace-nowrap">(${t(courseCount === 1 ? 'contentManager.modules.course_count_singular' : 'contentManager.modules.course_count_plural', { count: courseCount })})</span>
                 </div>
                 <div class="flex items-center gap-1 flex-shrink-0">
-                    <button onclick="event.preventDefault(); showAddModuleCourseForm(${courseId}, ${module.id})" class="text-xs bg-green-50 text-cenat-green px-2 py-1 rounded hover:bg-green-100 whitespace-nowrap" title="Crear curso en este módulo">
-                        <i class="fas fa-plus mr-1"></i>Curso
+                    <button onclick="event.preventDefault(); showAddModuleCourseForm(${courseId}, ${module.id})" class="text-xs bg-green-50 text-cenat-green px-2 py-1 rounded hover:bg-green-100 whitespace-nowrap" title="${t('contentManager.modules.create_course_title')}">
+                        <i class="fas fa-plus mr-1"></i>${t('contentManager.modules.create_course_short')}
                     </button>
-                    <button onclick="event.preventDefault(); renameModuleHandler(${courseId}, ${module.id})" class="text-gray-400 hover:text-cenat-green px-2" title="Renombrar módulo">
+                    <button onclick="event.preventDefault(); renameModuleHandler(${courseId}, ${module.id})" class="text-gray-400 hover:text-cenat-green px-2" title="${t('contentManager.modules.rename_title')}">
                         <i class="fas fa-pencil-alt"></i>
                     </button>
-                    <button onclick="event.preventDefault(); deleteModuleHandler(${courseId}, ${module.id})" class="text-red-500 hover:text-red-700 px-2" title="Borrar módulo">
+                    <button onclick="event.preventDefault(); deleteModuleHandler(${courseId}, ${module.id})" class="text-red-500 hover:text-red-700 px-2" title="${t('contentManager.modules.delete_title')}">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -146,7 +146,7 @@ function renderModuleCard(courseId, module) {
             <div class="px-3 pb-3 border-t border-gray-100 pt-3 space-y-2">
                 <div id="${scopeId('add-module-course-form-container', module.id)}"></div>
                 ${courseCount === 0
-                    ? `<p class="text-gray-400 text-xs text-center py-2">Este módulo todavía no tiene cursos.</p>`
+                    ? `<p class="text-gray-400 text-xs text-center py-2">${t('contentManager.modules.no_courses_yet')}</p>`
                     : module.courses.map(c => renderModuleChildCourseRow(courseId, module.id, c)).join('')}
             </div>
         </details>
@@ -167,14 +167,14 @@ function renderModuleChildCourseRow(courseId, moduleId, childCourse) {
                 </div>
                 <div class="min-w-0">
                     <p class="text-sm font-medium text-gray-900 truncate">${escapeHtml(childCourse.title)}</p>
-                    <p class="text-xs text-gray-400 truncate">${childCourse.teacher_names ? escapeHtml(childCourse.teacher_names) : 'Sin profesor asignado'}</p>
+                    <p class="text-xs text-gray-400 truncate">${childCourse.teacher_names ? escapeHtml(childCourse.teacher_names) : t('contentManager.modules.no_teacher_assigned')}</p>
                 </div>
             </div>
             <div class="flex items-center gap-1 flex-shrink-0">
-                <a href="${manageHref}" class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200" title="Gestionar contenido de este curso">
+                <a href="${manageHref}" class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200" title="${t('contentManager.modules.manage_content_title')}">
                     <i class="fas fa-cog"></i>
                 </a>
-                <button onclick="unnestModuleCourseHandler(${courseId}, ${moduleId}, ${childCourse.id})" class="text-xs text-gray-400 hover:text-red-600 px-2" title="Desvincular del módulo (no borra el curso)">
+                <button onclick="unnestModuleCourseHandler(${courseId}, ${moduleId}, ${childCourse.id})" class="text-xs text-gray-400 hover:text-red-600 px-2" title="${t('contentManager.modules.unlink_title')}">
                     <i class="fas fa-unlink"></i>
                 </button>
             </div>
@@ -189,15 +189,15 @@ function showAddModuleForm(courseId) {
     container.innerHTML = `
         <form id="add-module-form" class="bg-green-50 rounded-lg p-4 mb-4 space-y-3">
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Nombre del módulo *</label>
-                <input type="text" id="module-title" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Ej: Módulo 1 - Ciencia abierta">
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.modules.name_label')}</label>
+                <input type="text" id="module-title" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="${t('contentManager.modules.name_placeholder')}">
             </div>
             <div class="flex gap-2">
                 <button type="submit" id="submit-module-btn" class="bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
-                    <i class="fas fa-check mr-1"></i> Crear Módulo
+                    <i class="fas fa-check mr-1"></i> ${t('contentManager.modules.create_button')}
                 </button>
                 <button type="button" onclick="document.getElementById('add-module-form-container').innerHTML = ''" class="text-gray-600 px-4 py-2 text-sm">
-                    Cancelar
+                    ${t('contentManager.cancel')}
                 </button>
             </div>
         </form>
@@ -210,16 +210,16 @@ function showAddModuleForm(courseId) {
         const submitBtn = document.getElementById('submit-module-btn');
 
         if (!title) {
-            showToast('El nombre del módulo es requerido', 'error');
+            showToast(t('contentManager.modules.name_required'), 'error');
             return;
         }
 
         await submitContentForm(submitBtn, {
-            loadingLabel: 'Creando...',
-            idleLabel: '<i class="fas fa-check mr-1"></i> Crear Módulo',
+            loadingLabel: t('contentManager.creating'),
+            idleLabel: `<i class="fas fa-check mr-1"></i> ${t('contentManager.modules.create_button')}`,
             apiCall: () => courseModulesAPI.create(courseId, title),
-            successMessage: 'Módulo creado exitosamente',
-            errorMessage: 'Error al crear el módulo'
+            successMessage: t('contentManager.modules.created'),
+            errorMessage: t('contentManager.modules.create_failed')
         });
     });
 }
@@ -231,42 +231,42 @@ async function renameModuleHandler(courseId, moduleId) {
     // el markup si el título tiene comillas.
     const titleEl = document.querySelector(`details[data-module-id="${moduleId}"] .font-semibold`);
     const currentTitle = titleEl ? titleEl.textContent : '';
-    const title = prompt('Nuevo nombre del módulo:', currentTitle);
+    const title = prompt(t('contentManager.modules.rename_prompt'), currentTitle);
     if (title === null) return;
     if (!title.trim()) {
-        showToast('El nombre del módulo es requerido', 'error');
+        showToast(t('contentManager.modules.name_required'), 'error');
         return;
     }
     try {
         await courseModulesAPI.update(moduleId, { title: title.trim() });
-        showToast('Módulo actualizado exitosamente', 'success');
+        showToast(t('contentManager.modules.updated'), 'success');
         contentManagerRerender();
     } catch (error) {
-        showToast(error.message || 'Error al actualizar el módulo', 'error');
+        showToast(error.message || t('contentManager.modules.update_failed'), 'error');
     }
 }
 
 async function deleteModuleHandler(courseId, moduleId) {
-    const confirmed = await confirmAction('¿Borrar este módulo? Solo se puede borrar si no tiene cursos adentro.');
+    const confirmed = await confirmAction(t('contentManager.modules.delete_confirm'));
     if (!confirmed) return;
     try {
         await courseModulesAPI.delete(moduleId);
-        showToast('Módulo eliminado exitosamente', 'success');
+        showToast(t('contentManager.modules.deleted'), 'success');
         contentManagerRerender();
     } catch (error) {
-        showToast(error.message || 'Error al eliminar el módulo', 'error');
+        showToast(error.message || t('contentManager.modules.delete_failed'), 'error');
     }
 }
 
 async function unnestModuleCourseHandler(courseId, moduleId, childId) {
-    const confirmed = await confirmAction('¿Desvincular este curso del módulo? El curso NO se borra — vuelve a ser un curso independiente en el catálogo.');
+    const confirmed = await confirmAction(t('contentManager.modules.unlink_confirm'));
     if (!confirmed) return;
     try {
         await courseModulesAPI.removeCourse(moduleId, childId);
-        showToast('Curso desvinculado del módulo', 'success');
+        showToast(t('contentManager.modules.unlinked'), 'success');
         contentManagerRerender();
     } catch (error) {
-        showToast(error.message || 'Error al desvincular el curso', 'error');
+        showToast(error.message || t('contentManager.modules.unlink_failed'), 'error');
     }
 }
 
@@ -280,29 +280,29 @@ function showAddModuleCourseForm(courseId, moduleId) {
     container.innerHTML = `
         <form id="add-module-course-form-${moduleId}" class="bg-green-50 rounded-lg p-4 mb-3 space-y-3">
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Título del curso *</label>
-                <input type="text" id="module-course-title-${moduleId}" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Ej: Contribución de la ciencia abierta...">
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.modules.course_title_label')}</label>
+                <input type="text" id="module-course-title-${moduleId}" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="${t('contentManager.modules.course_title_placeholder')}">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Descripción</label>
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.modules.description_label')}</label>
                 <textarea id="module-course-description-${moduleId}" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green"></textarea>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Miniatura</label>
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.modules.thumbnail_label')}</label>
                 <input type="file" id="module-course-thumbnail-${moduleId}" accept="image/*" class="w-full text-sm">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Profesor de módulo</label>
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.modules.teacher_label')}</label>
                 <div id="${teacherCheckboxesId}" class="border border-gray-300 rounded-lg p-2 max-h-40 overflow-y-auto bg-white">
-                    <p class="text-sm text-gray-400"><i class="fas fa-spinner fa-spin mr-1"></i> Cargando profesores...</p>
+                    <p class="text-sm text-gray-400"><i class="fas fa-spinner fa-spin mr-1"></i> ${t('contentManager.modules.loading_teachers')}</p>
                 </div>
             </div>
             <div class="flex gap-2">
                 <button type="submit" id="submit-module-course-btn-${moduleId}" class="bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
-                    <i class="fas fa-check mr-1"></i> Crear Curso
+                    <i class="fas fa-check mr-1"></i> ${t('contentManager.modules.create_course_button')}
                 </button>
                 <button type="button" onclick="document.getElementById('${containerId}').innerHTML = ''" class="text-gray-600 px-4 py-2 text-sm">
-                    Cancelar
+                    ${t('contentManager.cancel')}
                 </button>
             </div>
         </form>
@@ -319,10 +319,10 @@ function showAddModuleCourseForm(courseId, moduleId) {
         const submitBtn = document.getElementById(`submit-module-course-btn-${moduleId}`);
 
         if (!title) {
-            showToast('El título del curso es requerido', 'error');
+            showToast(t('contentManager.modules.course_title_required'), 'error');
             return;
         }
-        if (thumbnailFile && !checkFileSize(thumbnailFile, MAX_IMAGE_BYTES, 'La miniatura')) return;
+        if (thumbnailFile && !checkFileSize(thumbnailFile, MAX_IMAGE_BYTES, t('contentManager.modules.thumbnail_field_label'))) return;
 
         const formData = new FormData();
         formData.append('title', title);
@@ -331,11 +331,11 @@ function showAddModuleCourseForm(courseId, moduleId) {
         if (thumbnailFile) formData.append('thumbnail', thumbnailFile);
 
         await submitContentForm(submitBtn, {
-            loadingLabel: 'Creando...',
-            idleLabel: '<i class="fas fa-check mr-1"></i> Crear Curso',
+            loadingLabel: t('contentManager.creating'),
+            idleLabel: `<i class="fas fa-check mr-1"></i> ${t('contentManager.modules.create_course_button')}`,
             apiCall: () => courseModulesAPI.createCourse(moduleId, formData),
-            successMessage: 'Curso creado exitosamente dentro del módulo',
-            errorMessage: 'Error al crear el curso'
+            successMessage: t('contentManager.modules.course_created'),
+            errorMessage: t('contentManager.modules.create_course_failed')
         });
     });
 }
@@ -352,7 +352,7 @@ function renderDraggableFolderItem(courseId, contents, folder) {
     const itemCount = contents.filter(c => c.folder_id === folder.id).length;
     return `
         <div class="draggable-item flex items-stretch gap-1" draggable="true" data-content-id="${folder.id}" data-content-json="${encodeDataAttr(folder)}">
-            <span class="drag-handle flex items-center px-1 text-gray-300 hover:text-gray-500 cursor-grab flex-shrink-0" title="Arrastrar para reordenar">
+            <span class="drag-handle flex items-center px-1 text-gray-300 hover:text-gray-500 cursor-grab flex-shrink-0" title="${t('contentManager.drag_handle_title')}">
                 <i class="fas fa-grip-vertical"></i>
             </span>
             ${renderReorderButtons(folder.id)}
@@ -364,18 +364,18 @@ function renderDraggableFolderItem(courseId, contents, folder) {
                                 <i class="fas fa-chevron-right text-gray-400 text-xs folder-chevron transition-transform"></i>
                                 <i class="fas fa-folder-open text-cenat-green"></i>
                                 <span class="font-bold text-gray-900 truncate">${escapeHtml(folder.title)}</span>
-                                <span class="text-xs text-gray-400 whitespace-nowrap">(${itemCount} ${itemCount === 1 ? 'elemento' : 'elementos'})</span>
+                                <span class="text-xs text-gray-400 whitespace-nowrap">(${t(itemCount === 1 ? 'contentManager.item_count_singular' : 'contentManager.item_count_plural', { count: itemCount })})</span>
                                 ${folder.module_teacher_name ? `
-                                    <span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full whitespace-nowrap" title="Carpeta asignada a este profesor — solo él (o un admin) puede gestionar su contenido">
+                                    <span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full whitespace-nowrap" title="${t('contentManager.folders.assigned_teacher_title')}">
                                         <i class="fas fa-user-tie mr-1"></i>${escapeHtml(folder.module_teacher_name)}
                                     </span>
                                 ` : ''}
                             </div>
                             <div class="flex items-center gap-1 flex-shrink-0">
-                                <button onclick="event.preventDefault(); editContentHandler(${folder.id})" class="text-gray-400 hover:text-cenat-green px-2" title="Editar carpeta">
+                                <button onclick="event.preventDefault(); editContentHandler(${folder.id})" class="text-gray-400 hover:text-cenat-green px-2" title="${t('contentManager.folders.edit_title')}">
                                     <i class="fas fa-pencil-alt"></i>
                                 </button>
-                                <button onclick="event.preventDefault(); deleteContentHandler(${folder.id}, 'folder')" class="text-red-500 hover:text-red-700 px-2" title="Borrar carpeta">
+                                <button onclick="event.preventDefault(); deleteContentHandler(${folder.id}, 'folder')" class="text-red-500 hover:text-red-700 px-2" title="${t('contentManager.folders.delete_title')}">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
@@ -421,30 +421,30 @@ function renderContentTypeSections(courseId, contents, folderId, nested) {
         <div class="${wrap}">
             <div class="flex items-center justify-between mb-3">
                 <h3 class="${headingSize} font-bold text-gray-900">
-                    <i class="fas fa-video text-cenat-green mr-2"></i> Videos
+                    <i class="fas fa-video text-cenat-green mr-2"></i> ${t('contentManager.videos.heading')}
                 </h3>
                 <button onclick="showAddVideoForm(${courseId}, ${folderArg})" class="text-xs bg-green-50 text-cenat-green px-3 py-1.5 rounded-lg hover:bg-green-100 transition">
-                    <i class="fas fa-plus mr-1"></i> Agregar video
+                    <i class="fas fa-plus mr-1"></i> ${t('contentManager.videos.add')}
                 </button>
             </div>
             <div id="${scopeId('add-video-form-container', folderId)}"></div>
             <div id="${scopeId('video-list', folderId)}" class="space-y-2 sortable-list" data-course-id="${courseId}">
                 ${videos.length > 0 ? videos.map(renderDraggableItem).join('') : `
-                    <p class="text-gray-500 text-sm text-center py-4">No hay videos agregados aún</p>
+                    <p class="text-gray-500 text-sm text-center py-4">${t('contentManager.videos.empty')}</p>
                 `}
             </div>
         </div>
     `;
 
     const addButtons = [
-        ['showAddUrlForm', 'fa-link', 'URL'],
-        ['showAddFileForm', 'fa-file', 'Archivo'],
-        ['showAddImageForm', 'fa-image', 'Imagen'],
-        ['showAddTextForm', 'fa-align-left', 'Texto'],
-        ['showAddTaskForm', 'fa-tasks', 'Tarea'],
-        ['showAddQuizForm', 'fa-question-circle', 'Cuestionario'],
-        ['showAddSurveyForm', 'fa-poll', 'Encuesta'],
-        ['showAddForumForm', 'fa-comments', 'Foro']
+        ['showAddUrlForm', 'fa-link', t('contentManager.addButtons.url')],
+        ['showAddFileForm', 'fa-file', t('contentManager.addButtons.file')],
+        ['showAddImageForm', 'fa-image', t('contentManager.addButtons.image')],
+        ['showAddTextForm', 'fa-align-left', t('contentManager.addButtons.text')],
+        ['showAddTaskForm', 'fa-tasks', t('contentManager.addButtons.task')],
+        ['showAddQuizForm', 'fa-question-circle', t('contentManager.addButtons.quiz')],
+        ['showAddSurveyForm', 'fa-poll', t('contentManager.addButtons.survey')],
+        ['showAddForumForm', 'fa-comments', t('contentManager.addButtons.forum')]
     ].map(([fn, icon, label]) => `
         <button onclick="${fn}(${courseId}, ${folderArg})" class="text-xs bg-green-50 text-cenat-green px-3 py-1.5 rounded-lg hover:bg-green-100 transition whitespace-nowrap">
             <i class="fas ${icon} mr-1"></i> ${label}
@@ -455,7 +455,7 @@ function renderContentTypeSections(courseId, contents, folderId, nested) {
         <div class="${wrap}">
             <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
                 <h3 class="${headingSize} font-bold text-gray-900">
-                    <i class="fas fa-list text-cenat-green mr-2"></i> Contenido
+                    <i class="fas fa-list text-cenat-green mr-2"></i> ${t('contentManager.content.heading')}
                 </h3>
                 <div class="flex flex-wrap gap-2">${addButtons}</div>
             </div>
@@ -468,14 +468,14 @@ function renderContentTypeSections(courseId, contents, folderId, nested) {
             <div id="${scopeId('add-survey-form-container', folderId)}"></div>
             <div id="${scopeId('add-forum-form-container', folderId)}"></div>
             ${mixedItems.length > 1 ? `
-                <p class="text-xs text-gray-400 mb-2"><i class="fas fa-arrows-alt-v mr-1"></i> Arrastra para cambiar el orden</p>
+                <p class="text-xs text-gray-400 mb-2"><i class="fas fa-arrows-alt-v mr-1"></i> ${t('contentManager.drag_to_reorder')}</p>
             ` : ''}
             <div id="${scopeId('content-list', folderId)}" class="space-y-2 sortable-list" data-course-id="${courseId}">
                 ${mixedItems.length > 0 ? mixedItems.map(item => item.type === 'folder'
                     ? renderDraggableFolderItem(courseId, contents, item)
                     : renderDraggableItem(item)
                 ).join('') : `
-                    <p class="text-gray-500 text-sm text-center py-4">No hay contenido agregado aún</p>
+                    <p class="text-gray-500 text-sm text-center py-4">${t('contentManager.content.empty')}</p>
                 `}
             </div>
         </div>
@@ -524,10 +524,10 @@ function encodeDataAttr(obj) {
 function renderReorderButtons(contentId) {
     return `
         <span class="reorder-buttons flex flex-col justify-center flex-shrink-0">
-            <button type="button" onclick="moveContentItem(${contentId}, -1)" class="text-gray-300 hover:text-cenat-green leading-none px-1" title="Mover arriba" aria-label="Mover arriba">
+            <button type="button" onclick="moveContentItem(${contentId}, -1)" class="text-gray-300 hover:text-cenat-green leading-none px-1" title="${t('contentManager.move_up')}" aria-label="${t('contentManager.move_up')}">
                 <i class="fas fa-chevron-up text-xs"></i>
             </button>
-            <button type="button" onclick="moveContentItem(${contentId}, 1)" class="text-gray-300 hover:text-cenat-green leading-none px-1" title="Mover abajo" aria-label="Mover abajo">
+            <button type="button" onclick="moveContentItem(${contentId}, 1)" class="text-gray-300 hover:text-cenat-green leading-none px-1" title="${t('contentManager.move_down')}" aria-label="${t('contentManager.move_down')}">
                 <i class="fas fa-chevron-down text-xs"></i>
             </button>
         </span>
@@ -576,7 +576,7 @@ async function moveContentItem(contentId, direction) {
 function renderDraggableItem(content) {
     return `
         <div class="draggable-item flex items-stretch gap-1" draggable="true" data-content-id="${content.id}" data-content-json="${encodeDataAttr(content)}">
-            <span class="drag-handle flex items-center px-1 text-gray-300 hover:text-gray-500 cursor-grab flex-shrink-0" title="Arrastrar para reordenar">
+            <span class="drag-handle flex items-center px-1 text-gray-300 hover:text-gray-500 cursor-grab flex-shrink-0" title="${t('contentManager.drag_handle_title')}">
                 <i class="fas fa-grip-vertical"></i>
             </span>
             ${renderReorderButtons(content.id)}
@@ -684,7 +684,7 @@ async function persistContentOrder(container) {
     try {
         await contentsAPI.reorder(courseId, ids);
     } catch (error) {
-        showToast(error.message || 'Error al reordenar el contenido', 'error');
+        showToast(error.message || t('contentManager.reorder_failed'), 'error');
         contentManagerRerender();
     }
 }
@@ -703,7 +703,7 @@ function renderContentItem(content, type) {
                 ${content.file_size ? `<p class="text-xs text-gray-500">${formatFileSize(content.file_size)}</p>` : ''}
                 ${type === 'url' ? `<p class="text-xs text-gray-500 truncate">${escapeHtml(content.url)}</p>` : ''}
             </div>
-            <button onclick="editContentHandler(${content.id})" class="text-gray-400 hover:text-cenat-green px-2" title="Editar">
+            <button onclick="editContentHandler(${content.id})" class="text-gray-400 hover:text-cenat-green px-2" title="${t('contentManager.edit_title')}">
                 <i class="fas fa-pencil-alt"></i>
             </button>
             <button onclick="deleteContentHandler(${content.id}, '${type}')" class="text-red-500 hover:text-red-700 px-2">
@@ -719,12 +719,12 @@ function renderTaskItem(content) {
             <i class="fas fa-tasks text-xl text-cenat-green"></i>
             <div class="flex-1 min-w-0">
                 <p class="font-medium text-gray-900 truncate">${escapeHtml(content.title)}</p>
-                <p class="text-xs text-gray-500">${content.url ? 'Con archivo de instrucciones' : 'Sin archivo adjunto'}</p>
+                <p class="text-xs text-gray-500">${content.url ? t('contentManager.task.with_instructions_file') : t('contentManager.task.no_attached_file')}</p>
             </div>
-            <a href="#/contents/${content.id}/submissions" class="text-cenat-green hover:text-cenat-green-hover text-sm whitespace-nowrap" title="Ver entregas">
-                <i class="fas fa-inbox mr-1"></i> Entregas
+            <a href="#/contents/${content.id}/submissions" class="text-cenat-green hover:text-cenat-green-hover text-sm whitespace-nowrap" title="${t('contentManager.task.view_submissions_title')}">
+                <i class="fas fa-inbox mr-1"></i> ${t('contentManager.task.view_submissions')}
             </a>
-            <button onclick="editContentHandler(${content.id})" class="text-gray-400 hover:text-cenat-green px-2" title="Editar">
+            <button onclick="editContentHandler(${content.id})" class="text-gray-400 hover:text-cenat-green px-2" title="${t('contentManager.edit_title')}">
                 <i class="fas fa-pencil-alt"></i>
             </button>
             <button onclick="deleteContentHandler(${content.id}, 'task')" class="text-red-500 hover:text-red-700 px-2">
@@ -742,12 +742,12 @@ function renderQuizManagerItem(content) {
             <i class="fas ${isQuiz ? 'fa-question-circle' : 'fa-poll'} text-xl text-cenat-green"></i>
             <div class="flex-1 min-w-0">
                 <p class="font-medium text-gray-900 truncate">${escapeHtml(content.title)}</p>
-                <p class="text-xs text-gray-500">${questionCount} ${questionCount === 1 ? 'pregunta' : 'preguntas'}</p>
+                <p class="text-xs text-gray-500">${t(questionCount === 1 ? 'contentManager.quiz.question_count_singular' : 'contentManager.quiz.question_count_plural', { count: questionCount })}</p>
             </div>
-            <a href="#/contents/${content.id}/results" class="text-cenat-green hover:text-cenat-green-hover text-sm whitespace-nowrap" title="Ver resultados">
-                <i class="fas fa-chart-bar mr-1"></i> Resultados
+            <a href="#/contents/${content.id}/results" class="text-cenat-green hover:text-cenat-green-hover text-sm whitespace-nowrap" title="${t('contentManager.quiz.view_results_title')}">
+                <i class="fas fa-chart-bar mr-1"></i> ${t('contentManager.quiz.view_results')}
             </a>
-            <button onclick="editContentHandler(${content.id})" class="text-gray-400 hover:text-cenat-green px-2" title="Editar">
+            <button onclick="editContentHandler(${content.id})" class="text-gray-400 hover:text-cenat-green px-2" title="${t('contentManager.edit_title')}">
                 <i class="fas fa-pencil-alt"></i>
             </button>
             <button onclick="deleteContentHandler(${content.id}, '${content.type}')" class="text-red-500 hover:text-red-700 px-2">
@@ -765,10 +765,10 @@ function renderForumItem(content) {
                 <p class="font-medium text-gray-900 truncate">${escapeHtml(content.title)}</p>
                 <p class="text-xs text-gray-500 truncate">${escapeHtml(content.description || '')}</p>
             </div>
-            <a href="#/forum/${content.id}" class="text-cenat-green hover:text-cenat-green-hover text-sm whitespace-nowrap" title="Ver foro">
-                <i class="fas fa-comment-dots mr-1"></i> Ver foro
+            <a href="#/forum/${content.id}" class="text-cenat-green hover:text-cenat-green-hover text-sm whitespace-nowrap" title="${t('contentManager.forum.view')}">
+                <i class="fas fa-comment-dots mr-1"></i> ${t('contentManager.forum.view')}
             </a>
-            <button onclick="editContentHandler(${content.id})" class="text-gray-400 hover:text-cenat-green px-2" title="Editar">
+            <button onclick="editContentHandler(${content.id})" class="text-gray-400 hover:text-cenat-green px-2" title="${t('contentManager.edit_title')}">
                 <i class="fas fa-pencil-alt"></i>
             </button>
             <button onclick="deleteContentHandler(${content.id}, 'forum')" class="text-red-500 hover:text-red-700 px-2">
@@ -814,15 +814,15 @@ function showAddFolderForm(courseId) {
     container.innerHTML = `
         <form id="add-folder-form" class="bg-green-50 rounded-lg p-4 mb-4 space-y-3">
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Nombre de la carpeta *</label>
-                <input type="text" id="folder-title" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Ej: Semana 1 - Introducción">
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.folders.name_label')}</label>
+                <input type="text" id="folder-title" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="${t('contentManager.folders.name_placeholder')}">
             </div>
             <div class="flex gap-2">
                 <button type="submit" id="submit-folder-btn" class="bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
-                    <i class="fas fa-check mr-1"></i> Crear Carpeta
+                    <i class="fas fa-check mr-1"></i> ${t('contentManager.folders.create_button')}
                 </button>
                 <button type="button" onclick="document.getElementById('add-folder-form-container').innerHTML = ''" class="text-gray-600 px-4 py-2 text-sm">
-                    Cancelar
+                    ${t('contentManager.cancel')}
                 </button>
             </div>
         </form>
@@ -835,16 +835,16 @@ function showAddFolderForm(courseId) {
         const submitBtn = document.getElementById('submit-folder-btn');
 
         if (!title) {
-            showToast('El nombre de la carpeta es requerido', 'error');
+            showToast(t('contentManager.folders.name_required'), 'error');
             return;
         }
 
         await submitContentForm(submitBtn, {
-            loadingLabel: 'Creando...',
-            idleLabel: '<i class="fas fa-check mr-1"></i> Crear Carpeta',
+            loadingLabel: t('contentManager.creating'),
+            idleLabel: `<i class="fas fa-check mr-1"></i> ${t('contentManager.folders.create_button')}`,
             apiCall: () => contentsAPI.createFolder({ course_id: courseId, title }),
-            successMessage: 'Carpeta creada exitosamente',
-            errorMessage: 'Error al crear la carpeta'
+            successMessage: t('contentManager.folders.created'),
+            errorMessage: t('contentManager.folders.create_failed')
         });
     });
 }
@@ -859,25 +859,25 @@ function showAddVideoForm(courseId, folderId) {
     container.innerHTML = `
         <form class="add-video-form bg-green-50 rounded-lg p-4 mb-4 space-y-3">
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Título del video *</label>
-                <input type="text" class="video-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="Ej: Introducción al curso">
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.videos.title_label')}</label>
+                <input type="text" class="video-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="${t('contentManager.videos.title_placeholder')}">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Descripción (opcional)</label>
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.videos.description_label')}</label>
                 <input type="text" class="video-description w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Archivo de video *</label>
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.videos.file_label')}</label>
                 <input type="file" class="video-file w-full text-sm" accept="video/*" required>
-                <p class="text-xs text-gray-500 mt-1">Formatos: MP4, AVI, MOV, WEBM (máx. 2GB)</p>
+                <p class="text-xs text-gray-500 mt-1">${t('contentManager.videos.formats_hint')}</p>
                 <video class="video-preview hidden w-full rounded-lg mt-2 max-h-64" controls></video>
             </div>
             <div class="flex gap-2">
                 <button type="submit" class="submit-video-btn bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
-                    <i class="fas fa-upload mr-1"></i> Subir Video
+                    <i class="fas fa-upload mr-1"></i> ${t('contentManager.videos.submit')}
                 </button>
                 <button type="button" onclick="document.getElementById('${scopeId('add-video-form-container', folderId)}').innerHTML = ''" class="text-gray-600 px-4 py-2 text-sm">
-                    Cancelar
+                    ${t('contentManager.cancel')}
                 </button>
             </div>
         </form>
@@ -911,10 +911,10 @@ function showAddVideoForm(courseId, folderId) {
         const submitBtn = e.target.querySelector('.submit-video-btn');
 
         if (!title || !videoFile) {
-            showToast('Título y archivo de video son requeridos', 'error');
+            showToast(t('contentManager.videos.required'), 'error');
             return;
         }
-        if (!checkFileSize(videoFile, MAX_VIDEO_BYTES, 'El video')) return;
+        if (!checkFileSize(videoFile, MAX_VIDEO_BYTES, t('contentManager.videos.field_label'))) return;
 
         const formData = new FormData();
         formData.append('course_id', courseId);
@@ -924,11 +924,11 @@ function showAddVideoForm(courseId, folderId) {
         if (folderId) formData.append('folder_id', folderId);
 
         await submitContentForm(submitBtn, {
-            loadingLabel: 'Subiendo...',
-            idleLabel: '<i class="fas fa-upload mr-1"></i> Subir Video',
+            loadingLabel: t('contentManager.uploading'),
+            idleLabel: `<i class="fas fa-upload mr-1"></i> ${t('contentManager.videos.submit')}`,
             apiCall: () => contentsAPI.createVideo(formData),
-            successMessage: 'Video agregado exitosamente',
-            errorMessage: 'Error al subir el video'
+            successMessage: t('contentManager.videos.added'),
+            errorMessage: t('contentManager.videos.add_failed')
         });
     });
 }
@@ -943,24 +943,24 @@ function showAddFileForm(courseId, folderId) {
     container.innerHTML = `
         <form class="add-file-form bg-green-50 rounded-lg p-4 mb-4 space-y-3">
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Título del archivo *</label>
-                <input type="text" class="file-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="Ej: Guía del curso">
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.file.title_label')}</label>
+                <input type="text" class="file-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="${t('contentManager.file.title_placeholder')}">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Descripción (opcional)</label>
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.file.description_label')}</label>
                 <input type="text" class="file-description w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Archivo *</label>
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.file.file_label')}</label>
                 <input type="file" class="file-upload w-full text-sm" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip,.rar" required>
-                <p class="text-xs text-gray-500 mt-1">PDF, DOCX, PPT, XLS, TXT, ZIP, RAR (máx. 50MB)</p>
+                <p class="text-xs text-gray-500 mt-1">${t('contentManager.file.formats_hint')}</p>
             </div>
             <div class="flex gap-2">
                 <button type="submit" class="submit-file-btn bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
-                    <i class="fas fa-upload mr-1"></i> Subir Archivo
+                    <i class="fas fa-upload mr-1"></i> ${t('contentManager.file.submit')}
                 </button>
                 <button type="button" onclick="document.getElementById('${scopeId('add-file-form-container', folderId)}').innerHTML = ''" class="text-gray-600 px-4 py-2 text-sm">
-                    Cancelar
+                    ${t('contentManager.cancel')}
                 </button>
             </div>
         </form>
@@ -975,10 +975,10 @@ function showAddFileForm(courseId, folderId) {
         const submitBtn = e.target.querySelector('.submit-file-btn');
 
         if (!title || !file) {
-            showToast('Título y archivo son requeridos', 'error');
+            showToast(t('contentManager.file.required'), 'error');
             return;
         }
-        if (!checkFileSize(file, MAX_DOC_BYTES, 'El archivo')) return;
+        if (!checkFileSize(file, MAX_DOC_BYTES, t('contentManager.file.field_label'))) return;
 
         const formData = new FormData();
         formData.append('course_id', courseId);
@@ -988,11 +988,11 @@ function showAddFileForm(courseId, folderId) {
         if (folderId) formData.append('folder_id', folderId);
 
         await submitContentForm(submitBtn, {
-            loadingLabel: 'Subiendo...',
-            idleLabel: '<i class="fas fa-upload mr-1"></i> Subir Archivo',
+            loadingLabel: t('contentManager.uploading'),
+            idleLabel: `<i class="fas fa-upload mr-1"></i> ${t('contentManager.file.submit')}`,
             apiCall: () => contentsAPI.createFile(formData),
-            successMessage: 'Archivo agregado exitosamente',
-            errorMessage: 'Error al subir el archivo'
+            successMessage: t('contentManager.file.added'),
+            errorMessage: t('contentManager.file.add_failed')
         });
     });
 }
@@ -1007,24 +1007,24 @@ function showAddImageForm(courseId, folderId) {
     container.innerHTML = `
         <form class="add-image-form bg-green-50 rounded-lg p-4 mb-4 space-y-3">
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Título de la imagen *</label>
-                <input type="text" class="image-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="Ej: Diagrama del proceso">
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.image.title_label')}</label>
+                <input type="text" class="image-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="${t('contentManager.image.title_placeholder')}">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Descripción (opcional)</label>
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.image.description_label')}</label>
                 <input type="text" class="image-description w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Imagen *</label>
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.image.file_label')}</label>
                 <input type="file" class="image-file w-full text-sm" accept="image/*" required>
-                <p class="text-xs text-gray-500 mt-1">JPG, PNG, GIF, WEBP (máx. 5MB)</p>
+                <p class="text-xs text-gray-500 mt-1">${t('contentManager.image.formats_hint')}</p>
             </div>
             <div class="flex gap-2">
                 <button type="submit" class="submit-image-btn bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
-                    <i class="fas fa-upload mr-1"></i> Subir Imagen
+                    <i class="fas fa-upload mr-1"></i> ${t('contentManager.image.submit')}
                 </button>
                 <button type="button" onclick="document.getElementById('${scopeId('add-image-form-container', folderId)}').innerHTML = ''" class="text-gray-600 px-4 py-2 text-sm">
-                    Cancelar
+                    ${t('contentManager.cancel')}
                 </button>
             </div>
         </form>
@@ -1039,10 +1039,10 @@ function showAddImageForm(courseId, folderId) {
         const submitBtn = e.target.querySelector('.submit-image-btn');
 
         if (!title || !imageFile) {
-            showToast('Título e imagen son requeridos', 'error');
+            showToast(t('contentManager.image.required'), 'error');
             return;
         }
-        if (!checkFileSize(imageFile, MAX_IMAGE_BYTES, 'La imagen')) return;
+        if (!checkFileSize(imageFile, MAX_IMAGE_BYTES, t('contentManager.image.field_label'))) return;
 
         const formData = new FormData();
         formData.append('course_id', courseId);
@@ -1052,11 +1052,11 @@ function showAddImageForm(courseId, folderId) {
         if (folderId) formData.append('folder_id', folderId);
 
         await submitContentForm(submitBtn, {
-            loadingLabel: 'Subiendo...',
-            idleLabel: '<i class="fas fa-upload mr-1"></i> Subir Imagen',
+            loadingLabel: t('contentManager.uploading'),
+            idleLabel: `<i class="fas fa-upload mr-1"></i> ${t('contentManager.image.submit')}`,
             apiCall: () => contentsAPI.createImage(formData),
-            successMessage: 'Imagen agregada exitosamente',
-            errorMessage: 'Error al subir la imagen'
+            successMessage: t('contentManager.image.added'),
+            errorMessage: t('contentManager.image.add_failed')
         });
     });
 }
@@ -1071,19 +1071,19 @@ function showAddTextForm(courseId, folderId) {
     container.innerHTML = `
         <form class="add-text-form bg-green-50 rounded-lg p-4 mb-4 space-y-3">
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Título *</label>
-                <input type="text" class="text-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="Ej: Lectura complementaria">
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.text.title_label')}</label>
+                <input type="text" class="text-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="${t('contentManager.text.title_placeholder')}">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Contenido *</label>
-                <textarea class="text-content w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required rows="5" placeholder="Escribe el texto que verán los estudiantes..."></textarea>
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.text.content_label')}</label>
+                <textarea class="text-content w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required rows="5" placeholder="${t('contentManager.text.content_placeholder')}"></textarea>
             </div>
             <div class="flex gap-2">
                 <button type="submit" class="submit-text-btn bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
-                    <i class="fas fa-check mr-1"></i> Guardar Texto
+                    <i class="fas fa-check mr-1"></i> ${t('contentManager.text.submit')}
                 </button>
                 <button type="button" onclick="document.getElementById('${scopeId('add-text-form-container', folderId)}').innerHTML = ''" class="text-gray-600 px-4 py-2 text-sm">
-                    Cancelar
+                    ${t('contentManager.cancel')}
                 </button>
             </div>
         </form>
@@ -1097,16 +1097,16 @@ function showAddTextForm(courseId, folderId) {
         const submitBtn = e.target.querySelector('.submit-text-btn');
 
         if (!title || !description) {
-            showToast('Título y contenido son requeridos', 'error');
+            showToast(t('contentManager.text.required'), 'error');
             return;
         }
 
         await submitContentForm(submitBtn, {
-            loadingLabel: 'Guardando...',
-            idleLabel: '<i class="fas fa-check mr-1"></i> Guardar Texto',
+            loadingLabel: t('contentManager.saving'),
+            idleLabel: `<i class="fas fa-check mr-1"></i> ${t('contentManager.text.submit')}`,
             apiCall: () => contentsAPI.createText({ course_id: courseId, title, description, folder_id: folderId || undefined }),
-            successMessage: 'Texto agregado exitosamente',
-            errorMessage: 'Error al guardar el texto'
+            successMessage: t('contentManager.text.added'),
+            errorMessage: t('contentManager.text.add_failed')
         });
     });
 }
@@ -1121,25 +1121,25 @@ function showAddUrlForm(courseId, folderId) {
     container.innerHTML = `
         <form class="add-url-form bg-green-50 rounded-lg p-4 mb-4 space-y-3">
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Título *</label>
-                <input type="text" class="url-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="Ej: Video complementario en YouTube">
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.url.title_label')}</label>
+                <input type="text" class="url-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="${t('contentManager.url.title_placeholder')}">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Descripción (opcional)</label>
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.url.description_label')}</label>
                 <input type="text" class="url-description w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">URL del video *</label>
-                <input type="url" class="url-value w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="https://www.youtube.com/watch?v=...">
-                <p class="text-xs text-gray-500 mt-1">Debe empezar con http:// o https://. Se puede previsualizar video de YouTube o Vimeo.</p>
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.url.url_label')}</label>
+                <input type="url" class="url-value w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="${t('contentManager.url.url_placeholder')}">
+                <p class="text-xs text-gray-500 mt-1">${t('contentManager.url.url_hint')}</p>
             </div>
             <div class="url-preview-container"></div>
             <div class="flex gap-2">
                 <button type="submit" class="submit-url-btn bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
-                    <i class="fas fa-check mr-1"></i> Guardar URL
+                    <i class="fas fa-check mr-1"></i> ${t('contentManager.url.submit')}
                 </button>
                 <button type="button" onclick="document.getElementById('${scopeId('add-url-form-container', folderId)}').innerHTML = ''" class="text-gray-600 px-4 py-2 text-sm">
-                    Cancelar
+                    ${t('contentManager.cancel')}
                 </button>
             </div>
         </form>
@@ -1167,7 +1167,7 @@ function showAddUrlForm(courseId, folderId) {
                     </div>
                     <div data-embed-fallback class="hidden text-sm text-gray-500 bg-gray-50 rounded-lg p-3 mt-2">
                         <i class="fas fa-triangle-exclamation text-yellow-500 mr-1"></i>
-                        Este video no se pudo previsualizar aquí — probá con otra URL.
+                        ${t('contentManager.url.preview_failed')}
                     </div>
                 </div>
             `;
@@ -1192,16 +1192,16 @@ function showAddUrlForm(courseId, folderId) {
         const submitBtn = e.target.querySelector('.submit-url-btn');
 
         if (!title || !url) {
-            showToast('Título y URL son requeridos', 'error');
+            showToast(t('contentManager.url.required'), 'error');
             return;
         }
 
         await submitContentForm(submitBtn, {
-            loadingLabel: 'Guardando...',
-            idleLabel: '<i class="fas fa-check mr-1"></i> Guardar URL',
+            loadingLabel: t('contentManager.saving'),
+            idleLabel: `<i class="fas fa-check mr-1"></i> ${t('contentManager.url.submit')}`,
             apiCall: () => contentsAPI.createUrl({ course_id: courseId, title, description, url, folder_id: folderId || undefined }),
-            successMessage: 'URL agregada exitosamente',
-            errorMessage: 'Error al guardar la URL'
+            successMessage: t('contentManager.url.added'),
+            errorMessage: t('contentManager.url.add_failed')
         });
     });
 }
@@ -1216,19 +1216,19 @@ function showAddForumForm(courseId, folderId) {
     container.innerHTML = `
         <form class="add-forum-form bg-green-50 rounded-lg p-4 mb-4 space-y-3">
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Título del tema *</label>
-                <input type="text" class="forum-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="Ej: Discusión sobre el capítulo 3">
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.forum.title_label')}</label>
+                <input type="text" class="forum-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="${t('contentManager.forum.title_placeholder')}">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Texto principal *</label>
-                <textarea class="forum-description w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required rows="4" placeholder="Escribe la pregunta o el tema que los estudiantes van a discutir..."></textarea>
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.forum.body_label')}</label>
+                <textarea class="forum-description w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required rows="4" placeholder="${t('contentManager.forum.body_placeholder')}"></textarea>
             </div>
             <div class="flex gap-2">
                 <button type="submit" class="submit-forum-btn bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
-                    <i class="fas fa-check mr-1"></i> Crear Tema
+                    <i class="fas fa-check mr-1"></i> ${t('contentManager.forum.submit')}
                 </button>
                 <button type="button" onclick="document.getElementById('${scopeId('add-forum-form-container', folderId)}').innerHTML = ''" class="text-gray-600 px-4 py-2 text-sm">
-                    Cancelar
+                    ${t('contentManager.cancel')}
                 </button>
             </div>
         </form>
@@ -1242,16 +1242,16 @@ function showAddForumForm(courseId, folderId) {
         const submitBtn = e.target.querySelector('.submit-forum-btn');
 
         if (!title || !description) {
-            showToast('Título y texto principal son requeridos', 'error');
+            showToast(t('contentManager.forum.required'), 'error');
             return;
         }
 
         await submitContentForm(submitBtn, {
-            loadingLabel: 'Creando...',
-            idleLabel: '<i class="fas fa-check mr-1"></i> Crear Tema',
+            loadingLabel: t('contentManager.creating'),
+            idleLabel: `<i class="fas fa-check mr-1"></i> ${t('contentManager.forum.submit')}`,
             apiCall: () => contentsAPI.createForum({ course_id: courseId, title, description, folder_id: folderId || undefined }),
-            successMessage: 'Tema de foro creado exitosamente',
-            errorMessage: 'Error al crear el tema de foro'
+            successMessage: t('contentManager.forum.created'),
+            errorMessage: t('contentManager.forum.create_failed')
         });
     });
 }
@@ -1266,29 +1266,29 @@ function showAddTaskForm(courseId, folderId) {
     container.innerHTML = `
         <form class="add-task-form bg-green-50 rounded-lg p-4 mb-4 space-y-3">
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Título *</label>
-                <input type="text" class="task-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="Ej: Ensayo final">
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.task.title_label')}</label>
+                <input type="text" class="task-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="${t('contentManager.task.title_placeholder')}">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Instrucciones (opcional)</label>
-                <textarea class="task-description w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" rows="3" placeholder="Describe qué debe entregar el estudiante..."></textarea>
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.task.instructions_label')}</label>
+                <textarea class="task-description w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" rows="3" placeholder="${t('contentManager.task.instructions_placeholder')}"></textarea>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Archivo de plantilla/instrucciones (opcional)</label>
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.task.file_label')}</label>
                 <input type="file" class="task-file w-full text-sm" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip,.rar">
-                <p class="text-xs text-gray-500 mt-1">PDF, DOCX, PPT, XLS, TXT, ZIP, RAR (máx. 50MB)</p>
+                <p class="text-xs text-gray-500 mt-1">${t('contentManager.task.formats_hint')}</p>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">% del curso (opcional)</label>
-                <input type="number" class="task-weight w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" min="0" max="100" step="0.01" placeholder="Ej: 10">
-                <p class="text-xs text-gray-500 mt-1">Cuánto vale esta tarea para la nota final del curso — dejalo vacío si no cuenta para la nota.</p>
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.task.weight_label')}</label>
+                <input type="number" class="task-weight w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" min="0" max="100" step="0.01" placeholder="${t('contentManager.task.weight_placeholder')}">
+                <p class="text-xs text-gray-500 mt-1">${t('contentManager.task.weight_hint')}</p>
             </div>
             <div class="flex gap-2">
                 <button type="submit" class="submit-task-btn bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
-                    <i class="fas fa-check mr-1"></i> Guardar Tarea
+                    <i class="fas fa-check mr-1"></i> ${t('contentManager.task.submit')}
                 </button>
                 <button type="button" onclick="document.getElementById('${scopeId('add-task-form-container', folderId)}').innerHTML = ''" class="text-gray-600 px-4 py-2 text-sm">
-                    Cancelar
+                    ${t('contentManager.cancel')}
                 </button>
             </div>
         </form>
@@ -1304,13 +1304,13 @@ function showAddTaskForm(courseId, folderId) {
         const submitBtn = e.target.querySelector('.submit-task-btn');
 
         if (!title) {
-            showToast('El título es requerido', 'error');
+            showToast(t('contentManager.title_required'), 'error');
             return;
         }
         // El archivo de instrucciones es opcional en una tarea (a
         // diferencia de video/archivo/imagen) — solo se chequea el
         // tamaño si efectivamente se adjuntó uno.
-        if (file && !checkFileSize(file, MAX_DOC_BYTES, 'El archivo')) return;
+        if (file && !checkFileSize(file, MAX_DOC_BYTES, t('contentManager.task.field_label'))) return;
 
         const formData = new FormData();
         formData.append('course_id', courseId);
@@ -1323,11 +1323,11 @@ function showAddTaskForm(courseId, folderId) {
         if (folderId) formData.append('folder_id', folderId);
 
         await submitContentForm(submitBtn, {
-            loadingLabel: 'Guardando...',
-            idleLabel: '<i class="fas fa-check mr-1"></i> Guardar Tarea',
+            loadingLabel: t('contentManager.saving'),
+            idleLabel: `<i class="fas fa-check mr-1"></i> ${t('contentManager.task.submit')}`,
             apiCall: () => contentsAPI.createTask(formData),
-            successMessage: 'Tarea agregada exitosamente',
-            errorMessage: 'Error al guardar la tarea'
+            successMessage: t('contentManager.task.added'),
+            errorMessage: t('contentManager.task.add_failed')
         });
     });
 }
@@ -1345,18 +1345,20 @@ function showAddTaskForm(courseId, folderId) {
 // el submit (eso lo decide quien llama, vía `apiCall`).
 // =================================
 
-const QUESTION_TYPE_OPTIONS = [
-    { value: 'multiple_choice', label: 'Opción múltiple' },
-    { value: 'true_false', label: 'Verdadero o falso' },
-    { value: 'short_answer', label: 'Respuesta corta' }
-];
+function getQuestionTypeOptions() {
+    return [
+        { value: 'multiple_choice', label: t('contentManager.quiz.type_multiple_choice') },
+        { value: 'true_false', label: t('contentManager.quiz.type_true_false') },
+        { value: 'short_answer', label: t('contentManager.quiz.type_short_answer') }
+    ];
+}
 
 // El tipo de pregunta se elige por pregunta, no una sola vez para todo el
 // cuestionario/encuesta — cada fila puede ser de un tipo distinto (ej. una
 // opción múltiple, otra verdadero/falso, otra respuesta corta).
 function blankOptionsForType(questionType) {
     if (questionType === 'true_false') {
-        return [{ text: 'Verdadero', is_correct: true }, { text: 'Falso', is_correct: false }];
+        return [{ text: t('contentManager.quiz.option_true'), is_correct: true }, { text: t('contentManager.quiz.option_false'), is_correct: false }];
     }
     if (questionType === 'multiple_choice') {
         return [{ text: '', is_correct: true }, { text: '', is_correct: false }];
@@ -1412,10 +1414,10 @@ function renderQuestionForm(container, {
                 ${isQuiz ? `<input type="radio" name="correct-${qIndex}" class="option-correct-radio" ${opt.is_correct ? 'checked' : ''}>` : ''}
                 ${isTrueFalse
                     ? `<span class="text-sm text-gray-700 flex-1">${escapeHtml(opt.text)}</span>`
-                    : `<input type="text" class="option-text flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Opción ${oIndex + 1}" value="${escapeAttr(opt.text)}">`
+                    : `<input type="text" class="option-text flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="${t('contentManager.quiz.option_placeholder', { n: oIndex + 1 })}" value="${escapeAttr(opt.text)}">`
                 }
                 ${!isTrueFalse && options.length > 2 ? `
-                    <button type="button" class="remove-option-btn text-gray-400 hover:text-red-500 px-1" title="Quitar opción">
+                    <button type="button" class="remove-option-btn text-gray-400 hover:text-red-500 px-1" title="${t('contentManager.quiz.remove_option_title')}">
                         <i class="fas fa-times"></i>
                     </button>
                 ` : ''}
@@ -1430,14 +1432,14 @@ function renderQuestionForm(container, {
             <div class="question-row border border-gray-200 rounded-lg p-3 space-y-2" data-q-index="${qIndex}">
                 <div class="flex items-start gap-2 flex-wrap">
                     <span class="text-sm font-semibold text-gray-500 mt-2">${qIndex + 1}.</span>
-                    <input type="text" class="question-text flex-1 min-w-[10rem] px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Escribe la pregunta..." value="${escapeAttr(q.text || '')}">
-                    <select class="question-type-select px-2 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" title="Tipo de esta pregunta">
-                        ${QUESTION_TYPE_OPTIONS.map((opt) => `<option value="${opt.value}" ${questionType === opt.value ? 'selected' : ''}>${opt.label}</option>`).join('')}
+                    <input type="text" class="question-text flex-1 min-w-[10rem] px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="${t('contentManager.quiz.question_placeholder')}" value="${escapeAttr(q.text || '')}">
+                    <select class="question-type-select px-2 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" title="${t('contentManager.quiz.question_type_title')}">
+                        ${getQuestionTypeOptions().map((opt) => `<option value="${opt.value}" ${questionType === opt.value ? 'selected' : ''}>${opt.label}</option>`).join('')}
                     </select>
                     ${isQuiz ? `
-                        <input type="number" class="question-points w-16 px-2 py-2 border border-gray-300 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-cenat-green" min="1" step="1" title="Puntos que vale esta pregunta" value="${q.points || 1}">
+                        <input type="number" class="question-points w-16 px-2 py-2 border border-gray-300 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-cenat-green" min="1" step="1" title="${t('contentManager.quiz.points_title')}" value="${q.points || 1}">
                     ` : ''}
-                    <button type="button" class="remove-question-btn text-red-500 hover:text-red-700 px-2 mt-1" title="Quitar pregunta">
+                    <button type="button" class="remove-question-btn text-red-500 hover:text-red-700 px-2 mt-1" title="${t('contentManager.quiz.remove_question_title')}">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -1446,7 +1448,7 @@ function renderQuestionForm(container, {
                         ${(q.options || []).map((opt, oIndex) => optionRowHTML(opt, qIndex, oIndex, q.options, questionType)).join('')}
                         ${questionType === 'multiple_choice' ? `
                             <button type="button" class="add-option-btn text-xs text-cenat-green hover:underline mt-1">
-                                <i class="fas fa-plus mr-1"></i> Agregar opción
+                                <i class="fas fa-plus mr-1"></i> ${t('contentManager.quiz.add_option')}
                             </button>
                         ` : ''}
                     </div>
@@ -1462,29 +1464,29 @@ function renderQuestionForm(container, {
     container.innerHTML = `
         <form class="question-content-form bg-green-50 rounded-lg p-4 mb-4 space-y-3">
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Título ${isQuiz ? 'del cuestionario' : 'de la encuesta'} *</label>
-                <input type="text" class="quiz-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="Ej: ${isQuiz ? 'Quiz semana 1' : 'Encuesta de satisfacción'}" value="${escapeAttr(initialTitle)}">
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t(isQuiz ? 'contentManager.quiz.title_label_quiz' : 'contentManager.quiz.title_label_survey')}</label>
+                <input type="text" class="quiz-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="${t(isQuiz ? 'contentManager.quiz.title_placeholder_quiz' : 'contentManager.quiz.title_placeholder_survey')}" value="${escapeAttr(initialTitle)}">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Descripción (opcional)</label>
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.quiz.description_label')}</label>
                 <input type="text" class="quiz-description w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" value="${escapeAttr(initialDescription)}">
             </div>
             ${isQuiz ? `
                 <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">% del curso (opcional)</label>
-                    <input type="number" class="quiz-weight w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" min="0" max="100" step="0.01" placeholder="Ej: 15" value="${initialWeightPercent ?? ''}">
-                    <p class="text-xs text-gray-500 mt-1">Cuánto vale este cuestionario para la nota final del curso — dejalo vacío si no cuenta para la nota.</p>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.quiz.weight_label')}</label>
+                    <input type="number" class="quiz-weight w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" min="0" max="100" step="0.01" placeholder="${t('contentManager.quiz.weight_placeholder')}" value="${initialWeightPercent ?? ''}">
+                    <p class="text-xs text-gray-500 mt-1">${t('contentManager.quiz.weight_hint')}</p>
                 </div>
             ` : ''}
             <div class="questions-list space-y-3"></div>
             <button type="button" class="add-question-btn text-sm text-cenat-green hover:underline">
-                <i class="fas fa-plus mr-1"></i> Agregar pregunta
+                <i class="fas fa-plus mr-1"></i> ${t('contentManager.quiz.add_question')}
             </button>
             <div class="flex gap-2 pt-2 border-t border-green-100">
                 <button type="submit" class="submit-quiz-btn bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
                     ${idleLabel}
                 </button>
-                <button type="button" class="cancel-quiz-btn text-gray-600 px-4 py-2 text-sm">Cancelar</button>
+                <button type="button" class="cancel-quiz-btn text-gray-600 px-4 py-2 text-sm">${t('contentManager.cancel')}</button>
             </div>
         </form>
     `;
@@ -1522,7 +1524,7 @@ function renderQuestionForm(container, {
         if (removeQBtn) {
             questions = readCurrentQuestions();
             if (questions.length <= 1) {
-                showToast('Debe haber al menos una pregunta', 'warning');
+                showToast(t('contentManager.quiz.at_least_one_question'), 'warning');
                 return;
             }
             const qIndex = Number(removeQBtn.closest('.question-row').dataset.qIndex);
@@ -1563,20 +1565,20 @@ function renderQuestionForm(container, {
         const currentQuestions = readCurrentQuestions();
 
         if (!title) {
-            showToast('El título es requerido', 'error');
+            showToast(t('contentManager.title_required'), 'error');
             return;
         }
         if (currentQuestions.some((q) => !q.text.trim())) {
-            showToast('Todas las preguntas necesitan un texto', 'error');
+            showToast(t('contentManager.quiz.all_questions_need_text'), 'error');
             return;
         }
         const withOptions = currentQuestions.filter((q) => q.question_type !== 'short_answer');
         if (withOptions.some((q) => (q.options || []).some((o) => !o.text.trim()))) {
-            showToast('Todas las opciones necesitan un texto', 'error');
+            showToast(t('contentManager.quiz.all_options_need_text'), 'error');
             return;
         }
         if (isQuiz && withOptions.some((q) => !(q.options || []).some((o) => o.is_correct))) {
-            showToast('Marca la opción correcta de cada pregunta', 'error');
+            showToast(t('contentManager.quiz.mark_correct_option'), 'error');
             return;
         }
 
@@ -1596,7 +1598,7 @@ function renderQuestionForm(container, {
         };
 
         await submitContentForm(submitBtn, {
-            loadingLabel: 'Guardando...',
+            loadingLabel: t('contentManager.saving'),
             idleLabel,
             apiCall: () => apiCall(payload),
             successMessage,
@@ -1607,16 +1609,15 @@ function renderQuestionForm(container, {
 
 function showAddQuestionForm(courseId, folderId, kind) {
     const isQuiz = kind === 'quiz';
-    const kindLabel = isQuiz ? 'Cuestionario' : 'Encuesta';
     const create = isQuiz ? contentsAPI.createQuiz : contentsAPI.createSurvey;
     const container = document.getElementById(scopeId(`add-${kind}-form-container`, folderId));
 
     renderQuestionForm(container, {
         kind,
-        idleLabel: `<i class="fas fa-check mr-1"></i> Guardar ${kindLabel}`,
+        idleLabel: `<i class="fas fa-check mr-1"></i> ${t(isQuiz ? 'contentManager.quiz.save_quiz' : 'contentManager.quiz.save_survey')}`,
         apiCall: (payload) => create({ ...payload, course_id: courseId, folder_id: folderId || undefined }),
-        successMessage: `${kindLabel} agregad${isQuiz ? 'o' : 'a'} exitosamente`,
-        errorMessage: `Error al guardar ${isQuiz ? 'el cuestionario' : 'la encuesta'}`,
+        successMessage: t(isQuiz ? 'contentManager.quiz.added_quiz' : 'contentManager.quiz.added_survey'),
+        errorMessage: t(isQuiz ? 'contentManager.quiz.add_failed_quiz' : 'contentManager.quiz.add_failed_survey'),
         onCancel: () => { container.innerHTML = ''; }
     });
 }
@@ -1676,14 +1677,14 @@ function editContentHandler(id) {
  * preguntas (mismo formulario que crear, precargado con lo existente).
  */
 async function editQuestionContentHandler(content, display, editContainer) {
-    editContainer.innerHTML = '<p class="text-xs text-gray-400 mt-2 px-1">Cargando preguntas...</p>';
+    editContainer.innerHTML = `<p class="text-xs text-gray-400 mt-2 px-1">${t('contentManager.quiz.loading_questions')}</p>`;
 
     let data;
     try {
         ({ data } = await contentsAPI.getQuestionsForManage(content.id));
     } catch (error) {
         editContainer.innerHTML = '';
-        showToast(error.message || 'Error al cargar las preguntas', 'error');
+        showToast(error.message || t('contentManager.quiz.load_questions_failed'), 'error');
         return;
     }
 
@@ -1698,7 +1699,6 @@ async function editQuestionContentHandler(content, display, editContainer) {
     }
 
     const isQuiz = content.type === 'quiz';
-    const kindLabel = isQuiz ? 'Cuestionario' : 'Encuesta';
     renderQuestionForm(editContainer, {
         kind: content.type,
         initialTitle: content.title,
@@ -1712,10 +1712,10 @@ async function editQuestionContentHandler(content, display, editContainer) {
                 ? q.options.map((o) => ({ text: o.option_text, is_correct: !!o.is_correct }))
                 : null
         })),
-        idleLabel: '<i class="fas fa-check mr-1"></i> Guardar',
+        idleLabel: `<i class="fas fa-check mr-1"></i> ${t('contentManager.save')}`,
         apiCall: (payload) => contentsAPI.updateQuestions(content.id, payload),
-        successMessage: `${kindLabel} actualizad${isQuiz ? 'o' : 'a'} exitosamente`,
-        errorMessage: `Error al actualizar ${isQuiz ? 'el cuestionario' : 'la encuesta'}`,
+        successMessage: t(isQuiz ? 'contentManager.quiz.updated_quiz' : 'contentManager.quiz.updated_survey'),
+        errorMessage: t(isQuiz ? 'contentManager.quiz.update_failed_quiz' : 'contentManager.quiz.update_failed_survey'),
         onCancel: () => cancelEditContent(content.id)
     });
 }
@@ -1739,7 +1739,7 @@ function cancelEditContent(id) {
 function renderEditForm(content, respondentCount = 0) {
     const titleField = `
         <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1">Título *</label>
+            <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.edit.title_label')}</label>
             <input type="text" class="edit-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required value="${escapeAttr(content.title)}">
         </div>
     `;
@@ -1758,15 +1758,15 @@ function renderEditForm(content, respondentCount = 0) {
         <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">${label}</label>
             <input type="file" class="edit-file w-full text-sm" accept="${accept}">
-            <p class="text-xs text-gray-500 mt-1">${hint} — deja vacío para no cambiarlo</p>
+            <p class="text-xs text-gray-500 mt-1">${hint} — ${t('contentManager.videos.keep_unchanged_hint')}</p>
         </div>
     `;
 
     const weightField = () => `
         <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1">% del curso (opcional)</label>
-            <input type="number" class="edit-weight w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" min="0" max="100" step="0.01" placeholder="Ej: 10" value="${content.weight_percent ?? ''}">
-            <p class="text-xs text-gray-500 mt-1">Cuánto vale esto para la nota final del curso — dejalo vacío si no cuenta para la nota.</p>
+            <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.edit.weight_label')}</label>
+            <input type="number" class="edit-weight w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" min="0" max="100" step="0.01" placeholder="${t('contentManager.edit.weight_placeholder')}" value="${content.weight_percent ?? ''}">
+            <p class="text-xs text-gray-500 mt-1">${t('contentManager.edit.weight_hint')}</p>
         </div>
     `;
 
@@ -1776,42 +1776,45 @@ function renderEditForm(content, respondentCount = 0) {
             body = '';
             break;
         case 'text':
-            body = descriptionField('Contenido *', true, 5);
+            body = descriptionField(t('contentManager.edit.content_label'), true, 5);
             break;
         case 'forum':
-            body = descriptionField('Texto principal *', true, 4);
+            body = descriptionField(t('contentManager.edit.main_text_label'), true, 4);
             break;
         case 'task':
-            body = descriptionField('Instrucciones (opcional)', false, 3)
-                + fileField('Reemplazar archivo de plantilla/instrucciones (opcional)', '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip,.rar', 'PDF, DOCX, PPT, XLS, TXT, ZIP, RAR (máx. 50MB)')
+            body = descriptionField(t('contentManager.edit.instructions_label'), false, 3)
+                + fileField(t('contentManager.task.replace_file_label'), '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip,.rar', t('contentManager.task.formats_hint'))
                 + weightField();
             break;
         case 'url':
-            body = descriptionField('Descripción (opcional)')
+            body = descriptionField(t('contentManager.edit.description_label'))
                 + `<div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">URL del video *</label>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.edit.url_label')}</label>
                     <input type="url" class="edit-url w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required value="${escapeAttr(content.url || '')}">
                 </div>`;
             break;
         case 'quiz':
         case 'survey': {
-            const respondentLabel = respondentCount === 1 ? '1 respuesta' : `${respondentCount} respuestas`;
-            body = descriptionField('Descripción (opcional)')
-                + (content.type === 'quiz' ? weightField() : '')
-                + `<p class="text-xs text-gray-400">Ya hay ${respondentLabel} registrada${respondentCount === 1 ? '' : 's'}: para cambiar las preguntas hay que borrar ${content.type === 'quiz' ? 'el cuestionario' : 'la encuesta'} y crear ${content.type === 'quiz' ? 'uno' : 'una'} nuev${content.type === 'quiz' ? 'o' : 'a'}.</p>`;
+            const isQuizType = content.type === 'quiz';
+            const noteKey = respondentCount === 1
+                ? (isQuizType ? 'contentManager.quiz.respondent_note_quiz_singular' : 'contentManager.quiz.respondent_note_survey_singular')
+                : (isQuizType ? 'contentManager.quiz.respondent_note_quiz_plural' : 'contentManager.quiz.respondent_note_survey_plural');
+            body = descriptionField(t('contentManager.edit.description_label'))
+                + (isQuizType ? weightField() : '')
+                + `<p class="text-xs text-gray-400">${t(noteKey, { count: respondentCount })}</p>`;
             break;
         }
         case 'video':
-            body = descriptionField('Descripción (opcional)')
-                + fileField('Reemplazar video (opcional)', 'video/*', 'MP4, AVI, MOV, WEBM (máx. 2GB)');
+            body = descriptionField(t('contentManager.edit.description_label'))
+                + fileField(t('contentManager.videos.replace_label'), 'video/*', t('contentManager.videos.formats_hint'));
             break;
         case 'image':
-            body = descriptionField('Descripción (opcional)')
-                + fileField('Reemplazar imagen (opcional)', 'image/*', 'JPG, PNG, GIF, WEBP (máx. 5MB)');
+            body = descriptionField(t('contentManager.edit.description_label'))
+                + fileField(t('contentManager.image.replace_label'), 'image/*', t('contentManager.image.formats_hint'));
             break;
         case 'file':
-            body = descriptionField('Descripción (opcional)')
-                + fileField('Reemplazar archivo (opcional)', '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip,.rar', 'PDF, DOCX, PPT, XLS, TXT, ZIP, RAR (máx. 50MB)');
+            body = descriptionField(t('contentManager.edit.description_label'))
+                + fileField(t('contentManager.file.replace_label'), '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip,.rar', t('contentManager.file.formats_hint'));
             break;
     }
 
@@ -1821,9 +1824,9 @@ function renderEditForm(content, respondentCount = 0) {
             ${body}
             <div class="flex gap-2">
                 <button type="submit" class="submit-edit-btn bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
-                    <i class="fas fa-check mr-1"></i> Guardar
+                    <i class="fas fa-check mr-1"></i> ${t('contentManager.save')}
                 </button>
-                <button type="button" class="cancel-edit-btn text-gray-600 px-4 py-2 text-sm">Cancelar</button>
+                <button type="button" class="cancel-edit-btn text-gray-600 px-4 py-2 text-sm">${t('contentManager.cancel')}</button>
             </div>
         </form>
     `;
@@ -1836,20 +1839,20 @@ async function submitEditContent(e, content) {
 
     const title = form.querySelector('.edit-title').value.trim();
     if (!title) {
-        showToast('El título es requerido', 'error');
+        showToast(t('contentManager.title_required'), 'error');
         return;
     }
 
     const descriptionInput = form.querySelector('.edit-description');
     const description = descriptionInput ? descriptionInput.value.trim() : undefined;
     if (descriptionInput && descriptionInput.required && !description) {
-        showToast('Este campo es requerido', 'error');
+        showToast(t('contentManager.field_required'), 'error');
         return;
     }
 
     const urlInput = form.querySelector('.edit-url');
     if (urlInput && !urlInput.value.trim()) {
-        showToast('La URL es requerida', 'error');
+        showToast(t('contentManager.url.required_edit'), 'error');
         return;
     }
 
@@ -1857,7 +1860,7 @@ async function submitEditContent(e, content) {
     const file = fileInput ? fileInput.files[0] : null;
     if (file) {
         const maxBytes = content.type === 'video' ? MAX_VIDEO_BYTES : content.type === 'image' ? MAX_IMAGE_BYTES : MAX_DOC_BYTES;
-        if (!checkFileSize(file, maxBytes, 'El archivo')) return;
+        if (!checkFileSize(file, maxBytes, t('contentManager.file.field_label'))) return;
     }
 
     const weightInput = form.querySelector('.edit-weight');
@@ -1880,39 +1883,42 @@ async function submitEditContent(e, content) {
     }
 
     await submitContentForm(submitBtn, {
-        loadingLabel: 'Guardando...',
-        idleLabel: '<i class="fas fa-check mr-1"></i> Guardar',
+        loadingLabel: t('contentManager.saving'),
+        idleLabel: `<i class="fas fa-check mr-1"></i> ${t('contentManager.save')}`,
         apiCall: () => contentsAPI.update(content.id, payload),
-        successMessage: 'Contenido actualizado exitosamente',
-        errorMessage: 'Error al actualizar el contenido'
+        successMessage: t('contentManager.content_updated'),
+        errorMessage: t('contentManager.content_update_failed')
     });
 }
 
-const CONTENT_TYPE_LABELS = {
-    video: 'el video',
-    file: 'el archivo',
-    image: 'la imagen',
-    text: 'el texto',
-    url: 'la URL',
-    task: 'la tarea',
-    quiz: 'el cuestionario (se borran también todas las respuestas)',
-    survey: 'la encuesta (se borran también todas las respuestas)',
-    forum: 'el tema de foro (se borran también todas sus respuestas)',
-    folder: 'la carpeta'
-};
+function getDeleteContentTypeLabel(type) {
+    const map = {
+        video: t('contentManager.delete_type_video'),
+        file: t('contentManager.delete_type_file'),
+        image: t('contentManager.delete_type_image'),
+        text: t('contentManager.delete_type_text'),
+        url: t('contentManager.delete_type_url'),
+        task: t('contentManager.delete_type_task'),
+        quiz: t('contentManager.delete_type_quiz'),
+        survey: t('contentManager.delete_type_survey'),
+        forum: t('contentManager.delete_type_forum'),
+        folder: t('contentManager.delete_type_folder')
+    };
+    return map[type] || t('contentManager.delete_type_default');
+}
 
 async function deleteContentHandler(id, type) {
-    const label = CONTENT_TYPE_LABELS[type] || 'el contenido';
-    if (!(await confirmAction(`¿Estás seguro de eliminar ${label}? Esta acción no se puede deshacer.`))) {
+    const label = getDeleteContentTypeLabel(type);
+    if (!(await confirmAction(t('contentManager.delete_confirm', { label })))) {
         return;
     }
 
     try {
         await contentsAPI.delete(id);
-        showToast('Contenido eliminado exitosamente', 'success');
+        showToast(t('contentManager.content_deleted'), 'success');
         contentManagerRerender();
     } catch (error) {
-        showToast(error.message || 'Error al eliminar el contenido', 'error');
+        showToast(error.message || t('contentManager.content_delete_failed'), 'error');
     }
 }
 
