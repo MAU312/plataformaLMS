@@ -438,8 +438,12 @@ function renderCourseCardShell({ course, navigateToPath, heightClass = 'h-40', s
 /**
  * `modules` (las carpetas del curso) y `moduleScopeByTeacherId` (id →
  * module_id|null, de Course.getCourseTeachers) son opcionales — un curso
- * sin carpetas no muestra el selector de módulo en absoluto, así un curso
- * "plano" se ve exactamente igual que antes de agregar módulos.
+ * sin carpetas no muestra el selector de carpeta en absoluto, así un curso
+ * "plano" se ve exactamente igual que antes de agregar carpetas. Se llama
+ * "carpeta" en el copy visible (no "módulo") para no confundirlo con los
+ * módulos-con-cursos-anidados (ver CourseModule) — dos features distintas
+ * que comparten el mismo nombre solo a nivel de código histórico
+ * (course_teachers.module_id sigue apuntando a una carpeta).
  */
 function renderTeacherCheckboxesHTML(teachers, selectedIds = [], modules = [], moduleScopeByTeacherId = {}) {
     if (teachers.length === 0) {
@@ -456,7 +460,7 @@ function renderTeacherCheckboxesHTML(teachers, selectedIds = [], modules = [], m
                 ${escapeHtml(t.name)} <span class="text-gray-400 dark:text-slate-500">(${escapeHtml(t.email)})</span>
             </label>
             ${modules.length > 0 ? `
-                <select class="teacher-module-select text-xs border border-gray-300 rounded px-1 py-0.5" data-teacher-id="${t.id}" ${checked ? '' : 'disabled'} title="A qué módulo queda escopeado este profesor">
+                <select class="teacher-module-select text-xs border border-gray-300 rounded px-1 py-0.5" data-teacher-id="${t.id}" ${checked ? '' : 'disabled'} title="A qué carpeta queda escopeado este profesor">
                     <option value="">Todo el curso</option>
                     ${modules.map(m => `<option value="${m.id}" ${String(currentModule) === String(m.id) ? 'selected' : ''}>${escapeHtml(m.title)}</option>`).join('')}
                 </select>
@@ -467,7 +471,7 @@ function renderTeacherCheckboxesHTML(teachers, selectedIds = [], modules = [], m
 }
 
 /**
- * Habilita/deshabilita el select de módulo de cada fila según su checkbox
+ * Habilita/deshabilita el select de carpeta de cada fila según su checkbox
  * — un profesor desmarcado no tiene sentido que quede escopeado a nada, así
  * que al desmarcar se resetea a "Todo el curso" (vacío) además de
  * deshabilitarse. Delegado en el contenedor: sigue funcionando después de

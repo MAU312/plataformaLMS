@@ -120,6 +120,19 @@ const coursesAPI = {
 };
 
 // =================================
+// Course Modules API (módulos con cursos anidados dentro de un curso)
+// =================================
+
+const courseModulesAPI = {
+    getByCourse: async (courseId) => apiRequest(`/courses/${courseId}/modules`),
+    create: async (courseId, title) => apiRequest(`/courses/${courseId}/modules`, { method: 'POST', body: JSON.stringify({ title }) }),
+    update: async (moduleId, data) => apiRequest(`/course-modules/${moduleId}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: async (moduleId) => apiRequest(`/course-modules/${moduleId}`, { method: 'DELETE' }),
+    createCourse: async (moduleId, formData) => apiRequestFormData(`/course-modules/${moduleId}/courses`, formData),
+    removeCourse: async (moduleId, childId) => apiRequest(`/course-modules/${moduleId}/courses/${childId}`, { method: 'DELETE' })
+};
+
+// =================================
 // Contents API
 // =================================
 
@@ -222,6 +235,7 @@ const settingsAPI = {
 
 window.authAPI = authAPI;
 window.coursesAPI = coursesAPI;
+window.courseModulesAPI = courseModulesAPI;
 window.contentsAPI = contentsAPI;
 window.usersAPI = usersAPI;
 window.forumPostsAPI = forumPostsAPI;

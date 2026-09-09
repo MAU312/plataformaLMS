@@ -102,7 +102,7 @@ window.renderAdminEditCourse = async function(params) {
             </div>
         `, 'courses');
 
-        initCourseContentManager(() => renderAdminEditCourse({ id: course.id }));
+        initCourseContentManager(() => renderAdminEditCourse({ id: course.id }), course);
 
         // Form de edición de curso
         document.getElementById('edit-course-form').addEventListener('submit', async (e) => {

@@ -1,6 +1,7 @@
 import Course from '../models/Course.js';
 import User from '../models/User.js';
 import Content from '../models/Content.js';
+import CourseModule from '../models/CourseModule.js';
 import TaskSubmission from '../models/TaskSubmission.js';
 import { deleteFile } from '../middlewares/upload.middleware.js';
 import certificateGenerator, { isValidCertificateStyle, DEFAULT_CERTIFICATE_STYLE } from '../utils/certificate.js';
@@ -73,10 +74,26 @@ export const getCourseById = async (req, res) => {
     // Obtener contenidos del curso
     const rawContents = await Content.findByCourse(id);
 
-    // Verificar si el usuario está inscrito (si hay sesión activa)
+    // Verificar si el usuario está inscrito (si hay sesión activa) y traer
+    // su inscripción (progreso/certificado). Course.getEnrollment ya
+    // resuelve la raíz: si `id` es un curso hijo, esto trae la inscripción
+    // REAL del curso padre (progreso combinado de padre + todos sus
+    // hermanos), no una fila propia que el hijo nunca tiene — el frontend
+    // usa esto para la barra de progreso/certificado en vez de recalcularlo
+    // solo con los `contents` de esta página (ver views_course_detail.js).
     let isEnrolled = false;
+    let enrollment = null;
     if (req.session?.user) {
-      isEnrolled = await Course.isUserEnrolled(id, req.session.user.id);
+      enrollment = (await Course.getEnrollment(id, req.session.user.id)) || null;
+      isEnrolled = Boolean(enrollment);
+      if (enrollment) {
+        // total/completed combinados (padre + todos sus cursos hijo si
+        // aplica) — el frontend los usa para la barra "X% (completado/total)"
+        // en vez de recalcularlos solo con los `contents` de esta página.
+        const groupProgress = await Content.calculateGroupProgress(id, req.session.user.id);
+        enrollment.total = groupProgress.total;
+        enrollment.completed = groupProgress.completed;
+      }
     }
     const canAccessMedia = await Course.canAccessMedia(id, req.session?.user);
 
@@ -96,7 +113,8 @@ export const getCourseById = async (req, res) => {
       data: {
         ...course,
         contents,
-        isEnrolled
+        isEnrolled,
+        enrollment
       }
     });
   } catch (error) {
@@ -116,7 +134,7 @@ export const getCourseById = async (req, res) => {
  * — así un id viejo/inválido/de otro rol simplemente se ignora en vez de
  * fallar toda la operación.
  */
-async function resolveValidTeacherIds(raw) {
+export async function resolveValidTeacherIds(raw) {
   if (!raw) return [];
 
   let ids;
@@ -333,6 +351,27 @@ export const updateCourse = async (req, res) => {
 };
 
 /**
+ * Junta las rutas de archivo de UN curso (miniatura, contenidos, entregas
+ * de tareas) SIN borrar nada todavía — extraído de deleteCourse para poder
+ * reusarlo también por cada curso hijo cuando se borra un curso padre con
+ * módulos (ver deleteCourse).
+ */
+async function collectCourseFilesToDelete(course) {
+  const contents = await Content.findByCourse(course.id);
+  const submissions = await TaskSubmission.findAllByCourse(course.id);
+
+  const files = [];
+  if (course.thumbnail) files.push(course.thumbnail);
+  for (const content of contents) {
+    if (content.url && content.type !== 'url') files.push(content.url);
+  }
+  for (const submission of submissions) {
+    if (submission.file_url) files.push(submission.file_url);
+  }
+  return files;
+}
+
+/**
  * Eliminar curso (solo admin)
  */
 export const deleteCourse = async (req, res) => {
@@ -356,16 +395,23 @@ export const deleteCourse = async (req, res) => {
     // borraran antes y el DELETE fallara, el curso completo (contenidos,
     // inscripciones, entregas) quedaría en BD apuntando a archivos que ya
     // no existen en disco, sin forma de recuperarlos.
-    const contents = await Content.findByCourse(id);
-    const submissions = await TaskSubmission.findAllByCourse(id);
+    let filesToDelete = await collectCourseFilesToDelete(course);
 
-    const filesToDelete = [];
-    if (course.thumbnail) filesToDelete.push(course.thumbnail);
-    for (const content of contents) {
-      if (content.url && content.type !== 'url') filesToDelete.push(content.url);
-    }
-    for (const submission of submissions) {
-      if (submission.file_url) filesToDelete.push(submission.file_url);
+    // Un curso con módulos tiene cursos hijo colgando de ellos
+    // (courses.parent_module_id → course_modules.id, SIN cascade a
+    // propósito — ver plan de "Módulos con cursos anidados"). Si no se
+    // borran explícitamente antes, el DELETE del padre fallaría por esa FK
+    // al intentar arrastrar en cascada sus course_modules (course_id →
+    // courses.id ON DELETE CASCADE) mientras un curso hijo todavía les
+    // apunta. Cada hijo se borra con la MISMA lógica de limpieza de
+    // archivos que el curso principal, para no dejar huérfanos en disco.
+    const modules = await CourseModule.findByCourse(id);
+    for (const module of modules) {
+      for (const childCourse of module.courses) {
+        const childFiles = await collectCourseFilesToDelete(childCourse);
+        const childDeleted = await Course.delete(childCourse.id);
+        if (childDeleted) filesToDelete = filesToDelete.concat(childFiles);
+      }
     }
 
     const deleted = await Course.delete(id);
@@ -415,6 +461,21 @@ export const enrollCourse = async (req, res) => {
       return res.status(403).json({
         success: false,
         message: 'Este curso no está disponible actualmente'
+      });
+    }
+
+    // Un curso hijo de un módulo no es inscribible por su cuenta: la
+    // inscripción vive SIEMPRE en el curso padre y da acceso a todos sus
+    // cursos hijo (ver Course.resolveEnrollmentRoot). Sin este guard, un
+    // estudiante que llamara este endpoint directo con el id de un curso
+    // hijo (visible en las tarjetas del selector de módulos) crearía una
+    // fila fantasma en enrollments que nunca recibe progreso real.
+    if (course.parent_module_id) {
+      return res.status(400).json({
+        success: false,
+        message: course.parent_course_title
+          ? `Debes inscribirte en el curso principal («${course.parent_course_title}»)`
+          : 'Debes inscribirte en el curso principal'
       });
     }
 
@@ -557,6 +618,19 @@ export const getCourseStudents = async (req, res) => {
     // curso, para no pagar ese costo en cursos con muchos inscritos.
     const grades = await Promise.all(students.map((s) => Content.calculateCourseGrade(id, s.id)));
     students.forEach((s, i) => { s.grade = grades[i]; });
+
+    // Course.getEnrolledStudents ya resuelve la raíz y trae el `progress`
+    // COMBINADO del curso padre completo (padre + todos sus cursos hijo).
+    // Si `id` es en sí un curso hijo, eso es engañoso para el profesor de
+    // módulo que gestiona SOLO ese curso — se reemplaza por el progreso
+    // puntual de este curso, sin persistir nada (ver
+    // Content.calculateProgressForSingleCourse).
+    if (course.parent_module_id) {
+      const soloProgress = await Promise.all(
+        students.map((s) => Content.calculateProgressForSingleCourse(id, s.id))
+      );
+      students.forEach((s, i) => { s.progress = soloProgress[i].progress; });
+    }
 
     res.json({
       success: true,

@@ -5,6 +5,7 @@ import * as courseController from '../../src/controllers/course.controller.js';
 import Course from '../../src/models/Course.js';
 import User from '../../src/models/User.js';
 import Content from '../../src/models/Content.js';
+import CourseModule from '../../src/models/CourseModule.js';
 import TaskSubmission from '../../src/models/TaskSubmission.js';
 import certificateGenerator from '../../src/utils/certificate.js';
 import { mockReq, mockRes } from '../helpers/http.js';
@@ -319,6 +320,20 @@ test('enrollCourse: 201 en inscripción exitosa', async (t) => {
   assert.equal(res.statusCode, 201);
 });
 
+test('enrollCourse: 400 si el curso es un curso hijo de un módulo (la inscripción real es en el padre)', async (t) => {
+  const enrollCall = t.mock.method(Course, 'enrollUser', async () => 999);
+  t.mock.method(Course, 'findById', async () => ({
+    id: 8, is_active: 1, parent_module_id: 3, parent_course_title: 'Ciencia Abierta'
+  }));
+  const req = mockReq({ params: { id: 8 }, session: { user: { id: 1 } } });
+  const res = mockRes();
+  await courseController.enrollCourse(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.match(res.body.message, /Ciencia Abierta/);
+  assert.equal(enrollCall.mock.calls.length, 0, 'no debe crear una fila de inscripción fantasma para el curso hijo');
+});
+
 test('unenrollCourse: 400 si no estaba inscrito', async (t) => {
   t.mock.method(Course, 'unenrollUser', async () => false);
   const req = mockReq({ params: { id: 5 }, session: { user: { id: 1 } } });
@@ -334,6 +349,7 @@ test('getCourseById: oculta las URLs de contenido a un visitante no inscrito', a
   ]));
   t.mock.method(Course, 'isUserEnrolled', async () => false);
   t.mock.method(Course, 'isUserTeacher', async () => false);
+  t.mock.method(Course, 'getEnrollment', async () => undefined);
 
   const req = mockReq({ params: { id: 5 }, session: { user: { id: 2, role: 'student' } } });
   const res = mockRes();
@@ -351,12 +367,16 @@ test('getCourseById: expone las URLs reales a un estudiante inscrito', async (t)
   ]));
   t.mock.method(Course, 'isUserEnrolled', async () => true);
   t.mock.method(Course, 'isUserTeacher', async () => false);
+  t.mock.method(Course, 'getEnrollment', async () => ({ id: 9, progress: 50, enrolled_at: new Date(), completed_at: null }));
+  t.mock.method(Content, 'calculateGroupProgress', async () => ({ progress: 50, total: 2, completed: 1 }));
 
   const req = mockReq({ params: { id: 5 }, session: { user: { id: 2, role: 'student' } } });
   const res = mockRes();
   await courseController.getCourseById(req, res);
 
   assert.equal(res.body.data.contents[0].url, '/uploads/videos/real.mp4');
+  assert.equal(res.body.data.isEnrolled, true);
+  assert.equal(res.body.data.enrollment.total, 2);
 });
 
 test('getCourseById: expone las URLs reales a un admin sin importar inscripción', async (t) => {
@@ -365,6 +385,7 @@ test('getCourseById: expone las URLs reales a un admin sin importar inscripción
     { id: 1, title: 'Video 1', url: '/uploads/videos/real.mp4' }
   ]));
   t.mock.method(Course, 'isUserEnrolled', async () => false);
+  t.mock.method(Course, 'getEnrollment', async () => undefined);
 
   const req = mockReq({ params: { id: 5 }, session: { user: { id: 2, role: 'admin' } } });
   const res = mockRes();
@@ -380,6 +401,7 @@ test('getCourseById: expone las URLs reales a un profesor asignado al curso, sin
   ]));
   t.mock.method(Course, 'isUserEnrolled', async () => false);
   t.mock.method(Course, 'isUserTeacher', async () => true);
+  t.mock.method(Course, 'getEnrollment', async () => undefined);
 
   const req = mockReq({ params: { id: 5 }, session: { user: { id: 2, role: 'teacher' } } });
   const res = mockRes();
@@ -509,6 +531,30 @@ test('getCourseStudents: adjunta la nota calculada de cada estudiante (Content.c
   assert.equal(gradeCall.mock.calls.length, 2);
 });
 
+test('getCourseStudents: si el curso consultado es un curso hijo, reemplaza el progreso combinado por el progreso puntual de ese curso', async (t) => {
+  t.mock.method(Course, 'findById', async () => ({ id: 4, title: 'Curso hijo', parent_module_id: 3 }));
+  t.mock.method(Course, 'getEnrolledStudents', async () => ({
+    rows: [
+      { id: 2, name: 'Ana', email: 'ana@test.com', progress: 60 }, // combinado del padre
+      { id: 3, name: 'Beto', email: 'beto@test.com', progress: 60 }
+    ],
+    total: 2
+  }));
+  t.mock.method(Content, 'calculateCourseGrade', async () => null);
+  const soloCall = t.mock.method(Content, 'calculateProgressForSingleCourse', async (courseId, userId) => ({
+    progress: userId === 2 ? 100 : 0, total: 3, completed: userId === 2 ? 3 : 0
+  }));
+
+  const req = mockReq({ params: { id: 4 }, query: {} });
+  const res = mockRes();
+  await courseController.getCourseStudents(req, res);
+
+  assert.equal(res.body.data.students[0].progress, 100, 'debe mostrar el progreso puntual del curso hijo, no el 60% combinado del padre');
+  assert.equal(res.body.data.students[1].progress, 0);
+  assert.equal(soloCall.mock.calls.length, 2);
+  assert.deepEqual(soloCall.mock.calls[0].arguments, [4, 2]);
+});
+
 // =================================
 // deleteCourse
 // =================================
@@ -530,6 +576,7 @@ test('deleteCourse: borra la miniatura del curso y el archivo de cada contenido 
     { id: 13, type: 'text', url: null }
   ]));
   t.mock.method(TaskSubmission, 'findAllByCourse', async () => ([]));
+  t.mock.method(CourseModule, 'findByCourse', async () => ([]));
   t.mock.method(Course, 'delete', async () => true);
   const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
   t.mock.method(fs, 'existsSync', () => true);
@@ -553,6 +600,7 @@ test('deleteCourse: borra el archivo de cada entrega de tarea del curso, en una 
     { id: 1, file_url: '/uploads/submissions/a.pdf' },
     { id: 2, file_url: '/uploads/submissions/b.docx' }
   ]));
+  t.mock.method(CourseModule, 'findByCourse', async () => ([]));
   t.mock.method(Course, 'delete', async () => true);
   const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
   t.mock.method(fs, 'existsSync', () => true);
@@ -571,6 +619,7 @@ test('deleteCourse: un curso sin contenido no intenta borrar ningún archivo de 
   t.mock.method(Course, 'findById', async () => ({ id: 1, thumbnail: null }));
   t.mock.method(Content, 'findByCourse', async () => ([]));
   t.mock.method(TaskSubmission, 'findAllByCourse', async () => ([]));
+  t.mock.method(CourseModule, 'findByCourse', async () => ([]));
   t.mock.method(Course, 'delete', async () => true);
   const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
 
@@ -588,6 +637,7 @@ test('deleteCourse: si Course.delete no confirma (0 filas), no borra ningún arc
     { id: 10, type: 'video', url: '/uploads/videos/a.mp4' }
   ]));
   t.mock.method(TaskSubmission, 'findAllByCourse', async () => ([]));
+  t.mock.method(CourseModule, 'findByCourse', async () => ([]));
   t.mock.method(Course, 'delete', async () => false);
   const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
   t.mock.method(fs, 'existsSync', () => true);
@@ -598,6 +648,43 @@ test('deleteCourse: si Course.delete no confirma (0 filas), no borra ningún arc
 
   assert.equal(res.statusCode, 400);
   assert.equal(unlinkCall.mock.calls.length, 0, 'si el DELETE no confirmó, los archivos no deben tocarse (evita perderlos sin haber borrado el curso)');
+});
+
+test('deleteCourse: borra también los cursos hijo de sus módulos (y sus propios archivos) antes de borrar el padre', async (t) => {
+  t.mock.method(Course, 'findById', async () => ({ id: 1, thumbnail: '/uploads/thumbnails/padre.jpg' }));
+  // findByCourse/findAllByCourse se llaman tanto para el padre (id 1) como
+  // para cada curso hijo (ids 10 y 11) — se distingue por el id pedido.
+  t.mock.method(Content, 'findByCourse', async (courseId) => {
+    if (courseId === 1) return [];
+    if (courseId === 10) return [{ id: 100, type: 'video', url: '/uploads/videos/hijo-a.mp4' }];
+    if (courseId === 11) return [{ id: 110, type: 'file', url: '/uploads/files/hijo-b.pdf' }];
+    return [];
+  });
+  t.mock.method(TaskSubmission, 'findAllByCourse', async () => ([]));
+  t.mock.method(CourseModule, 'findByCourse', async () => ([
+    {
+      id: 3, title: 'Módulo 1', courses: [
+        { id: 10, thumbnail: '/uploads/thumbnails/hijo-a.jpg' },
+        { id: 11, thumbnail: null }
+      ]
+    }
+  ]));
+  const deleteCall = t.mock.method(Course, 'delete', async () => true);
+  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
+  t.mock.method(fs, 'existsSync', () => true);
+
+  const req = mockReq({ params: { id: 1 } });
+  const res = mockRes();
+  await courseController.deleteCourse(req, res);
+
+  assert.equal(res.statusCode, 200);
+  // Course.delete debe llamarse para CADA curso hijo (10, 11) y recién
+  // después para el padre (1) — el padre tiene una FK sin cascade hacia
+  // course_modules mientras un hijo le siga apuntando (ver plan).
+  assert.deepEqual(deleteCall.mock.calls.map(c => c.arguments[0]), [10, 11, 1]);
+  // miniatura del padre + miniatura del hijo 10 (el 11 no tiene) + video
+  // del hijo 10 + archivo del hijo 11 = 4
+  assert.equal(unlinkCall.mock.calls.length, 4);
 });
 
 // =================================

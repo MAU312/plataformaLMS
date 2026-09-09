@@ -45,6 +45,20 @@ window.renderCourseDetail = async function(params) {
             contents = contentsResponse.data || contents;
         }
 
+        // Módulos de este curso (cursos hijo completos, con su propia
+        // portada/título/profesor) — endpoint público, igual que el resto
+        // del detalle del curso, para que hasta un guest los vea antes de
+        // registrarse. Un curso hijo nunca tiene sus propios módulos (ver
+        // courseModule.controller.js#createModule), así que ahí esto
+        // siempre resuelve vacío sin necesitar un chequeo aparte acá.
+        let courseModules = [];
+        try {
+            const modulesResponse = await courseModulesAPI.getByCourse(course.id);
+            courseModules = modulesResponse.data || [];
+        } catch (error) {
+            console.error('Error al cargar los módulos del curso:', error);
+        }
+
         const folders = contents.filter(c => c.type === 'folder');
         const isTopLevel = c => !c.folder_id;
 
@@ -95,6 +109,25 @@ window.renderCourseDetail = async function(params) {
             ? Math.round((completedCount / progressTrackableContents.length) * 100)
             : 0;
 
+        // La barra de progreso/gating del certificado que se MUESTRA usa el
+        // `enrollment` que ya manda el servidor (getCourseById), resuelto
+        // en la raíz y combinado con todos los cursos hijo de sus módulos
+        // si aplica (ver Course.resolveEnrollmentRoot/Content.calculateGroupProgress)
+        // — el cálculo de arriba con SOLO los `contents` de esta página
+        // subestimaría el progreso real en un curso padre con módulos, o
+        // mostraría 100%/certificado disponible en un curso hijo cuando el
+        // certificado real cuelga del padre. Si no hay inscripción (no
+        // logueado o no inscrito), no hay `enrollment` y no importa: esa
+        // sección ni se muestra.
+        const enrollment = course.enrollment || null;
+        const displayProgressPercent = enrollment ? enrollment.progress : progressPercent;
+        const displayTotal = enrollment && enrollment.total != null ? enrollment.total : progressTrackableContents.length;
+        const displayCompleted = enrollment && enrollment.completed != null ? enrollment.completed : completedCount;
+        // Curso al que en realidad pertenecen la inscripción/progreso/
+        // certificado — el propio curso, salvo que ESTE sea un curso hijo
+        // de un módulo (ver getCourseById), en cuyo caso es su padre.
+        const enrollmentCourseId = course.parent_course_id || course.id;
+
         // Estado de entrega de cada tarea: viene incluido directamente en
         // cada content (`my_submission`, ver Content.findByCourseWithProgress)
         // cuando hay sesión — ya no hace falta un GET
@@ -137,23 +170,25 @@ window.renderCourseDetail = async function(params) {
                             </p>
                         </div>
                         <div id="enroll-button-container">
-                            ${renderEnrollButton(isLoggedIn, isEnrolled, course.id)}
+                            ${renderEnrollButton(isLoggedIn, isEnrolled, course.id, course.parent_course_title)}
                         </div>
                     </div>
 
-                    ${isLoggedIn && isEnrolled && progressTrackableContents.length > 0 ? `
+                    ${isLoggedIn && isEnrolled && displayTotal > 0 ? `
                         <div class="mt-6 bg-white/10 rounded-lg p-4">
                             <div class="flex justify-between text-sm text-white mb-1">
                                 <span><i class="fas fa-chart-line mr-1"></i> Tu progreso</span>
-                                <span id="course-progress-label">${progressPercent}% (${completedCount}/${progressTrackableContents.length})</span>
+                                <span id="course-progress-label">${displayProgressPercent}% (${displayCompleted}/${displayTotal})</span>
                             </div>
                             <div class="progress-bar bg-white/20">
-                                <div id="course-progress-fill" class="progress-fill" style="width: ${progressPercent}%"></div>
+                                <div id="course-progress-fill" class="progress-fill" style="width: ${displayProgressPercent}%"></div>
                             </div>
                         </div>
                     ` : ''}
                 </div>
             </div>
+
+            ${renderPublicCourseModulesHTML(courseModules)}
 
             <div class="courses-bg">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -239,8 +274,8 @@ window.renderCourseDetail = async function(params) {
                             </ul>
                         </div>
 
-                        ${isLoggedIn && isEnrolled && progressPercent === 100 ? `
-                            <button onclick="downloadCertificate(${course.id})" class="btn-cenat w-full">
+                        ${isLoggedIn && isEnrolled && displayProgressPercent === 100 ? `
+                            <button onclick="downloadCertificate(${enrollmentCourseId})" class="btn-cenat w-full">
                                 <i class="fas fa-certificate mr-2"></i> Descargar certificado
                             </button>
                         ` : ''}
@@ -291,16 +326,16 @@ window.renderCourseDetail = async function(params) {
                 const isCompleted = this.dataset.completed === 'true';
                 // Deshabilitar el botón mientras se procesa para evitar doble click
                 this.disabled = true;
-                await toggleContentCompleted(contentId, !isCompleted, course.id);
+                await toggleContentCompleted(contentId, !isCompleted, course.id, enrollmentCourseId);
                 this.disabled = false;
             });
         });
 
         // Botón de inscripción
-        setupEnrollButton(course.id);
+        setupEnrollButton(enrollmentCourseId, course.id);
 
         // Formularios de entrega de tareas
-        setupTaskSubmitForms(course.id);
+        setupTaskSubmitForms(course.id, enrollmentCourseId);
 
         // Reproductores de video externo (YouTube) con detección de error
         initYoutubeEmbeds();
@@ -772,7 +807,13 @@ function renderQuizCard(content, quizStatus, hasAccess) {
     `;
 }
 
-function setupTaskSubmitForms(courseId) {
+/**
+ * `enrollmentCourseId` (por defecto igual a `courseId`) es a quién
+ * pertenece el certificado — el propio curso, o su padre si esta página es
+ * la de un curso hijo de un módulo. `courseId` sigue siendo la página a
+ * volver a renderizar tras entregar (SIEMPRE la que se está viendo).
+ */
+function setupTaskSubmitForms(courseId, enrollmentCourseId = courseId) {
     document.querySelectorAll('.task-submit-form').forEach(form => {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -808,7 +849,7 @@ function setupTaskSubmitForms(courseId) {
                 // barra de progreso y el botón de certificado sí se
                 // actualizaban bien.
                 if (response.data.progress === 100) {
-                    showCourseCompletionModal(courseId);
+                    showCourseCompletionModal(enrollmentCourseId);
                 }
 
             } catch (error) {
@@ -820,7 +861,12 @@ function setupTaskSubmitForms(courseId) {
     });
 }
 
-async function toggleContentCompleted(contentId, markAsCompleted, courseId) {
+/**
+ * `enrollmentCourseId` (por defecto igual a `courseId`) es a quién
+ * pertenece el certificado — ver setupTaskSubmitForms. `courseId` sigue
+ * siendo la página actual (para refrescar el badge de SU carpeta).
+ */
+async function toggleContentCompleted(contentId, markAsCompleted, courseId, enrollmentCourseId = courseId) {
     try {
         const response = markAsCompleted
             ? await contentsAPI.markCompleted(contentId)
@@ -873,7 +919,7 @@ async function toggleContentCompleted(contentId, markAsCompleted, courseId) {
 
         // Toast + celebración si llegó al 100%
         if (markAsCompleted && newProgress === 100) {
-            showCourseCompletionModal(courseId);
+            showCourseCompletionModal(enrollmentCourseId);
         } else {
             showToast(markAsCompleted ? 'Contenido marcado como completado' : 'Contenido marcado como pendiente', 'success');
         }
@@ -923,7 +969,55 @@ async function refreshFolderBadge(folderId, courseId) {
     }
 }
 
-function renderEnrollButton(isLoggedIn, isEnrolled, courseId) {
+/**
+ * "Módulos de este curso": un selector de módulo + una grilla de tarjetas
+ * con los cursos hijo de ese módulo (portada/título/profesor propios) —
+ * reusa renderCourseCard/renderCourseCardShell tal cual (views_home.js),
+ * la misma tarjeta que usa el catálogo, sin reinventar el markup. Solo un
+ * curso PADRE puede tener módulos (un curso hijo nunca los tiene, ver
+ * courseModule.controller.js#createModule), así que con `modules` vacío
+ * esta sección directamente no se renderiza.
+ */
+function renderPublicCourseModulesHTML(modules) {
+    if (!modules || modules.length === 0) return '';
+
+    return `
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
+                    <label for="course-module-select" class="text-sm font-semibold text-gray-700 flex-shrink-0">
+                        <i class="fas fa-layer-group text-cenat-green mr-1"></i> Módulo:
+                    </label>
+                    <select id="course-module-select" onchange="switchCourseModule(this.value)" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent w-full sm:w-auto">
+                        ${modules.map((m, i) => `<option value="${m.id}" ${i === 0 ? 'selected' : ''}>${escapeHtml(m.title)}</option>`).join('')}
+                    </select>
+                </div>
+                ${modules.map((m, i) => `
+                    <div id="module-course-grid-${m.id}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 ${i === 0 ? '' : 'hidden'}">
+                        ${m.courses.length === 0
+                            ? `<p class="text-gray-400 text-sm col-span-full text-center py-4">Este módulo todavía no tiene cursos.</p>`
+                            : m.courses.map(c => renderCourseCard(c)).join('')}
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+function switchCourseModule(moduleId) {
+    document.querySelectorAll('[id^="module-course-grid-"]').forEach((el) => {
+        el.classList.toggle('hidden', el.id !== `module-course-grid-${moduleId}`);
+    });
+}
+window.switchCourseModule = switchCourseModule;
+
+/**
+ * `parentCourseTitle` solo viene poblado en la página de un curso HIJO de
+ * un módulo — ahí la inscripción real es en el curso padre (ver
+ * enrollmentCourseId/course.parent_course_id), así que el botón lo aclara
+ * en vez de sugerir que este curso hijo tiene inscripción propia.
+ */
+function renderEnrollButton(isLoggedIn, isEnrolled, courseId, parentCourseTitle) {
     if (!isLoggedIn) {
         return `
             <a href="#/login" class="btn-cenat">
@@ -939,28 +1033,37 @@ function renderEnrollButton(isLoggedIn, isEnrolled, courseId) {
     if (isEnrolled) {
         return `
             <button id="unenroll-btn" class="bg-white text-cenat-green px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition">
-                <i class="fas fa-check-circle mr-2"></i> Inscrito
+                <i class="fas fa-check-circle mr-2"></i> ${parentCourseTitle ? `Inscrito vía «${escapeHtml(parentCourseTitle)}»` : 'Inscrito'}
             </button>
         `;
     }
 
     return `
         <button id="enroll-btn" class="bg-white text-cenat-green px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition">
-            <i class="fas fa-plus-circle mr-2"></i> Inscribirme
+            <i class="fas fa-plus-circle mr-2"></i> ${parentCourseTitle ? `Inscribirme en «${escapeHtml(parentCourseTitle)}»` : 'Inscribirme'}
         </button>
     `;
 }
 
-function setupEnrollButton(courseId) {
+/**
+ * `enrollmentCourseId` es a quién realmente se inscribe/desinscribe (el
+ * propio curso, o su padre si esta página es la de un curso hijo de un
+ * módulo — ver enrollmentCourseId en renderCourseDetail). `displayCourseId`
+ * es la página a la que volver después (SIEMPRE la que el usuario está
+ * viendo, aunque sea la de un curso hijo) — sin esta distinción, inscribirse
+ * desde la página de un curso hijo terminaba mandando al usuario a la
+ * página del padre en vez de quedarse donde hizo clic.
+ */
+function setupEnrollButton(enrollmentCourseId, displayCourseId = enrollmentCourseId) {
     const enrollBtn = document.getElementById('enroll-btn');
     const unenrollBtn = document.getElementById('unenroll-btn');
 
     if (enrollBtn) {
         enrollBtn.addEventListener('click', async () => {
             try {
-                await coursesAPI.enroll(courseId);
+                await coursesAPI.enroll(enrollmentCourseId);
                 showToast('Te has inscrito exitosamente', 'success');
-                renderCourseDetail({ id: courseId });
+                renderCourseDetail({ id: displayCourseId });
             } catch (error) {
                 showToast(error.message || 'Error al inscribirse', 'error');
             }
@@ -971,9 +1074,9 @@ function setupEnrollButton(courseId) {
         unenrollBtn.addEventListener('click', async () => {
             if (await confirmAction('¿Estás seguro de que deseas desinscribirte de este curso?')) {
                 try {
-                    await coursesAPI.unenroll(courseId);
+                    await coursesAPI.unenroll(enrollmentCourseId);
                     showToast('Te has desinscrito del curso', 'info');
-                    renderCourseDetail({ id: courseId });
+                    renderCourseDetail({ id: displayCourseId });
                 } catch (error) {
                     showToast(error.message || 'Error al desinscribirse', 'error');
                 }

@@ -23,8 +23,20 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB
 
 let contentManagerRerender = () => {};
 
-function initCourseContentManager(rerenderFn) {
+/**
+ * `course` es opcional (por compatibilidad con cualquier otro llamador
+ * viejo) — cuando se pasa y el curso no es en sí un curso hijo de un
+ * módulo, dispara la carga async de la lista de módulos (ver
+ * renderCourseModulesSectionHTML/loadCourseModulesList): el HTML de esa
+ * sección ya está en el DOM en este punto (ambas vistas llaman a esto
+ * después de setear app.innerHTML), así que el contenedor #course-modules-list
+ * existe y puede rellenarse.
+ */
+function initCourseContentManager(rerenderFn, course) {
     contentManagerRerender = rerenderFn;
+    if (course && !course.parent_module_id) {
+        loadCourseModulesList(course.id);
+    }
 }
 
 function scopeId(base, folderId) {
@@ -54,9 +66,278 @@ function renderCourseContentManagerHTML(course, contents) {
                 `}
             </div>
 
+            ${renderCourseModulesSectionHTML(course)}
+
             ${renderContentTypeSections(course.id, contents, null, false)}
         </div>
     `;
+}
+
+// =================================
+// Módulos (cursos anidados dentro de un curso)
+//
+// Distinto de las "carpetas" de arriba: acá cada módulo agrupa CURSOS
+// COMPLETOS (portada/título/profesor propios), no contenido. Nesting de un
+// solo nivel — un curso que ya es hijo de un módulo (course.parent_module_id)
+// no puede alojar sus propios módulos, así que esta sección directamente no
+// se muestra en ese caso (el backend también lo rechaza, ver
+// courseModule.controller.js#createModule — esto es solo la UI).
+// =================================
+
+function renderCourseModulesSectionHTML(course) {
+    if (course.parent_module_id) return '';
+
+    return `
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-gray-900">
+                    <i class="fas fa-layer-group text-cenat-green mr-2"></i> Módulos
+                </h2>
+                <button onclick="showAddModuleForm(${course.id})" class="text-sm bg-green-50 text-cenat-green px-3 py-1.5 rounded-lg hover:bg-green-100 transition">
+                    <i class="fas fa-plus mr-1"></i> Crear módulo
+                </button>
+            </div>
+            <p class="text-gray-400 text-xs mb-3">Un módulo agrupa cursos completos (con su propia portada, título y profesor) dentro de este curso — se muestran como tarjetas en la página pública del curso.</p>
+            <div id="add-module-form-container"></div>
+            <div id="course-modules-list">
+                <p class="text-gray-400 text-sm text-center py-4"><i class="fas fa-spinner fa-spin mr-1"></i> Cargando módulos...</p>
+            </div>
+        </div>
+    `;
+}
+
+async function loadCourseModulesList(courseId) {
+    const container = document.getElementById('course-modules-list');
+    if (!container) return;
+    try {
+        const response = await courseModulesAPI.getByCourse(courseId);
+        const modules = response.data || [];
+        container.innerHTML = modules.length === 0
+            ? `<p class="text-gray-500 text-sm text-center py-4">Todavía no hay módulos. Crea uno para empezar a agrupar cursos dentro de este curso.</p>`
+            : modules.map(m => renderModuleCard(courseId, m)).join('');
+    } catch (error) {
+        container.innerHTML = `<p class="text-sm text-red-500 text-center py-4">Error al cargar los módulos</p>`;
+    }
+}
+
+function renderModuleCard(courseId, module) {
+    const courseCount = module.courses.length;
+    return `
+        <details class="border border-gray-100 rounded-lg mb-3" open data-module-id="${module.id}">
+            <summary class="cursor-pointer list-none p-3 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                    <i class="fas fa-chevron-right text-gray-400 text-xs module-chevron transition-transform"></i>
+                    <i class="fas fa-layer-group text-cenat-green"></i>
+                    <span class="font-semibold text-gray-900 truncate">${escapeHtml(module.title)}</span>
+                    <span class="text-xs text-gray-400 whitespace-nowrap">(${courseCount} ${courseCount === 1 ? 'curso' : 'cursos'})</span>
+                </div>
+                <div class="flex items-center gap-1 flex-shrink-0">
+                    <button onclick="event.preventDefault(); showAddModuleCourseForm(${courseId}, ${module.id})" class="text-xs bg-green-50 text-cenat-green px-2 py-1 rounded hover:bg-green-100 whitespace-nowrap" title="Crear curso en este módulo">
+                        <i class="fas fa-plus mr-1"></i>Curso
+                    </button>
+                    <button onclick="event.preventDefault(); renameModuleHandler(${courseId}, ${module.id})" class="text-gray-400 hover:text-cenat-green px-2" title="Renombrar módulo">
+                        <i class="fas fa-pencil-alt"></i>
+                    </button>
+                    <button onclick="event.preventDefault(); deleteModuleHandler(${courseId}, ${module.id})" class="text-red-500 hover:text-red-700 px-2" title="Borrar módulo">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </summary>
+            <div class="px-3 pb-3 border-t border-gray-100 pt-3 space-y-2">
+                <div id="${scopeId('add-module-course-form-container', module.id)}"></div>
+                ${courseCount === 0
+                    ? `<p class="text-gray-400 text-xs text-center py-2">Este módulo todavía no tiene cursos.</p>`
+                    : module.courses.map(c => renderModuleChildCourseRow(courseId, module.id, c)).join('')}
+            </div>
+        </details>
+    `;
+}
+
+function renderModuleChildCourseRow(courseId, moduleId, childCourse) {
+    const manageHref = (typeof isAdmin === 'function' && isAdmin())
+        ? `#/admin/courses/${childCourse.id}/edit`
+        : `#/teacher/courses/${childCourse.id}/edit`;
+    return `
+        <div class="flex items-center justify-between gap-2 bg-gray-50 rounded-lg px-3 py-2">
+            <div class="flex items-center gap-2 min-w-0">
+                <div class="w-10 h-10 rounded bg-gradient-to-br from-cenat-green to-cenat-green-light flex items-center justify-center overflow-hidden flex-shrink-0">
+                    ${childCourse.thumbnail
+                        ? `<img src="${escapeAttr(childCourse.thumbnail)}" alt="${escapeAttr(childCourse.title)}" class="w-full h-full object-cover">`
+                        : `<i class="fas fa-flask text-white text-sm"></i>`}
+                </div>
+                <div class="min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">${escapeHtml(childCourse.title)}</p>
+                    <p class="text-xs text-gray-400 truncate">${childCourse.teacher_names ? escapeHtml(childCourse.teacher_names) : 'Sin profesor asignado'}</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-1 flex-shrink-0">
+                <a href="${manageHref}" class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200" title="Gestionar contenido de este curso">
+                    <i class="fas fa-cog"></i>
+                </a>
+                <button onclick="unnestModuleCourseHandler(${courseId}, ${moduleId}, ${childCourse.id})" class="text-xs text-gray-400 hover:text-red-600 px-2" title="Desvincular del módulo (no borra el curso)">
+                    <i class="fas fa-unlink"></i>
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function showAddModuleForm(courseId) {
+    const container = document.getElementById('add-module-form-container');
+    if (!container) return;
+
+    container.innerHTML = `
+        <form id="add-module-form" class="bg-green-50 rounded-lg p-4 mb-4 space-y-3">
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Nombre del módulo *</label>
+                <input type="text" id="module-title" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Ej: Módulo 1 - Ciencia abierta">
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" id="submit-module-btn" class="bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
+                    <i class="fas fa-check mr-1"></i> Crear Módulo
+                </button>
+                <button type="button" onclick="document.getElementById('add-module-form-container').innerHTML = ''" class="text-gray-600 px-4 py-2 text-sm">
+                    Cancelar
+                </button>
+            </div>
+        </form>
+    `;
+
+    document.getElementById('add-module-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const title = document.getElementById('module-title').value.trim();
+        const submitBtn = document.getElementById('submit-module-btn');
+
+        if (!title) {
+            showToast('El nombre del módulo es requerido', 'error');
+            return;
+        }
+
+        await submitContentForm(submitBtn, {
+            loadingLabel: 'Creando...',
+            idleLabel: '<i class="fas fa-check mr-1"></i> Crear Módulo',
+            apiCall: () => courseModulesAPI.create(courseId, title),
+            successMessage: 'Módulo creado exitosamente',
+            errorMessage: 'Error al crear el módulo'
+        });
+    });
+}
+
+async function renameModuleHandler(courseId, moduleId) {
+    // El título actual se lee del propio DOM (en vez de pasarlo como
+    // argumento del onclick) para no tener que escapar un string arbitrario
+    // dentro de un atributo HTML inline — más simple y sin riesgo de romper
+    // el markup si el título tiene comillas.
+    const titleEl = document.querySelector(`details[data-module-id="${moduleId}"] .font-semibold`);
+    const currentTitle = titleEl ? titleEl.textContent : '';
+    const title = prompt('Nuevo nombre del módulo:', currentTitle);
+    if (title === null) return;
+    if (!title.trim()) {
+        showToast('El nombre del módulo es requerido', 'error');
+        return;
+    }
+    try {
+        await courseModulesAPI.update(moduleId, { title: title.trim() });
+        showToast('Módulo actualizado exitosamente', 'success');
+        contentManagerRerender();
+    } catch (error) {
+        showToast(error.message || 'Error al actualizar el módulo', 'error');
+    }
+}
+
+async function deleteModuleHandler(courseId, moduleId) {
+    const confirmed = await confirmAction('¿Borrar este módulo? Solo se puede borrar si no tiene cursos adentro.');
+    if (!confirmed) return;
+    try {
+        await courseModulesAPI.delete(moduleId);
+        showToast('Módulo eliminado exitosamente', 'success');
+        contentManagerRerender();
+    } catch (error) {
+        showToast(error.message || 'Error al eliminar el módulo', 'error');
+    }
+}
+
+async function unnestModuleCourseHandler(courseId, moduleId, childId) {
+    const confirmed = await confirmAction('¿Desvincular este curso del módulo? El curso NO se borra — vuelve a ser un curso independiente en el catálogo.');
+    if (!confirmed) return;
+    try {
+        await courseModulesAPI.removeCourse(moduleId, childId);
+        showToast('Curso desvinculado del módulo', 'success');
+        contentManagerRerender();
+    } catch (error) {
+        showToast(error.message || 'Error al desvincular el curso', 'error');
+    }
+}
+
+function showAddModuleCourseForm(courseId, moduleId) {
+    const containerId = scopeId('add-module-course-form-container', moduleId);
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const teacherCheckboxesId = scopeId('module-course-teachers', moduleId);
+
+    container.innerHTML = `
+        <form id="add-module-course-form-${moduleId}" class="bg-green-50 rounded-lg p-4 mb-3 space-y-3">
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Título del curso *</label>
+                <input type="text" id="module-course-title-${moduleId}" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="Ej: Contribución de la ciencia abierta...">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Descripción</label>
+                <textarea id="module-course-description-${moduleId}" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Miniatura</label>
+                <input type="file" id="module-course-thumbnail-${moduleId}" accept="image/*" class="w-full text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Profesor de módulo</label>
+                <div id="${teacherCheckboxesId}" class="border border-gray-300 rounded-lg p-2 max-h-40 overflow-y-auto bg-white">
+                    <p class="text-sm text-gray-400"><i class="fas fa-spinner fa-spin mr-1"></i> Cargando profesores...</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" id="submit-module-course-btn-${moduleId}" class="bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
+                    <i class="fas fa-check mr-1"></i> Crear Curso
+                </button>
+                <button type="button" onclick="document.getElementById('${containerId}').innerHTML = ''" class="text-gray-600 px-4 py-2 text-sm">
+                    Cancelar
+                </button>
+            </div>
+        </form>
+    `;
+
+    loadTeacherCheckboxes(teacherCheckboxesId);
+
+    document.getElementById(`add-module-course-form-${moduleId}`).addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const title = document.getElementById(`module-course-title-${moduleId}`).value.trim();
+        const description = document.getElementById(`module-course-description-${moduleId}`).value.trim();
+        const thumbnailFile = document.getElementById(`module-course-thumbnail-${moduleId}`).files[0];
+        const submitBtn = document.getElementById(`submit-module-course-btn-${moduleId}`);
+
+        if (!title) {
+            showToast('El título del curso es requerido', 'error');
+            return;
+        }
+        if (thumbnailFile && !checkFileSize(thumbnailFile, MAX_IMAGE_BYTES, 'La miniatura')) return;
+
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('description', description);
+        formData.append('teacher_ids', JSON.stringify(getSelectedTeacherIds(teacherCheckboxesId)));
+        if (thumbnailFile) formData.append('thumbnail', thumbnailFile);
+
+        await submitContentForm(submitBtn, {
+            loadingLabel: 'Creando...',
+            idleLabel: '<i class="fas fa-check mr-1"></i> Crear Curso',
+            apiCall: () => courseModulesAPI.createCourse(moduleId, formData),
+            successMessage: 'Curso creado exitosamente dentro del módulo',
+            errorMessage: 'Error al crear el curso'
+        });
+    });
 }
 
 /**
@@ -85,7 +366,7 @@ function renderDraggableFolderItem(courseId, contents, folder) {
                                 <span class="font-bold text-gray-900 truncate">${escapeHtml(folder.title)}</span>
                                 <span class="text-xs text-gray-400 whitespace-nowrap">(${itemCount} ${itemCount === 1 ? 'elemento' : 'elementos'})</span>
                                 ${folder.module_teacher_name ? `
-                                    <span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full whitespace-nowrap" title="Módulo asignado a este profesor — solo él (o un admin) puede gestionar su contenido">
+                                    <span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full whitespace-nowrap" title="Carpeta asignada a este profesor — solo él (o un admin) puede gestionar su contenido">
                                         <i class="fas fa-user-tie mr-1"></i>${escapeHtml(folder.module_teacher_name)}
                                     </span>
                                 ` : ''}

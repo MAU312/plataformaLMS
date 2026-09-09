@@ -12,6 +12,11 @@ class Course {
     const conditions = [];
     const searchParams = [];
     if (activeOnly) conditions.push('c.is_active = TRUE');
+    // Un curso hijo de un módulo (ver resolveEnrollmentRoot) no es
+    // inscribible por su cuenta — no debe listarse suelto en el catálogo
+    // público ni en "mis cursos". `findAllForAdmin` (activeOnly=false) sigue
+    // mostrando todo, para que el admin pueda gestionarlos directamente.
+    if (activeOnly) conditions.push('c.parent_module_id IS NULL');
     if (search) {
       conditions.push('(c.title LIKE ? OR c.description LIKE ?)');
       searchParams.push(`%${search}%`, `%${search}%`);
@@ -62,8 +67,11 @@ class Course {
     const [rows] = await pool.query(
       `SELECT c.*,
        (SELECT GROUP_CONCAT(u.name SEPARATOR ', ') FROM course_teachers ct INNER JOIN users u ON u.id = ct.user_id WHERE ct.course_id = c.id) as teacher_names,
-       (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id) as enrolled_count
+       (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id) as enrolled_count,
+       pc.id as parent_course_id, pc.title as parent_course_title
        FROM courses c
+       LEFT JOIN course_modules cm ON cm.id = c.parent_module_id
+       LEFT JOIN courses pc ON pc.id = cm.course_id
        WHERE c.id = ?`,
       [id]
     );
@@ -73,10 +81,10 @@ class Course {
   /**
    * Crear un nuevo curso
    */
-  static async create({ title, description, thumbnail, instructor_id, certificate_style }) {
+  static async create({ title, description, thumbnail, instructor_id, certificate_style, parent_module_id }) {
     const [result] = await pool.query(
-      'INSERT INTO courses (title, description, thumbnail, instructor_id, certificate_style) VALUES (?, ?, ?, ?, ?)',
-      [title, description, thumbnail || null, instructor_id, certificate_style || 'classic']
+      'INSERT INTO courses (title, description, thumbnail, instructor_id, certificate_style, parent_module_id) VALUES (?, ?, ?, ?, ?, ?)',
+      [title, description, thumbnail || null, instructor_id, certificate_style || 'classic', parent_module_id || null]
     );
     return result.insertId;
   }
@@ -115,6 +123,21 @@ class Course {
     const [result] = await pool.query(
       `UPDATE courses SET ${fields.join(', ')} WHERE id = ?`,
       values
+    );
+    return result.affectedRows > 0;
+  }
+
+  /**
+   * Vincula (o desvincula, con moduleId null) un curso a un módulo — usado
+   * para "desanidar" un curso hijo de vuelta a curso top-level
+   * independiente (courseModule.controller.js#removeModuleCourse). No
+   * valida que moduleId exista o pertenezca a este curso: eso lo hace el
+   * controller, mismo criterio que setTeacherModuleScope.
+   */
+  static async setParentModule(courseId, moduleId) {
+    const [result] = await pool.query(
+      'UPDATE courses SET parent_module_id = ? WHERE id = ?',
+      [moduleId, courseId]
     );
     return result.affectedRows > 0;
   }
@@ -263,12 +286,55 @@ class Course {
   }
 
   /**
-   * Verificar si un usuario está inscrito en un curso
+   * Si `courseId` es un curso hijo de un módulo (courses.parent_module_id),
+   * devuelve el course_id del curso PADRE — el único que realmente tiene
+   * inscripción/progreso/certificado (ver Módulos con cursos anidados: una
+   * sola inscripción en el padre da acceso a todos sus cursos hijo). Si no
+   * es un curso hijo, devuelve el mismo id sin tocar. Un solo JOIN, sin
+   * recursión: un curso hijo nunca puede a su vez alojar sus propios
+   * módulos (ver courseModule.controller.js#createModule), así que la
+   * jerarquía nunca pasa de un nivel.
+   */
+  static async resolveEnrollmentRoot(courseId) {
+    const [rows] = await pool.query(
+      `SELECT cm.course_id as parent_id
+       FROM courses c
+       INNER JOIN course_modules cm ON cm.id = c.parent_module_id
+       WHERE c.id = ?`,
+      [courseId]
+    );
+    return rows.length > 0 ? rows[0].parent_id : courseId;
+  }
+
+  /**
+   * Todos los course_id que cuentan para el progreso/certificado combinado
+   * de `rootCourseId` (que debe ser ya una raíz — ver resolveEnrollmentRoot):
+   * el propio curso, más todos los cursos hijo de sus módulos.
+   */
+  static async getProgressGroupIds(rootCourseId) {
+    const [rows] = await pool.query(
+      `SELECT c.id
+       FROM courses c
+       INNER JOIN course_modules cm ON cm.id = c.parent_module_id
+       WHERE cm.course_id = ?`,
+      [rootCourseId]
+    );
+    return [rootCourseId, ...rows.map((r) => r.id)];
+  }
+
+  /**
+   * Verificar si un usuario está inscrito en un curso. Resuelve la raíz
+   * primero: si `courseId` es un curso hijo, la inscripción real vive en el
+   * curso padre (ver resolveEnrollmentRoot), no hay fila propia para el
+   * hijo. Como canAccessMedia y ~6 puntos más del código llaman a este
+   * método (o a canAccessMedia) para decidir acceso, este único cambio
+   * propaga el comportamiento correcto a todos sin tocarlos uno por uno.
    */
   static async isUserEnrolled(courseId, userId) {
+    const rootId = await Course.resolveEnrollmentRoot(courseId);
     const [rows] = await pool.query(
       'SELECT id FROM enrollments WHERE course_id = ? AND user_id = ?',
-      [courseId, userId]
+      [rootId, userId]
     );
     return rows.length > 0;
   }
@@ -276,11 +342,13 @@ class Course {
   /**
    * Obtener el registro de inscripción de un usuario en un curso
    * (progreso, fecha de inscripción, fecha de finalización si aplica).
+   * Resuelve la raíz igual que isUserEnrolled.
    */
   static async getEnrollment(courseId, userId) {
+    const rootId = await Course.resolveEnrollmentRoot(courseId);
     const [rows] = await pool.query(
       'SELECT id, progress, enrolled_at, completed_at FROM enrollments WHERE course_id = ? AND user_id = ?',
-      [courseId, userId]
+      [rootId, userId]
     );
     return rows[0];
   }
@@ -289,8 +357,15 @@ class Course {
    * Obtener los estudiantes inscritos en un curso junto con su progreso
    * (vista de instructor/admin), paginado — devuelve también el total sin
    * paginar para que el cliente pueda calcular el número de páginas.
+   * Resuelve la raíz: si `courseId` es un curso hijo, la inscripción real
+   * está en el padre — sin esto, un profesor de módulo entrando a "Ver
+   * estudiantes" de su curso hijo vería la lista vacía. El `progress`
+   * devuelto es el COMBINADO del padre completo, no específico de este
+   * curso hijo — el controller lo reemplaza por el progreso puntual del
+   * hijo cuando corresponde (ver getCourseStudents).
    */
   static async getEnrolledStudents(courseId, { page = 1, limit = 20 } = {}) {
+    const rootId = await Course.resolveEnrollmentRoot(courseId);
     const offset = (page - 1) * limit;
     const [rows] = await pool.query(
       `SELECT u.id, u.name, u.email, u.last_login, e.progress, e.enrolled_at, e.completed_at
@@ -299,12 +374,12 @@ class Course {
        WHERE e.course_id = ?
        ORDER BY e.progress DESC, u.name ASC
        LIMIT ? OFFSET ?`,
-      [courseId, limit, offset]
+      [rootId, limit, offset]
     );
 
     const [countRows] = await pool.query(
       'SELECT COUNT(*) as total FROM enrollments WHERE course_id = ?',
-      [courseId]
+      [rootId]
     );
 
     return { rows, total: countRows[0].total };

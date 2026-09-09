@@ -66,7 +66,7 @@ window.renderTeacherCourse = async function(params) {
             </div>
         `;
 
-        initCourseContentManager(() => renderTeacherCourse({ id: course.id }));
+        initCourseContentManager(() => renderTeacherCourse({ id: course.id }), course);
 
     } catch (error) {
         console.error('Error loading course:', error);

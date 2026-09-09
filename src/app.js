@@ -16,6 +16,7 @@ const MySQLStore = expressMySQLSession(session);
 // Routes
 import authRoutes from './routes/auth.routes.js';
 import courseRoutes from './routes/course.routes.js';
+import courseModuleRoutes from './routes/courseModule.routes.js';
 import contentRoutes from './routes/content.routes.js';
 import userRoutes from './routes/user.routes.js';
 import submissionRoutes from './routes/submission.routes.js';
@@ -160,6 +161,7 @@ app.use('/api', resolveLocale);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
+app.use('/api/course-modules', courseModuleRoutes);
 app.use('/api/contents', contentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/submissions', submissionRoutes);

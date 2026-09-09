@@ -1,4 +1,5 @@
 import pool from '../config/db.js';
+import Course from './Course.js';
 
 class Content {
   /**
@@ -240,49 +241,91 @@ class Content {
   }
 
   /**
-   * Calcular y actualizar el porcentaje de progreso de un usuario en un curso,
-   * basado en cuántos contenidos completó sobre el total de contenidos del curso.
-   * Devuelve el nuevo porcentaje calculado.
+   * Cuenta total/completados de un usuario sobre un CONJUNTO de course_id ya
+   * resuelto — extraído para que recalculateCourseProgress (persiste),
+   * calculateGroupProgress (combinado, solo lectura) y
+   * calculateProgressForSingleCourse (un curso puntual, solo lectura)
+   * compartan la misma query en vez de triplicarla. Una carpeta queda fuera
+   * (es solo un agrupador, no contenido en sí) y una imagen también (es
+   * solo decoración/ilustración, no algo que tenga sentido "completar") —
+   * contarlas dejaría a los estudiantes sin poder llegar nunca al 100% ni
+   * sacar certificado. Un foro SÍ cuenta (participar con al menos un post
+   * lo marca completado, ver forum.controller.js createPost).
    */
-  static async recalculateCourseProgress(courseId, userId) {
-    // Contar total de contenidos del curso. Una carpeta queda fuera (es
-    // solo un agrupador, no contenido en sí) y una imagen también (es solo
-    // decoración/ilustración, no algo que tenga sentido "completar") —
-    // contarlas dejaría a los estudiantes sin poder llegar nunca al 100%
-    // ni sacar certificado. Un foro SÍ cuenta (participar con al menos un
-    // post lo marca completado, ver forum.controller.js createPost).
+  static async _computeProgress(courseIds, userId) {
     const [totalRows] = await pool.query(
-      "SELECT COUNT(*) as total FROM contents WHERE course_id = ? AND type NOT IN ('folder', 'image')",
-      [courseId]
+      "SELECT COUNT(*) as total FROM contents WHERE course_id IN (?) AND type NOT IN ('folder', 'image')",
+      [courseIds]
     );
     const total = totalRows[0].total;
 
-    // Contar contenidos completados por el usuario en ese curso
     const [completedRows] = await pool.query(
       `SELECT COUNT(*) as completed
        FROM content_progress cp
        INNER JOIN contents co ON co.id = cp.content_id
-       WHERE co.course_id = ? AND cp.user_id = ? AND co.type NOT IN ('folder', 'image')`,
-      [courseId, userId]
+       WHERE co.course_id IN (?) AND cp.user_id = ? AND co.type NOT IN ('folder', 'image')`,
+      [courseIds, userId]
     );
     const completed = completedRows[0].completed;
 
     const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+    return { progress, total, completed };
+  }
 
-    // Actualizar el progreso en la tabla enrollments. completed_at se marca
-    // solo la primera vez que se llega a 100 (CASE con "completed_at IS
-    // NULL") y no se vuelve a tocar después, aunque el progreso baje más
-    // adelante por desmarcar contenido: sirve como fecha de finalización
-    // para el certificado, no como "está completo ahora mismo".
+  /**
+   * Calcular y actualizar el porcentaje de progreso de un usuario en un
+   * curso. Resuelve la raíz (si `courseId` es un curso hijo de un módulo,
+   * la inscripción/progreso real vive en el padre — ver
+   * Course.resolveEnrollmentRoot) y junta TODOS los course_id que cuentan
+   * para ese progreso combinado: el padre más todos sus cursos hijo. Los 5
+   * call-sites de este método (content/submission/quiz/forum controllers)
+   * siguen pasando el course_id crudo del contenido recién tocado, sin
+   * cambios — este es el único choke point que necesita saber de módulos.
+   */
+  static async recalculateCourseProgress(courseId, userId) {
+    const rootId = await Course.resolveEnrollmentRoot(courseId);
+    const courseIds = await Course.getProgressGroupIds(rootId);
+    const result = await Content._computeProgress(courseIds, userId);
+
+    // Actualizar el progreso en la tabla enrollments — SIEMPRE en la fila
+    // del curso raíz, nunca en la de un curso hijo (que no tiene una).
+    // completed_at se marca solo la primera vez que se llega a 100 (CASE
+    // con "completed_at IS NULL") y no se vuelve a tocar después, aunque el
+    // progreso baje más adelante por desmarcar contenido: sirve como fecha
+    // de finalización para el certificado, no como "está completo ahora
+    // mismo".
     await pool.query(
       `UPDATE enrollments
        SET progress = ?,
            completed_at = CASE WHEN ? = 100 AND completed_at IS NULL THEN NOW() ELSE completed_at END
        WHERE course_id = ? AND user_id = ?`,
-      [progress, progress, courseId, userId]
+      [result.progress, result.progress, rootId, userId]
     );
 
-    return { progress, total, completed };
+    return result;
+  }
+
+  /**
+   * Igual que recalculateCourseProgress (resuelve la raíz y combina padre +
+   * cursos hijo) pero SIN persistir — para que el frontend muestre la barra
+   * de progreso/gating del certificado usando el mismo total combinado que
+   * el servidor, en vez de recalcularlo solo con los `contents` de la
+   * página actual (ver course.controller.js#getCourseById).
+   */
+  static async calculateGroupProgress(courseId, userId) {
+    const rootId = await Course.resolveEnrollmentRoot(courseId);
+    const courseIds = await Course.getProgressGroupIds(rootId);
+    return Content._computeProgress(courseIds, userId);
+  }
+
+  /**
+   * Progreso de un usuario dentro de UN curso puntual, sin resolver la raíz
+   * ni persistir — para que un profesor de módulo vea en "Ver estudiantes"
+   * el avance específico de SU curso hijo en vez del combinado del padre
+   * completo (ver course.controller.js#getCourseStudents).
+   */
+  static async calculateProgressForSingleCourse(courseId, userId) {
+    return Content._computeProgress([courseId], userId);
   }
 
   /**

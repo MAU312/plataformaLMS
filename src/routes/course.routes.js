@@ -1,5 +1,6 @@
 import express from 'express';
 import * as courseController from '../controllers/course.controller.js';
+import * as courseModuleController from '../controllers/courseModule.controller.js';
 import { isAuthenticated, isAdmin, requireCourseManager } from '../middlewares/auth.middleware.js';
 import { uploadThumbnail } from '../middlewares/upload.middleware.js';
 import { verifyFileSignature } from '../middlewares/fileSignature.middleware.js';
@@ -132,5 +133,20 @@ router.get('/:id/students/:studentId/grades/export', isAuthenticated, requireCou
  * Admin, o el propio profesor asignado a ese curso
  */
 router.get('/:id/teachers', isAuthenticated, requireCourseManager((req) => req.params.id), courseController.getCourseTeachers);
+
+/**
+ * GET /api/courses/:id/modules
+ * Módulos del curso (cada uno con sus cursos hijo) — público, mismo
+ * criterio que GET /api/courses/:id.
+ */
+router.get('/:id/modules', courseModuleController.getModules);
+
+/**
+ * POST /api/courses/:id/modules
+ * Crea un módulo dentro del curso. Admin, o el profesor de TODO el curso
+ * (no uno escopeado a una carpeta) — requireCourseManager sin
+ * resolveFolderId ya exige exactamente eso.
+ */
+router.post('/:id/modules', isAuthenticated, requireCourseManager((req) => req.params.id), courseModuleController.createModule);
 
 export default router;
