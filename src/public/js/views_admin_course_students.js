@@ -23,10 +23,10 @@ window.renderAdminCourseStudents = async function(params) {
             <div class="flex items-start justify-between gap-4 flex-wrap mb-1">
                 <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
                     <i class="fas fa-user-graduate text-cenat-green mr-2"></i>
-                    Estudiantes inscritos
+                    ${t('studentsTable.heading')}
                 </h1>
                 <button onclick="coursesAPI.downloadGrades(${params.id})" class="text-sm border border-cenat-green text-cenat-green px-3 py-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-slate-700 transition">
-                    <i class="fas fa-file-csv mr-1"></i> Descargar notas del curso
+                    <i class="fas fa-file-csv mr-1"></i> ${t('studentsTable.download_course_grades')}
                 </button>
             </div>
             <p class="text-gray-500 dark:text-slate-400 mb-6">${escapeHtml(course.title)}</p>
@@ -43,7 +43,7 @@ window.renderAdminCourseStudents = async function(params) {
 
     } catch (error) {
         console.error('Error loading course students:', error);
-        showToast('Error al cargar los estudiantes del curso', 'error');
+        showToast(t('studentsTable.load_failed'), 'error');
     }
 };
 
@@ -76,7 +76,7 @@ async function loadCourseStudentsPage(courseId, page, tableContainerId, paginati
         }
     } catch (error) {
         console.error('Error loading course students:', error);
-        showToast('Error al cargar los estudiantes del curso', 'error');
+        showToast(t('studentsTable.load_failed'), 'error');
     }
 }
 
@@ -91,7 +91,7 @@ function renderStudentsTableHTML(students, courseId) {
         return `
             <div class="empty-state">
                 <i class="fas fa-user-graduate"></i>
-                <p class="text-xl text-gray-600 dark:text-slate-400 font-medium">Nadie se ha inscrito todavía</p>
+                <p class="text-xl text-gray-600 dark:text-slate-400 font-medium">${t('studentsTable.empty')}</p>
             </div>
         `;
     }
@@ -101,14 +101,14 @@ function renderStudentsTableHTML(students, courseId) {
             <table class="w-full text-sm">
                 <thead class="bg-gray-50 dark:bg-slate-700">
                     <tr class="text-left text-gray-500 dark:text-slate-400">
-                        <th class="py-3 px-4">Nombre</th>
-                        <th class="py-3 px-4">Email</th>
-                        <th class="py-3 px-4">Progreso</th>
-                        <th class="py-3 px-4">Nota</th>
-                        <th class="py-3 px-4">Inscrito</th>
-                        <th class="py-3 px-4">Último ingreso</th>
-                        <th class="py-3 px-4">Completado</th>
-                        <th class="py-3 px-4 text-right">Notas</th>
+                        <th class="py-3 px-4">${t('studentsTable.col_name')}</th>
+                        <th class="py-3 px-4">${t('studentsTable.col_email')}</th>
+                        <th class="py-3 px-4">${t('studentsTable.col_progress')}</th>
+                        <th class="py-3 px-4">${t('studentsTable.col_grade')}</th>
+                        <th class="py-3 px-4">${t('studentsTable.col_enrolled')}</th>
+                        <th class="py-3 px-4">${t('studentsTable.col_last_login')}</th>
+                        <th class="py-3 px-4">${t('studentsTable.col_completed')}</th>
+                        <th class="py-3 px-4 text-right">${t('studentsTable.col_grades')}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -126,14 +126,14 @@ function renderStudentsTableHTML(students, courseId) {
                             </td>
                             <td class="py-3 px-4 text-gray-700 dark:text-slate-300 font-medium">${student.grade !== null && student.grade !== undefined ? student.grade : '—'}</td>
                             <td class="py-3 px-4 text-gray-500 dark:text-slate-400">${formatDate(student.enrolled_at)}</td>
-                            <td class="py-3 px-4 text-gray-500 dark:text-slate-400">${student.last_login ? formatDate(student.last_login) : 'Nunca'}</td>
+                            <td class="py-3 px-4 text-gray-500 dark:text-slate-400">${student.last_login ? formatDate(student.last_login) : t('studentsTable.never_logged_in')}</td>
                             <td class="py-3 px-4">
                                 ${student.completed_at
                                     ? `<span class="badge badge-active"><i class="fas fa-certificate mr-1"></i> ${formatDate(student.completed_at)}</span>`
-                                    : `<span class="badge badge-inactive">En curso</span>`}
+                                    : `<span class="badge badge-inactive">${t('studentsTable.in_progress_badge')}</span>`}
                             </td>
                             <td class="py-3 px-4 text-right">
-                                <button onclick="coursesAPI.downloadStudentGrades(${courseId}, ${student.id})" class="text-cenat-green hover:text-cenat-green-hover" title="Descargar detalle de nota de ${escapeAttr(student.name)}">
+                                <button onclick="coursesAPI.downloadStudentGrades(${courseId}, ${student.id})" class="text-cenat-green hover:text-cenat-green-hover" title="${escapeAttr(t('studentsTable.download_grade_detail_title', { name: student.name }))}">
                                     <i class="fas fa-download"></i>
                                 </button>
                             </td>

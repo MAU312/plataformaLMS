@@ -81,7 +81,7 @@ export const listSubmissions = async (req, res) => {
 
     const content = await Content.findById(id);
     if (!content) {
-      return res.status(404).json({ success: false, message: 'Tarea no encontrada' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.task_not_found') });
     }
 
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -95,7 +95,7 @@ export const listSubmissions = async (req, res) => {
     });
   } catch (error) {
     console.error('Error al obtener las entregas:', error);
-    res.status(500).json({ success: false, message: 'Error al obtener las entregas' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.get_submissions_failed') });
   }
 };
 
@@ -112,7 +112,7 @@ export const downloadSubmission = async (req, res) => {
 
     const submission = await TaskSubmission.findById(id);
     if (!submission) {
-      return res.status(404).json({ success: false, message: 'Entrega no encontrada' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.submission_not_found') });
     }
 
     const content = await Content.findById(submission.content_id);
@@ -124,20 +124,20 @@ export const downloadSubmission = async (req, res) => {
     if (!isOwner && !isAdminUser && !isTeacherOfCourse) {
       return res.status(403).json({
         success: false,
-        message: 'No tienes permiso para descargar esta entrega'
+        message: t(req.locale, 'errors.download_submission_permission')
       });
     }
 
     const filePath = path.join(UPLOADS_ROOT, submission.file_url.replace(/^\/?uploads\//, ''));
 
     if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ success: false, message: 'Archivo no encontrado en el servidor' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.file_not_found_server') });
     }
 
     res.download(filePath, path.basename(submission.file_url));
   } catch (error) {
     console.error('Error al descargar la entrega:', error);
-    res.status(500).json({ success: false, message: 'Error al descargar la entrega' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.download_submission_failed') });
   }
 };
 
@@ -158,7 +158,7 @@ export const reviewSubmission = async (req, res) => {
 
     const submission = await TaskSubmission.findById(id);
     if (!submission) {
-      return res.status(404).json({ success: false, message: 'Entrega no encontrada' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.submission_not_found') });
     }
 
     let scoreToSave = null;
@@ -167,14 +167,14 @@ export const reviewSubmission = async (req, res) => {
       if (!content.weight_percent) {
         return res.status(400).json({
           success: false,
-          message: 'Esta tarea no tiene un porcentaje del curso asignado, no se puede calificar numéricamente'
+          message: t(req.locale, 'errors.task_no_weight_percent')
         });
       }
       const score = Number(score_earned);
       if (!Number.isFinite(score) || score < 0 || score > Number(content.weight_percent)) {
         return res.status(400).json({
           success: false,
-          message: `La calificación debe ser un número entre 0 y ${content.weight_percent}`
+          message: t(req.locale, 'errors.score_out_of_range', { max: content.weight_percent })
         });
       }
       scoreToSave = score;
@@ -182,9 +182,9 @@ export const reviewSubmission = async (req, res) => {
 
     await TaskSubmission.markReviewed(id, feedback, scoreToSave);
 
-    res.json({ success: true, message: 'Entrega marcada como revisada' });
+    res.json({ success: true, message: t(req.locale, 'success.submission_reviewed') });
   } catch (error) {
     console.error('Error al revisar la entrega:', error);
-    res.status(500).json({ success: false, message: 'Error al revisar la entrega' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.review_submission_failed') });
   }
 };

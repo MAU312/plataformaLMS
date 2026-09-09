@@ -113,7 +113,15 @@ const TRANSLATIONS = {
       unenroll_failed: 'Error al desinscribir del curso',
       get_enrolled_courses_failed: 'Error al obtener cursos inscritos',
       certificate_not_completed: 'Debes completar el curso al 100% para descargar el certificado',
-      generate_certificate_failed: 'Error al generar el certificado'
+      generate_certificate_failed: 'Error al generar el certificado',
+      task_not_found: 'Tarea no encontrada',
+      get_submissions_failed: 'Error al obtener las entregas',
+      submission_not_found: 'Entrega no encontrada',
+      download_submission_permission: 'No tienes permiso para descargar esta entrega',
+      download_submission_failed: 'Error al descargar la entrega',
+      task_no_weight_percent: 'Esta tarea no tiene un porcentaje del curso asignado, no se puede calificar numéricamente',
+      score_out_of_range: 'La calificación debe ser un número entre 0 y {{max}}',
+      review_submission_failed: 'Error al revisar la entrega'
     },
     success: {
       user_registered: 'Usuario registrado exitosamente',
@@ -135,7 +143,8 @@ const TRANSLATIONS = {
       content_unmarked: 'Contenido desmarcado',
       task_submitted: 'Tarea entregada exitosamente',
       enrollment_success: 'Inscripción exitosa',
-      unenroll_success: 'Te has desinscrito del curso'
+      unenroll_success: 'Te has desinscrito del curso',
+      submission_reviewed: 'Entrega marcada como revisada'
     }
   },
   en: {
@@ -234,7 +243,15 @@ const TRANSLATIONS = {
       unenroll_failed: 'Error unenrolling from the course',
       get_enrolled_courses_failed: 'Error getting enrolled courses',
       certificate_not_completed: 'You must complete the course 100% to download the certificate',
-      generate_certificate_failed: 'Error generating the certificate'
+      generate_certificate_failed: 'Error generating the certificate',
+      task_not_found: 'Task not found',
+      get_submissions_failed: 'Error getting the submissions',
+      submission_not_found: 'Submission not found',
+      download_submission_permission: "You don't have permission to download this submission",
+      download_submission_failed: 'Error downloading the submission',
+      task_no_weight_percent: "This task doesn't have a course percentage assigned, it can't be graded numerically",
+      score_out_of_range: 'The grade must be a number between 0 and {{max}}',
+      review_submission_failed: 'Error reviewing the submission'
     },
     success: {
       user_registered: 'User registered successfully',
@@ -256,7 +273,8 @@ const TRANSLATIONS = {
       content_unmarked: 'Content unmarked',
       task_submitted: 'Task submitted successfully',
       enrollment_success: 'Enrollment successful',
-      unenroll_success: 'You have unenrolled from the course'
+      unenroll_success: 'You have unenrolled from the course',
+      submission_reviewed: 'Submission marked as reviewed'
     }
   }
 };

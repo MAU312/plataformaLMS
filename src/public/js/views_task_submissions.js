@@ -30,11 +30,11 @@ window.renderTaskSubmissions = async function(params) {
         app.innerHTML = `
             <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <a href="javascript:history.back()" class="text-cenat-green hover:underline text-sm mb-4 inline-block">
-                    <i class="fas fa-arrow-left mr-1"></i> Volver
+                    <i class="fas fa-arrow-left mr-1"></i> ${t('quiz.results_back')}
                 </a>
 
                 <h1 class="text-2xl font-bold text-gray-900 mb-1">
-                    <i class="fas fa-inbox text-cenat-green mr-2"></i> Entregas
+                    <i class="fas fa-inbox text-cenat-green mr-2"></i> ${t('taskSubmissions.heading')}
                 </h1>
                 <p class="text-gray-500 mb-6">${escapeHtml(content.title)}</p>
 
@@ -51,7 +51,7 @@ window.renderTaskSubmissions = async function(params) {
             <div class="min-h-screen flex items-center justify-center">
                 <div class="text-center">
                     <i class="fas fa-exclamation-triangle text-5xl text-red-500 mb-4"></i>
-                    <p class="text-xl text-gray-600">${escapeHtml(error.message || 'Error al cargar las entregas')}</p>
+                    <p class="text-xl text-gray-600">${escapeHtml(error.message || t('taskSubmissions.load_failed'))}</p>
                 </div>
             </div>
         `;
@@ -75,7 +75,7 @@ window.goToSubmissionsPage = async function(page) {
         renderSubmissionsTable();
         renderSubmissionsPaginationControls(pagination);
     } catch (error) {
-        showToast(error.message || 'Error al cargar las entregas', 'error');
+        showToast(error.message || t('taskSubmissions.load_failed'), 'error');
     }
 };
 
@@ -88,12 +88,12 @@ function renderSubmissionsTable() {
             <table class="w-full text-sm">
                 <thead class="bg-gray-50">
                     <tr class="text-left text-gray-500">
-                        <th class="py-3 px-4">Estudiante</th>
-                        <th class="py-3 px-4">Entregado</th>
-                        <th class="py-3 px-4">Estado</th>
-                        ${currentTaskWeightPercent ? '<th class="py-3 px-4">Nota</th>' : ''}
-                        <th class="py-3 px-4">Comentario</th>
-                        <th class="py-3 px-4 text-right">Acciones</th>
+                        <th class="py-3 px-4">${t('taskSubmissions.col_student')}</th>
+                        <th class="py-3 px-4">${t('taskSubmissions.col_submitted')}</th>
+                        <th class="py-3 px-4">${t('taskSubmissions.col_status')}</th>
+                        ${currentTaskWeightPercent ? `<th class="py-3 px-4">${t('studentsTable.col_grade')}</th>` : ''}
+                        <th class="py-3 px-4">${t('taskSubmissions.col_comment')}</th>
+                        <th class="py-3 px-4 text-right">${t('taskSubmissions.col_actions')}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -104,7 +104,7 @@ function renderSubmissionsTable() {
     ` : `
         <div class="empty-state">
             <i class="fas fa-inbox"></i>
-            <p class="text-xl text-gray-600 font-medium">Nadie ha entregado esta tarea todavía</p>
+            <p class="text-xl text-gray-600 font-medium">${t('taskSubmissions.empty')}</p>
         </div>
     `;
 }
@@ -120,34 +120,34 @@ function renderSubmissionRow(s) {
             </td>
             <td class="py-3 px-4 text-gray-500">${formatDateTime(s.submitted_at)}</td>
             <td class="py-3 px-4">
-                <span class="badge ${reviewed ? 'badge-active' : 'badge-inactive'}">${reviewed ? 'Revisada' : 'Pendiente'}</span>
+                <span class="badge ${reviewed ? 'badge-active' : 'badge-inactive'}">${reviewed ? t('taskSubmissions.status_reviewed') : t('quiz.status_pending')}</span>
             </td>
             ${currentTaskWeightPercent ? `
                 <td class="py-3 px-4 text-gray-600">${hasScore ? `${s.score_earned}/${currentTaskWeightPercent}` : '—'}</td>
             ` : ''}
             <td class="py-3 px-4 text-gray-600 max-w-xs whitespace-normal break-words">${s.feedback ? escapeHtml(s.feedback) : '—'}</td>
             <td class="py-3 px-4 text-right whitespace-nowrap">
-                <button onclick="downloadSubmissionHandler(${s.id})" class="text-cenat-green hover:text-cenat-green-hover mr-3" title="Descargar entrega">
+                <button onclick="downloadSubmissionHandler(${s.id})" class="text-cenat-green hover:text-cenat-green-hover mr-3" title="${escapeAttr(t('taskSubmissions.download_submission_title'))}">
                     <i class="fas fa-download"></i>
                 </button>
                 <button onclick="showReviewForm(${s.id})" class="text-sm bg-green-50 text-cenat-green px-3 py-1.5 rounded-lg hover:bg-green-100 transition">
-                    <i class="fas fa-check mr-1"></i> ${reviewed ? 'Editar revisión' : 'Marcar revisada'}
+                    <i class="fas fa-check mr-1"></i> ${reviewed ? t('taskSubmissions.edit_review') : t('taskSubmissions.mark_reviewed')}
                 </button>
             </td>
         </tr>
         <tr id="review-form-row-${s.id}" class="hidden border-t border-gray-100">
             <td colspan="${currentTaskWeightPercent ? 6 : 5}" class="px-4 py-4 bg-green-50">
                 ${currentTaskWeightPercent ? `
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Calificación (de 0 a ${currentTaskWeightPercent})</label>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">${t('taskSubmissions.grade_label', { max: currentTaskWeightPercent })}</label>
                     <input type="number" id="score-${s.id}" min="0" max="${currentTaskWeightPercent}" step="0.01"
                         class="w-32 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green mb-2"
-                        placeholder="Ej: 7" value="${hasScore ? s.score_earned : ''}">
+                        placeholder="${escapeAttr(t('taskSubmissions.grade_placeholder'))}" value="${hasScore ? s.score_earned : ''}">
                 ` : ''}
-                <label class="block text-xs font-medium text-gray-700 mb-1">Comentario (opcional)</label>
+                <label class="block text-xs font-medium text-gray-700 mb-1">${t('taskSubmissions.comment_optional')}</label>
                 <textarea id="feedback-${s.id}" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green">${escapeHtml(s.feedback || '')}</textarea>
                 <div class="flex gap-2 mt-2">
-                    <button onclick="submitReview(${s.id})" class="bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">Guardar</button>
-                    <button onclick="hideReviewForm(${s.id})" class="text-gray-600 px-4 py-2 text-sm">Cancelar</button>
+                    <button onclick="submitReview(${s.id})" class="bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">${t('forum.save')}</button>
+                    <button onclick="hideReviewForm(${s.id})" class="text-gray-600 px-4 py-2 text-sm">${t('forum.cancel')}</button>
                 </div>
             </td>
         </tr>
@@ -176,7 +176,7 @@ async function submitReview(id) {
 
     try {
         await submissionsAPI.review(id, payload);
-        showToast('Entrega marcada como revisada', 'success');
+        showToast(t('taskSubmissions.review_saved'), 'success');
 
         // Parchea el estado local en vez de volver a pedir la lista
         // completa de entregas al servidor — el endpoint de revisión no
@@ -191,7 +191,7 @@ async function submitReview(id) {
         }
         renderSubmissionsTable();
     } catch (error) {
-        showToast(error.message || 'Error al guardar la revisión', 'error');
+        showToast(error.message || t('taskSubmissions.save_review_failed'), 'error');
     }
 }
 

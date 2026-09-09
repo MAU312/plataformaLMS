@@ -286,6 +286,54 @@ const TRANSLATIONS = {
             completion_understood: '¡Entendido!',
             completion_see_more: 'Ver más cursos',
             load_failed: 'Error al cargar el curso'
+        },
+        teacherCourses: {
+            subtitle: 'Cursos donde estás asignado como profesor',
+            empty_title: 'Aún no tienes cursos asignados',
+            empty_subtitle: 'El administrador te asigna a un curso desde la gestión de cursos',
+            load_failed: 'Error al cargar tus cursos'
+        },
+        teacherCourse: {
+            back_to_my_courses: 'Volver a mis cursos',
+            view_students: 'Ver estudiantes',
+            view_course: 'Ver curso',
+            edit_notice: 'Puedes agregar y editar el contenido de este curso. El título, la descripción, la miniatura y los profesores asignados los administra el equipo de LANBA - CeNAT.'
+        },
+        studentsTable: {
+            heading: 'Estudiantes inscritos',
+            download_course_grades: 'Descargar notas del curso',
+            empty: 'Nadie se ha inscrito todavía',
+            col_name: 'Nombre',
+            col_email: 'Email',
+            col_progress: 'Progreso',
+            col_grade: 'Nota',
+            col_enrolled: 'Inscrito',
+            col_last_login: 'Último ingreso',
+            col_completed: 'Completado',
+            col_grades: 'Notas',
+            never_logged_in: 'Nunca',
+            in_progress_badge: 'En curso',
+            download_grade_detail_title: 'Descargar detalle de nota de {{name}}',
+            load_failed: 'Error al cargar los estudiantes del curso'
+        },
+        taskSubmissions: {
+            heading: 'Entregas',
+            load_failed: 'Error al cargar las entregas',
+            col_student: 'Estudiante',
+            col_submitted: 'Entregado',
+            col_status: 'Estado',
+            col_comment: 'Comentario',
+            col_actions: 'Acciones',
+            empty: 'Nadie ha entregado esta tarea todavía',
+            status_reviewed: 'Revisada',
+            download_submission_title: 'Descargar entrega',
+            edit_review: 'Editar revisión',
+            mark_reviewed: 'Marcar revisada',
+            grade_label: 'Calificación (de 0 a {{max}})',
+            grade_placeholder: 'Ej: 7',
+            comment_optional: 'Comentario (opcional)',
+            review_saved: 'Entrega marcada como revisada',
+            save_review_failed: 'Error al guardar la revisión'
         }
     },
     en: {
@@ -560,6 +608,54 @@ const TRANSLATIONS = {
             completion_understood: 'Got it!',
             completion_see_more: 'See more courses',
             load_failed: 'Error loading the course'
+        },
+        teacherCourses: {
+            subtitle: 'Courses where you are assigned as a teacher',
+            empty_title: "You don't have any assigned courses yet",
+            empty_subtitle: 'The administrator assigns you to a course from course management',
+            load_failed: 'Error loading your courses'
+        },
+        teacherCourse: {
+            back_to_my_courses: 'Back to my courses',
+            view_students: 'View students',
+            view_course: 'View course',
+            edit_notice: "You can add and edit this course's content. Title, description, thumbnail, and assigned teachers are managed by the LANBA - CeNAT team."
+        },
+        studentsTable: {
+            heading: 'Enrolled students',
+            download_course_grades: 'Download course grades',
+            empty: 'No one has enrolled yet',
+            col_name: 'Name',
+            col_email: 'Email',
+            col_progress: 'Progress',
+            col_grade: 'Grade',
+            col_enrolled: 'Enrolled',
+            col_last_login: 'Last login',
+            col_completed: 'Completed',
+            col_grades: 'Grades',
+            never_logged_in: 'Never',
+            in_progress_badge: 'In progress',
+            download_grade_detail_title: "Download {{name}}'s grade detail",
+            load_failed: 'Error loading course students'
+        },
+        taskSubmissions: {
+            heading: 'Submissions',
+            load_failed: 'Error loading the submissions',
+            col_student: 'Student',
+            col_submitted: 'Submitted',
+            col_status: 'Status',
+            col_comment: 'Comment',
+            col_actions: 'Actions',
+            empty: "No one has submitted this task yet",
+            status_reviewed: 'Reviewed',
+            download_submission_title: 'Download submission',
+            edit_review: 'Edit review',
+            mark_reviewed: 'Mark as reviewed',
+            grade_label: 'Grade (0 to {{max}})',
+            grade_placeholder: 'E.g.: 7',
+            comment_optional: 'Comment (optional)',
+            review_saved: 'Submission marked as reviewed',
+            save_review_failed: 'Error saving the review'
         }
     }
 };

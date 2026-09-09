@@ -26,7 +26,7 @@ window.renderTeacherCourse = async function(params) {
         const course = response.data;
 
         if (!course) {
-            showToast('Curso no encontrado', 'error');
+            showToast(t('courseDetail.not_found'), 'error');
             navigateTo('/teacher/courses');
             return;
         }
@@ -36,7 +36,7 @@ window.renderTeacherCourse = async function(params) {
         app.innerHTML = `
             <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <a href="#/teacher/courses" class="text-cenat-green hover:underline text-sm mb-4 inline-block">
-                    <i class="fas fa-arrow-left mr-1"></i> Volver a mis cursos
+                    <i class="fas fa-arrow-left mr-1"></i> ${t('teacherCourse.back_to_my_courses')}
                 </a>
 
                 <div class="flex items-start justify-between gap-4 mb-4">
@@ -49,17 +49,17 @@ window.renderTeacherCourse = async function(params) {
                     </div>
                     <div class="flex flex-col sm:flex-row gap-2 shrink-0">
                         <a href="#/teacher/courses/${course.id}/students" class="text-sm bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-200 transition whitespace-nowrap">
-                            <i class="fas fa-user-graduate mr-1"></i> Ver estudiantes
+                            <i class="fas fa-user-graduate mr-1"></i> ${t('teacherCourse.view_students')}
                         </a>
                         <a href="#/course/${course.id}" class="text-sm bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-200 transition whitespace-nowrap">
-                            <i class="fas fa-eye mr-1"></i> Ver curso
+                            <i class="fas fa-eye mr-1"></i> ${t('teacherCourse.view_course')}
                         </a>
                     </div>
                 </div>
 
                 <div class="bg-blue-50 text-blue-700 text-sm rounded-lg p-3 mb-6">
                     <i class="fas fa-info-circle mr-1"></i>
-                    Puedes agregar y editar el contenido de este curso. El título, la descripción, la miniatura y los profesores asignados los administra el equipo de LANBA - CeNAT.
+                    ${t('teacherCourse.edit_notice')}
                 </div>
 
                 ${renderCourseContentManagerHTML(course, contents)}
@@ -70,7 +70,7 @@ window.renderTeacherCourse = async function(params) {
 
     } catch (error) {
         console.error('Error loading course:', error);
-        showToast('Error al cargar el curso', 'error');
+        showToast(t('courseDetail.load_failed'), 'error');
     }
 };
 
@@ -89,15 +89,15 @@ window.renderTeacherCourseStudents = async function(params) {
         app.innerHTML = `
             <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <a href="#/teacher/courses/${params.id}/edit" class="text-cenat-green hover:underline text-sm mb-4 inline-block">
-                    <i class="fas fa-arrow-left mr-1"></i> Volver al curso
+                    <i class="fas fa-arrow-left mr-1"></i> ${t('forum.back_to_course')}
                 </a>
 
                 <div class="flex items-start justify-between gap-4 flex-wrap mb-1">
                     <h1 class="text-2xl font-bold text-gray-900">
-                        <i class="fas fa-user-graduate text-cenat-green mr-2"></i> Estudiantes inscritos
+                        <i class="fas fa-user-graduate text-cenat-green mr-2"></i> ${t('studentsTable.heading')}
                     </h1>
                     <button onclick="coursesAPI.downloadGrades(${params.id})" class="text-sm border border-cenat-green text-cenat-green px-3 py-1.5 rounded-lg hover:bg-green-50 transition">
-                        <i class="fas fa-file-csv mr-1"></i> Descargar notas del curso
+                        <i class="fas fa-file-csv mr-1"></i> ${t('studentsTable.download_course_grades')}
                     </button>
                 </div>
                 <p class="text-gray-500 mb-6">${escapeHtml(course.title)}</p>
@@ -115,7 +115,7 @@ window.renderTeacherCourseStudents = async function(params) {
 
     } catch (error) {
         console.error('Error loading course students:', error);
-        showToast('Error al cargar los estudiantes del curso', 'error');
+        showToast(t('studentsTable.load_failed'), 'error');
     }
 };
 

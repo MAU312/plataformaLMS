@@ -16,9 +16,9 @@ window.renderTeacherCourses = async function(params) {
                 <div class="max-w-7xl mx-auto">
                     <h1 class="text-3xl font-extrabold text-gray-900">
                         <i class="fas fa-chalkboard-teacher text-cenat-green mr-2"></i>
-                        Mis Cursos (Profesor)
+                        ${t('nav.teacher_courses')}
                     </h1>
-                    <p class="text-gray-600 mt-1">Cursos donde estás asignado como profesor</p>
+                    <p class="text-gray-600 mt-1">${t('teacherCourses.subtitle')}</p>
                 </div>
             </div>
 
@@ -30,8 +30,8 @@ window.renderTeacherCourses = async function(params) {
                 ` : `
                     <div class="empty-state">
                         <i class="fas fa-chalkboard"></i>
-                        <p class="text-xl text-gray-600 font-medium">Aún no tienes cursos asignados</p>
-                        <p class="text-gray-500">El administrador te asigna a un curso desde la gestión de cursos</p>
+                        <p class="text-xl text-gray-600 font-medium">${t('teacherCourses.empty_title')}</p>
+                        <p class="text-gray-500">${t('teacherCourses.empty_subtitle')}</p>
                     </div>
                 `}
             </div>
@@ -43,7 +43,7 @@ window.renderTeacherCourses = async function(params) {
             <div class="min-h-screen flex items-center justify-center">
                 <div class="text-center">
                     <i class="fas fa-exclamation-triangle text-5xl text-red-500 mb-4"></i>
-                    <p class="text-xl text-gray-600">Error al cargar tus cursos</p>
+                    <p class="text-xl text-gray-600">${t('teacherCourses.load_failed')}</p>
                 </div>
             </div>
         `;
@@ -56,8 +56,8 @@ function renderTeacherCourseCard(course) {
             ${escapeHtml(course.title)}
         </h3>
         <div class="flex justify-between text-sm text-gray-500">
-            <span><i class="fas fa-users mr-1"></i> ${course.enrolled_count || 0} inscritos</span>
-            <span><i class="fas fa-layer-group mr-1"></i> ${course.content_count || 0} contenidos</span>
+            <span><i class="fas fa-users mr-1"></i> ${t('home.enrolled_count', { count: course.enrolled_count || 0 })}</span>
+            <span><i class="fas fa-layer-group mr-1"></i> ${t('home.contents_count', { count: course.content_count || 0 })}</span>
         </div>
     `;
 
