@@ -46,7 +46,7 @@ function showLoading(elementId = 'app') {
         <div class="flex items-center justify-center min-h-screen">
             <div class="text-center">
                 <div class="spinner mx-auto"></div>
-                <p class="mt-4 text-gray-600 dark:text-slate-400">Cargando...</p>
+                <p class="mt-4 text-gray-600 dark:text-slate-400">${t('common.loading')}</p>
             </div>
         </div>
     `;
@@ -56,10 +56,17 @@ function showLoading(elementId = 'app') {
 // Format Utilities
 // =================================
 
+// 'es-ES'/'en-US' nada más — no hay una variante por país que importe acá,
+// solo separa el formato de fecha/hora según el idioma elegido (ver
+// i18n.js).
+function dateLocaleTag() {
+    return getLocale() === 'en' ? 'en-US' : 'es-ES';
+}
+
 function formatDate(dateString) {
     if (!dateString) return '';
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString('es-ES', options);
+    return new Date(dateString).toLocaleDateString(dateLocaleTag(), options);
 }
 
 /**
@@ -69,7 +76,7 @@ function formatDate(dateString) {
 function formatDateTime(dateString) {
     if (!dateString) return '';
     const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-    return new Date(dateString).toLocaleString('es-ES', options);
+    return new Date(dateString).toLocaleString(dateLocaleTag(), options);
 }
 
 /**
@@ -83,7 +90,7 @@ function formatDateTime(dateString) {
  */
 function checkFileSize(file, maxBytes, label = 'El archivo') {
     if (file.size <= maxBytes) return true;
-    showToast(`${label} supera el máximo permitido (${formatFileSize(maxBytes)})`, 'error');
+    showToast(t('errors.file_too_large', { label, size: formatFileSize(maxBytes) }), 'error');
     return false;
 }
 
@@ -223,7 +230,7 @@ document.addEventListener('click', function(event) {
     input.type = show ? 'text' : 'password';
     icon.classList.toggle('fa-eye', !show);
     icon.classList.toggle('fa-eye-slash', show);
-    btn.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
+    btn.setAttribute('aria-label', show ? t('common.hide_password') : t('common.show_password'));
 });
 
 // =================================
@@ -247,7 +254,7 @@ function updateProgressBar(elementId, progress) {
  * `danger: false` es para confirmaciones que no son destructivas (hoy
  * todas las que existen sí lo son, pero queda listo por si hace falta).
  */
-function confirmAction(message, { confirmLabel = 'Confirmar', cancelLabel = 'Cancelar', danger = true } = {}) {
+function confirmAction(message, { confirmLabel = t('common.confirm'), cancelLabel = t('common.cancel'), danger = true } = {}) {
     return new Promise((resolve) => {
         const existing = document.getElementById('confirm-modal');
         if (existing) existing.remove();
@@ -339,10 +346,10 @@ function removeFromLocalStorage(key) {
 async function copyToClipboard(text) {
     try {
         await navigator.clipboard.writeText(text);
-        showToast('Copiado al portapapeles', 'success');
+        showToast(t('common.copied'), 'success');
         return true;
     } catch (error) {
-        showToast('Error al copiar', 'error');
+        showToast(t('errors.copy_failed'), 'error');
         return false;
     }
 }
@@ -370,7 +377,7 @@ function renderPagination(currentPage, totalPages, totalItems, perPage, callback
 
     return `
         <div class="flex items-center justify-between text-sm text-gray-600 dark:text-slate-400">
-            <span>Mostrando ${start}–${end} de ${totalItems}</span>
+            <span>${t('common.showing_range', { start, end, total: totalItems })}</span>
             <div class="flex items-center gap-1">
                 <button onclick="${callbackFn}(${currentPage - 1})"
                     class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"

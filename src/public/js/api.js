@@ -18,7 +18,7 @@ function handleSessionExpired() {
     const currentHash = window.location.hash;
     if (currentHash === '#/login' || currentHash === '#/register') return;
     setTimeout(() => {
-        showToast('Tu sesión ha expirado. Por favor inicia sesión nuevamente.', 'warning');
+        showToast(t('errors.session_expired_toast'), 'warning');
     }, 0);
     setTimeout(() => {
         window.location.hash = '#/login';
@@ -29,7 +29,7 @@ function handleSessionExpired() {
 async function apiRequest(endpoint, options = {}) {
     try {
         const response = await fetch(`${API_URL}${endpoint}`, {
-            headers: { 'Content-Type': 'application/json', ...options.headers },
+            headers: { 'Content-Type': 'application/json', 'X-Locale': getLocale(), ...options.headers },
             credentials: 'include',
             ...options
         });
@@ -38,10 +38,10 @@ async function apiRequest(endpoint, options = {}) {
 
         if (response.status === 401) {
             handleSessionExpired();
-            throw new Error(data.message || 'Sesión expirada');
+            throw new Error(data.message || t('errors.session_expired'));
         }
 
-        if (!response.ok) throw new Error(data.message || 'Error en la petición');
+        if (!response.ok) throw new Error(data.message || t('errors.generic'));
         return data;
     } catch (error) {
         console.error('API Error:', error);
@@ -61,6 +61,7 @@ async function apiRequestFormData(endpoint, formData, { method = 'POST' } = {}) 
     try {
         const response = await fetch(`${API_URL}${endpoint}`, {
             method,
+            headers: { 'X-Locale': getLocale() },
             body: formData,
             credentials: 'include'
         });
@@ -69,10 +70,10 @@ async function apiRequestFormData(endpoint, formData, { method = 'POST' } = {}) 
 
         if (response.status === 401) {
             handleSessionExpired();
-            throw new Error(data.message || 'Sesión expirada');
+            throw new Error(data.message || t('errors.session_expired'));
         }
 
-        if (!response.ok) throw new Error(data.message || 'Error en la petición');
+        if (!response.ok) throw new Error(data.message || t('errors.generic'));
         return data;
     } catch (error) {
         console.error('API Error:', error);

@@ -27,10 +27,10 @@ function updateToggleUI(isDark) {
 
     if (isDark) {
         toggleBtn.innerHTML = '<i class="fas fa-sun text-yellow-400"></i>';
-        toggleBtn.title = 'Cambiar a modo claro';
+        toggleBtn.title = t('nav.switch_to_light');
     } else {
         toggleBtn.innerHTML = '<i class="fas fa-moon text-gray-600"></i>';
-        toggleBtn.title = 'Cambiar a modo oscuro';
+        toggleBtn.title = t('nav.switch_to_dark');
     }
 }
 

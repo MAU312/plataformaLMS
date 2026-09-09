@@ -40,7 +40,7 @@ async function login(email, password) {
         if (response.success) {
             currentUser = response.data.user;
             updateUIForAuthenticatedUser();
-            showToast('Inicio de sesión exitoso', 'success');
+            showToast(t('auth.login.success'), 'success');
             
             // Redirigir según el rol
             if (currentUser.role === 'admin') {
@@ -53,7 +53,7 @@ async function login(email, password) {
         }
         return false;
     } catch (error) {
-        showToast(error.message || 'Error al iniciar sesión', 'error');
+        showToast(error.message || t('errors.login_failed'), 'error');
         return false;
     }
 }
@@ -66,17 +66,17 @@ async function register(name, email, password, username) {
     try {
         // Validar datos
         if (!name || !email || !password) {
-            showToast('Todos los campos son requeridos', 'error');
+            showToast(t('auth.register.fields_required'), 'error');
             return false;
         }
 
         if (!isValidEmail(email)) {
-            showToast('Email inválido', 'error');
+            showToast(t('auth.register.invalid_email'), 'error');
             return false;
         }
 
         if (password.length < 6) {
-            showToast('La contraseña debe tener al menos 6 caracteres', 'error');
+            showToast(t('errors.password_too_short'), 'error');
             return false;
         }
 
@@ -89,7 +89,7 @@ async function register(name, email, password, username) {
         }
         return false;
     } catch (error) {
-        showToast(error.message || 'Error al registrar usuario', 'error');
+        showToast(error.message || t('errors.register_failed'), 'error');
         return false;
     }
 }
@@ -100,13 +100,13 @@ async function register(name, email, password, username) {
 
 async function logout() {
     try {
-        await authAPI.logout();
+        const response = await authAPI.logout();
         currentUser = null;
         updateUIForUnauthenticatedUser();
-        showToast('Sesión cerrada exitosamente', 'success');
+        showToast(response.message, 'success');
         window.location.hash = '#/login';
     } catch (error) {
-        showToast('Error al cerrar sesión', 'error');
+        showToast(error.message || t('errors.logout_failed'), 'error');
     }
 }
 
@@ -284,7 +284,7 @@ function requireAdmin() {
     }
     
     if (!isAdmin()) {
-        showToast('No tienes permisos para acceder a esta sección', 'error');
+        showToast(t('errors.no_permission'), 'error');
         window.location.hash = '#/';
         return false;
     }

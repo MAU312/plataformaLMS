@@ -17,10 +17,10 @@ window.renderLogin = async function(params) {
                 <div class="text-center">
                     <img src="/images/logo-lanba.png" alt="LANBA" class="mx-auto h-16 w-auto object-contain mb-4">
                     <h2 class="text-3xl font-extrabold text-gray-900 mb-2">
-                        Bienvenido a LMS LANBA - CeNAT
+                        ${t('auth.login.title')}
                     </h2>
                     <p class="text-gray-600">
-                        Inicia sesión para acceder a tus cursos
+                        ${t('auth.login.subtitle')}
                     </p>
                 </div>
 
@@ -30,7 +30,7 @@ window.renderLogin = async function(params) {
                         <!-- Correo o usuario -->
                         <div>
                             <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
-                                Correo o nombre de usuario
+                                ${t('auth.login.identifier_label')}
                             </label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -42,7 +42,7 @@ window.renderLogin = async function(params) {
                                     type="text"
                                     required
                                     class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
-                                    placeholder="tu@email.com o tu usuario"
+                                    placeholder="${escapeAttr(t('auth.login.identifier_placeholder'))}"
                                 >
                             </div>
                         </div>
@@ -50,7 +50,7 @@ window.renderLogin = async function(params) {
                         <!-- Password -->
                         <div>
                             <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
-                                Contraseña
+                                ${t('auth.login.password_label')}
                             </label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -64,13 +64,13 @@ window.renderLogin = async function(params) {
                                     class="appearance-none relative block w-full pl-10 pr-10 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
                                     placeholder="••••••••"
                                 >
-                                <button type="button" class="toggle-password-btn absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition" data-target="password" aria-label="Mostrar contraseña">
+                                <button type="button" class="toggle-password-btn absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition" data-target="password" aria-label="${escapeAttr(t('common.show_password'))}">
                                     <i class="fas fa-eye"></i>
                                 </button>
                             </div>
                             <div class="text-right mt-1">
                                 <a href="#/forgot-password" class="text-xs font-medium text-cenat-green hover:text-cenat-green-hover transition">
-                                    ¿Olvidaste tu contraseña?
+                                    ${t('auth.login.forgot_password')}
                                 </a>
                             </div>
                         </div>
@@ -84,16 +84,16 @@ window.renderLogin = async function(params) {
                             class="btn-cenat w-full py-3 text-lg"
                         >
                             <i class="fas fa-sign-in-alt mr-2"></i>
-                            Iniciar Sesión
+                            ${t('auth.login.submit')}
                         </button>
                     </div>
 
                     <!-- Register Link -->
                     <div class="text-center">
                         <p class="text-sm text-gray-600">
-                            ¿No tienes una cuenta?
+                            ${t('auth.login.no_account')}
                             <a href="#/register" class="font-medium text-cenat-green hover:text-cenat-green-hover transition">
-                                Regístrate aquí
+                                ${t('auth.login.register_link')}
                             </a>
                         </p>
                     </div>
@@ -104,17 +104,17 @@ window.renderLogin = async function(params) {
                             <div class="w-full border-t border-gray-200"></div>
                         </div>
                         <div class="relative flex justify-center text-xs">
-                            <span class="bg-white px-3 text-gray-400">o</span>
+                            <span class="bg-white px-3 text-gray-400">${t('auth.login.or_separator')}</span>
                         </div>
                     </div>
 
                     <!-- Acceder como invitado -->
                     <button type="button" onclick="navigateTo('/')" class="w-full py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition">
                         <i class="fas fa-eye mr-2"></i>
-                        Acceder como invitado
+                        ${t('auth.login.guest_button')}
                     </button>
                     <p class="text-xs text-gray-400 text-center">
-                        Como invitado solo podés explorar el catálogo de cursos
+                        ${t('auth.login.guest_hint')}
                     </p>
                 </form>
             </div>
@@ -131,7 +131,7 @@ window.renderLogin = async function(params) {
         const submitBtn = document.getElementById('login-submit-btn');
         const originalHtml = submitBtn.innerHTML;
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Ingresando...';
+        submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> ${t('auth.login.submitting')}`;
 
         const success = await login(email, password);
 
@@ -159,10 +159,10 @@ window.renderRegister = async function(params) {
                 <div class="text-center">
                     <img src="/images/logo-lanba.png" alt="LANBA" class="mx-auto h-16 w-auto object-contain mb-4">
                     <h2 class="text-3xl font-extrabold text-gray-900 mb-2">
-                        Crear Cuenta
+                        ${t('auth.register.title')}
                     </h2>
                     <p class="text-gray-600">
-                        Únete a la comunidad educativa de LANBA - CeNAT
+                        ${t('auth.register.subtitle')}
                     </p>
                 </div>
 
@@ -172,19 +172,19 @@ window.renderRegister = async function(params) {
                         <!-- Nombre -->
                         <div>
                             <label for="name" class="block text-sm font-medium text-gray-700 mb-1">
-                                Nombre Completo
+                                ${t('auth.register.name_label')}
                             </label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <i class="fas fa-user text-gray-400"></i>
                                 </div>
-                                <input 
-                                    id="name" 
-                                    name="name" 
-                                    type="text" 
-                                    required 
+                                <input
+                                    id="name"
+                                    name="name"
+                                    type="text"
+                                    required
                                     class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
-                                    placeholder="Juan Pérez"
+                                    placeholder="${escapeAttr(t('auth.register.name_placeholder'))}"
                                 >
                             </div>
                         </div>
@@ -192,19 +192,19 @@ window.renderRegister = async function(params) {
                         <!-- Email -->
                         <div>
                             <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
-                                Correo Electrónico
+                                ${t('auth.register.email_label')}
                             </label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <i class="fas fa-envelope text-gray-400"></i>
                                 </div>
-                                <input 
-                                    id="email" 
-                                    name="email" 
-                                    type="email" 
-                                    required 
+                                <input
+                                    id="email"
+                                    name="email"
+                                    type="email"
+                                    required
                                     class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
-                                    placeholder="tu@email.com"
+                                    placeholder="${escapeAttr(t('auth.register.email_placeholder'))}"
                                 >
                             </div>
                         </div>
@@ -212,7 +212,7 @@ window.renderRegister = async function(params) {
                         <!-- Username (opcional) -->
                         <div>
                             <label for="username" class="block text-sm font-medium text-gray-700 mb-1">
-                                Nombre de usuario (opcional)
+                                ${t('auth.register.username_label')}
                             </label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -226,7 +226,7 @@ window.renderRegister = async function(params) {
                                     maxlength="50"
                                     pattern="[a-zA-Z0-9_.-]+"
                                     class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
-                                    placeholder="Para iniciar sesión sin tu correo"
+                                    placeholder="${escapeAttr(t('auth.register.username_placeholder'))}"
                                 >
                             </div>
                         </div>
@@ -234,7 +234,7 @@ window.renderRegister = async function(params) {
                         <!-- Password -->
                         <div>
                             <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
-                                Contraseña
+                                ${t('auth.register.password_label')}
                             </label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -249,19 +249,19 @@ window.renderRegister = async function(params) {
                                     class="appearance-none relative block w-full pl-10 pr-10 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
                                     placeholder="••••••••"
                                 >
-                                <button type="button" class="toggle-password-btn absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition" data-target="password" aria-label="Mostrar contraseña">
+                                <button type="button" class="toggle-password-btn absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition" data-target="password" aria-label="${escapeAttr(t('common.show_password'))}">
                                     <i class="fas fa-eye"></i>
                                 </button>
                             </div>
                             <p class="mt-1 text-xs text-gray-500">
-                                Mínimo 6 caracteres
+                                ${t('auth.register.password_hint')}
                             </p>
                         </div>
 
                         <!-- Confirmar contraseña -->
                         <div>
                             <label for="password-confirm" class="block text-sm font-medium text-gray-700 mb-1">
-                                Confirmar contraseña
+                                ${t('auth.register.password_confirm_label')}
                             </label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -276,7 +276,7 @@ window.renderRegister = async function(params) {
                                     class="appearance-none relative block w-full pl-10 pr-10 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
                                     placeholder="••••••••"
                                 >
-                                <button type="button" class="toggle-password-btn absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition" data-target="password-confirm" aria-label="Mostrar contraseña">
+                                <button type="button" class="toggle-password-btn absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition" data-target="password-confirm" aria-label="${escapeAttr(t('common.show_password'))}">
                                     <i class="fas fa-eye"></i>
                                 </button>
                             </div>
@@ -291,16 +291,16 @@ window.renderRegister = async function(params) {
                             class="btn-cenat w-full py-3 text-lg"
                         >
                             <i class="fas fa-user-plus mr-2"></i>
-                            Registrarse
+                            ${t('auth.register.submit')}
                         </button>
                     </div>
 
                     <!-- Login Link -->
                     <div class="text-center">
                         <p class="text-sm text-gray-600">
-                            ¿Ya tienes una cuenta? 
+                            ${t('auth.register.has_account')}
                             <a href="#/login" class="font-medium text-cenat-green hover:text-cenat-green-hover transition">
-                                Inicia sesión aquí
+                                ${t('auth.register.login_link')}
                             </a>
                         </p>
                     </div>
@@ -320,14 +320,14 @@ window.renderRegister = async function(params) {
         const passwordConfirm = document.getElementById('password-confirm').value;
 
         if (password !== passwordConfirm) {
-            showToast('Las contraseñas no coinciden', 'error');
+            showToast(t('errors.passwords_dont_match'), 'error');
             return;
         }
 
         const submitBtn = document.getElementById('register-submit-btn');
         const originalHtml = submitBtn.innerHTML;
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Registrando...';
+        submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> ${t('auth.register.submitting')}`;
 
         const success = await register(name, email, password, username || undefined);
 
@@ -354,17 +354,17 @@ window.renderForgotPassword = async function(params) {
                 <div class="text-center">
                     <img src="/images/logo-lanba.png" alt="LANBA" class="mx-auto h-16 w-auto object-contain mb-4">
                     <h2 class="text-3xl font-extrabold text-gray-900 mb-2">
-                        Recuperar contraseña
+                        ${t('auth.forgotPassword.title')}
                     </h2>
                     <p class="text-gray-600">
-                        Escribe tu correo y te enviaremos un enlace para restablecerla
+                        ${t('auth.forgotPassword.subtitle')}
                     </p>
                 </div>
 
                 <form id="forgot-password-form" class="mt-8 space-y-6">
                     <div>
                         <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
-                            Correo Electrónico
+                            ${t('auth.forgotPassword.email_label')}
                         </label>
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -376,7 +376,7 @@ window.renderForgotPassword = async function(params) {
                                 type="email"
                                 required
                                 class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
-                                placeholder="tu@email.com"
+                                placeholder="${escapeAttr(t('auth.forgotPassword.email_placeholder'))}"
                             >
                         </div>
                     </div>
@@ -384,13 +384,13 @@ window.renderForgotPassword = async function(params) {
                     <div>
                         <button id="forgot-password-submit" type="submit" class="btn-cenat w-full py-3 text-lg">
                             <i class="fas fa-paper-plane mr-2"></i>
-                            Enviar enlace de recuperación
+                            ${t('auth.forgotPassword.submit')}
                         </button>
                     </div>
 
                     <div class="text-center">
                         <a href="#/login" class="text-sm font-medium text-cenat-green hover:text-cenat-green-hover transition">
-                            <i class="fas fa-arrow-left mr-1"></i> Volver a iniciar sesión
+                            <i class="fas fa-arrow-left mr-1"></i> ${t('auth.forgotPassword.back_to_login')}
                         </a>
                     </div>
                 </form>
@@ -405,17 +405,17 @@ window.renderForgotPassword = async function(params) {
         const submitBtn = document.getElementById('forgot-password-submit');
 
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Enviando...';
+        submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> ${t('auth.forgotPassword.submitting')}`;
 
         try {
             const response = await authAPI.forgotPassword(email);
             showToast(response.message, 'success');
             e.target.reset();
         } catch (error) {
-            showToast(error.message || 'Error al procesar la solicitud', 'error');
+            showToast(error.message || t('errors.forgot_password_failed'), 'error');
         } finally {
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Enviar enlace de recuperación';
+            submitBtn.innerHTML = `<i class="fas fa-paper-plane mr-2"></i> ${t('auth.forgotPassword.submit')}`;
         }
     });
 };
@@ -434,17 +434,17 @@ window.renderResetPassword = async function(params) {
                 <div class="text-center">
                     <img src="/images/logo-lanba.png" alt="LANBA" class="mx-auto h-16 w-auto object-contain mb-4">
                     <h2 class="text-3xl font-extrabold text-gray-900 mb-2">
-                        Nueva contraseña
+                        ${t('auth.resetPassword.title')}
                     </h2>
                     <p class="text-gray-600">
-                        Elige una nueva contraseña para tu cuenta
+                        ${t('auth.resetPassword.subtitle')}
                     </p>
                 </div>
 
                 <form id="reset-password-form" class="mt-8 space-y-6">
                     <div>
                         <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
-                            Nueva contraseña
+                            ${t('auth.resetPassword.password_label')}
                         </label>
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -459,16 +459,16 @@ window.renderResetPassword = async function(params) {
                                 class="appearance-none relative block w-full pl-10 pr-10 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
                                 placeholder="••••••••"
                             >
-                            <button type="button" class="toggle-password-btn absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition" data-target="password" aria-label="Mostrar contraseña">
+                            <button type="button" class="toggle-password-btn absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition" data-target="password" aria-label="${escapeAttr(t('common.show_password'))}">
                                 <i class="fas fa-eye"></i>
                             </button>
                         </div>
-                        <p class="mt-1 text-xs text-gray-500">Mínimo 6 caracteres</p>
+                        <p class="mt-1 text-xs text-gray-500">${t('auth.resetPassword.password_hint')}</p>
                     </div>
 
                     <div>
                         <label for="password-confirm" class="block text-sm font-medium text-gray-700 mb-1">
-                            Confirmar contraseña
+                            ${t('auth.resetPassword.password_confirm_label')}
                         </label>
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -483,7 +483,7 @@ window.renderResetPassword = async function(params) {
                                 class="appearance-none relative block w-full pl-10 pr-10 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
                                 placeholder="••••••••"
                             >
-                            <button type="button" class="toggle-password-btn absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition" data-target="password-confirm" aria-label="Mostrar contraseña">
+                            <button type="button" class="toggle-password-btn absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition" data-target="password-confirm" aria-label="${escapeAttr(t('common.show_password'))}">
                                 <i class="fas fa-eye"></i>
                             </button>
                         </div>
@@ -492,7 +492,7 @@ window.renderResetPassword = async function(params) {
                     <div>
                         <button id="reset-password-submit" type="submit" class="btn-cenat w-full py-3 text-lg">
                             <i class="fas fa-check mr-2"></i>
-                            Restablecer contraseña
+                            ${t('auth.resetPassword.submit')}
                         </button>
                     </div>
                 </form>
@@ -507,22 +507,22 @@ window.renderResetPassword = async function(params) {
         const passwordConfirm = document.getElementById('password-confirm').value;
 
         if (password !== passwordConfirm) {
-            showToast('Las contraseñas no coinciden', 'error');
+            showToast(t('errors.passwords_dont_match'), 'error');
             return;
         }
 
         const submitBtn = document.getElementById('reset-password-submit');
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Guardando...';
+        submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> ${t('auth.resetPassword.submitting')}`;
 
         try {
             const response = await authAPI.resetPassword(token, password);
             showToast(response.message, 'success');
             setTimeout(() => { window.location.hash = '#/login'; }, 1500);
         } catch (error) {
-            showToast(error.message || 'El enlace es inválido o ya expiró', 'error');
+            showToast(error.message || t('errors.reset_password_failed'), 'error');
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-check mr-2"></i> Restablecer contraseña';
+            submitBtn.innerHTML = `<i class="fas fa-check mr-2"></i> ${t('auth.resetPassword.submit')}`;
         }
     });
 };

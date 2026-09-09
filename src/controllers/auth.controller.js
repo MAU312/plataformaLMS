@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import User from '../models/User.js';
 import mailer from '../config/mailer.js';
+import { t } from '../utils/i18n.js';
 
 // Regex simple pero suficiente para validar formato de email en el backend
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -18,17 +19,17 @@ export const register = async (req, res) => {
     const { name, email, password, username } = req.body;
 
     if (!name || !email || !password) {
-      return res.status(400).json({ success: false, message: 'Nombre, email y contraseña son requeridos' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.name_email_password_required') });
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
 
     if (!EMAIL_REGEX.test(normalizedEmail)) {
-      return res.status(400).json({ success: false, message: 'El email no tiene un formato válido' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.invalid_email_format') });
     }
 
     if (password.length < 6) {
-      return res.status(400).json({ success: false, message: 'La contraseña debe tener al menos 6 caracteres' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.password_min_length') });
     }
 
     // El username es opcional al registrarse.
@@ -38,20 +39,20 @@ export const register = async (req, res) => {
       if (!USERNAME_REGEX.test(normalizedUsername)) {
         return res.status(400).json({
           success: false,
-          message: 'El nombre de usuario debe tener 3-50 caracteres: letras, números, puntos, guiones o guiones bajos'
+          message: t(req.locale, 'errors.invalid_username_format')
         });
       }
     }
 
     const existingUser = await User.findByEmail(normalizedEmail);
     if (existingUser) {
-      return res.status(400).json({ success: false, message: 'El email ya está registrado' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.email_already_registered') });
     }
 
     if (normalizedUsername) {
       const existingUsername = await User.findByEmailOrUsername(normalizedUsername);
       if (existingUsername) {
-        return res.status(400).json({ success: false, message: 'Ese nombre de usuario ya está en uso' });
+        return res.status(400).json({ success: false, message: t(req.locale, 'errors.username_already_taken') });
       }
     }
 
@@ -64,13 +65,13 @@ export const register = async (req, res) => {
       role: 'student' // fijo, sin excepciones, para todo registro público
     });
 
-    res.status(201).json({ success: true, message: 'Usuario registrado exitosamente', data: { id: userId } });
+    res.status(201).json({ success: true, message: t(req.locale, 'success.user_registered'), data: { id: userId } });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(400).json({ success: false, message: 'El email o nombre de usuario ya está en uso' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.email_or_username_taken') });
     }
     console.error('Error en registro:', error);
-    res.status(500).json({ success: false, message: 'Error al registrar usuario' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.register_failed') });
   }
 };
 
@@ -83,7 +84,7 @@ export const login = async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Correo/usuario y contraseña son requeridos' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.identifier_password_required') });
     }
 
     const identifier = String(email).trim();
@@ -97,7 +98,7 @@ export const login = async (req, res) => {
     const isValidPassword = await bcrypt.compare(password, hashToCompare);
 
     if (!user || !isValidPassword) {
-      return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
+      return res.status(401).json({ success: false, message: t(req.locale, 'errors.invalid_credentials') });
     }
 
     // El estado de la cuenta se revela SOLO si la contraseña ya es correcta,
@@ -106,7 +107,7 @@ export const login = async (req, res) => {
     if (user.is_active == 0 || user.is_active === false) {
       return res.status(403).json({
         success: false,
-        message: 'Tu cuenta ha sido desactivada. Contacta al administrador.'
+        message: t(req.locale, 'errors.account_deactivated')
       });
     }
 
@@ -123,35 +124,36 @@ export const login = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Inicio de sesión exitoso',
+      message: t(req.locale, 'success.login_success'),
       data: { user: { id: user.id, name: user.name, email: user.email, role: user.role, admin_access: Boolean(user.admin_access), avatar_url: user.avatar_url } }
     });
 
   } catch (error) {
     console.error('Error en login:', error);
-    res.status(500).json({ success: false, message: 'Error al iniciar sesión' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.login_failed') });
   }
 };
 
 export const logout = (req, res) => {
+  const locale = req.locale;
   req.session.destroy((err) => {
-    if (err) return res.status(500).json({ success: false, message: 'Error al cerrar sesión' });
-    res.json({ success: true, message: 'Sesión cerrada exitosamente' });
+    if (err) return res.status(500).json({ success: false, message: t(locale, 'errors.logout_failed') });
+    res.json({ success: true, message: t(locale, 'success.logout_success') });
   });
 };
 
 export const getCurrentUser = async (req, res) => {
   try {
     if (!req.session.user) {
-      return res.status(401).json({ success: false, message: 'No hay sesión activa' });
+      return res.status(401).json({ success: false, message: t(req.locale, 'errors.no_active_session') });
     }
 
     const user = await User.findById(req.session.user.id);
-    if (!user) return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    if (!user) return res.status(404).json({ success: false, message: t(req.locale, 'errors.user_not_found') });
 
     res.json({ success: true, data: { user: { id: user.id, name: user.name, email: user.email, role: user.role, admin_access: Boolean(user.admin_access), avatar_url: user.avatar_url } } });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Error al obtener información del usuario' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.get_user_failed') });
   }
 };
 
@@ -173,7 +175,7 @@ export const forgotPassword = async (req, res) => {
     const { email } = req.body;
 
     if (!email) {
-      return res.status(400).json({ success: false, message: 'El email es requerido' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.email_required') });
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
@@ -190,11 +192,11 @@ export const forgotPassword = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.'
+      message: t(req.locale, 'success.forgot_password_sent')
     });
   } catch (error) {
     console.error('Error en forgotPassword:', error);
-    res.status(500).json({ success: false, message: 'Error al procesar la solicitud' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.forgot_password_failed') });
   }
 };
 
@@ -206,11 +208,11 @@ export const resetPassword = async (req, res) => {
     const { token, password } = req.body;
 
     if (!token || !password) {
-      return res.status(400).json({ success: false, message: 'Token y nueva contraseña son requeridos' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.token_password_required') });
     }
 
     if (password.length < 6) {
-      return res.status(400).json({ success: false, message: 'La contraseña debe tener al menos 6 caracteres' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.password_min_length') });
     }
 
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
@@ -219,7 +221,7 @@ export const resetPassword = async (req, res) => {
     if (!user) {
       return res.status(400).json({
         success: false,
-        message: 'El enlace es inválido o ya expiró. Solicita uno nuevo.'
+        message: t(req.locale, 'errors.reset_link_invalid')
       });
     }
 
@@ -232,9 +234,9 @@ export const resetPassword = async (req, res) => {
     // request (este endpoint no requiere estar logueado de todos modos).
     await User.invalidateSessions(user.id);
 
-    res.json({ success: true, message: 'Contraseña actualizada exitosamente. Ya puedes iniciar sesión.' });
+    res.json({ success: true, message: t(req.locale, 'success.password_reset_success') });
   } catch (error) {
     console.error('Error en resetPassword:', error);
-    res.status(500).json({ success: false, message: 'Error al restablecer la contraseña' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.reset_password_failed') });
   }
 };

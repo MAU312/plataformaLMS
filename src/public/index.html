@@ -67,41 +67,47 @@
                 <div class="hidden md:flex items-center space-x-6">
                     <a href="#/"
                         class="text-gray-700 dark:text-slate-300 hover:text-cenat-green dark:hover:text-green-400 transition">
-                        <i class="fas fa-home mr-1"></i> Inicio
+                        <i class="fas fa-home mr-1"></i> <span data-i18n="nav.home">Inicio</span>
                     </a>
                     <a href="#/my-courses" id="my-courses-link"
                         class="text-gray-700 dark:text-slate-300 hover:text-cenat-green dark:hover:text-green-400 transition">
-                        <i class="fas fa-book mr-1"></i> Mis Cursos
+                        <i class="fas fa-book mr-1"></i> <span data-i18n="nav.my_courses">Mis Cursos</span>
                     </a>
                     <a href="#/admin" id="admin-link"
                         class="text-gray-700 dark:text-slate-300 hover:text-cenat-green dark:hover:text-green-400 transition"
                         style="display:none;">
-                        <i class="fas fa-cog mr-1"></i> Administración
+                        <i class="fas fa-cog mr-1"></i> <span data-i18n="nav.admin">Administración</span>
                     </a>
                     <a href="#/teacher/courses" id="teacher-link"
                         class="text-gray-700 dark:text-slate-300 hover:text-cenat-green dark:hover:text-green-400 transition"
                         style="display:none;">
-                        <i class="fas fa-chalkboard-teacher mr-1"></i> Mis Cursos (Profesor)
+                        <i class="fas fa-chalkboard-teacher mr-1"></i> <span data-i18n="nav.teacher_courses">Mis Cursos (Profesor)</span>
                     </a>
 
                     <!-- Acciones de invitado (sin sesión) -->
                     <div id="guest-actions" class="items-center gap-3" style="display:none;">
                         <a href="#/login" class="text-gray-700 dark:text-slate-300 hover:text-cenat-green dark:hover:text-green-400 transition">
-                            Iniciar sesión
+                            <span data-i18n="nav.login">Iniciar sesión</span>
                         </a>
                         <a href="#/register" class="btn-cenat px-4 py-2 text-sm">
-                            Regístrate
+                            <span data-i18n="nav.register">Regístrate</span>
                         </a>
                     </div>
 
+                    <!-- Idioma -->
+                    <select id="language-select" onchange="setLocale(this.value)" title="Idioma" data-i18n-title="nav.language" class="text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded px-1 py-0.5">
+                        <option value="es">ES</option>
+                        <option value="en">EN</option>
+                    </select>
+
                     <!-- Tamaño de letra -->
-                    <div class="flex items-center gap-0.5" title="Tamaño de letra">
-                        <button class="text-size-btn text-size-decrease-btn" onclick="decreaseTextSize()" title="Reducir tamaño de letra" aria-label="Reducir tamaño de letra">A-</button>
-                        <button class="text-size-btn text-size-increase-btn" onclick="increaseTextSize()" title="Aumentar tamaño de letra" aria-label="Aumentar tamaño de letra">A+</button>
+                    <div class="flex items-center gap-0.5" title="Tamaño de letra" data-i18n-title="nav.font_size">
+                        <button class="text-size-btn text-size-decrease-btn" onclick="decreaseTextSize()" title="Reducir tamaño de letra" data-i18n-title="nav.decrease_font" aria-label="Reducir tamaño de letra" data-i18n-aria-label="nav.decrease_font">A-</button>
+                        <button class="text-size-btn text-size-increase-btn" onclick="increaseTextSize()" title="Aumentar tamaño de letra" data-i18n-title="nav.increase_font" aria-label="Aumentar tamaño de letra" data-i18n-aria-label="nav.increase_font">A+</button>
                     </div>
 
                     <!-- Dark mode toggle -->
-                    <button id="dark-mode-toggle" onclick="toggleDarkMode()" title="Cambiar modo oscuro/claro">
+                    <button id="dark-mode-toggle" onclick="toggleDarkMode()" title="Cambiar modo oscuro/claro" data-i18n-title="nav.toggle_dark_mode">
                         <i class="fas fa-moon text-gray-600 dark:text-yellow-400"></i>
                     </button>
 
@@ -119,11 +125,11 @@
                             class="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-md shadow-lg py-1 z-50 border border-gray-100 dark:border-slate-700">
                             <a href="#/profile"
                                 class="block px-4 py-2 text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700">
-                                <i class="fas fa-user mr-2"></i> Mi Perfil
+                                <i class="fas fa-user mr-2"></i> <span data-i18n="nav.profile">Mi Perfil</span>
                             </a>
                             <button id="logout-btn"
                                 class="w-full text-left block px-4 py-2 text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700">
-                                <i class="fas fa-sign-out-alt mr-2"></i> Cerrar Sesión
+                                <i class="fas fa-sign-out-alt mr-2"></i> <span data-i18n="nav.logout">Cerrar Sesión</span>
                             </button>
                         </div>
                     </div>
@@ -131,12 +137,16 @@
 
                 <!-- Mobile menu button -->
                 <div class="md:hidden flex items-center gap-3">
-                    <div class="flex items-center gap-0.5" title="Tamaño de letra">
-                        <button class="text-size-btn text-size-decrease-btn" onclick="decreaseTextSize()" title="Reducir tamaño de letra" aria-label="Reducir tamaño de letra">A-</button>
-                        <button class="text-size-btn text-size-increase-btn" onclick="increaseTextSize()" title="Aumentar tamaño de letra" aria-label="Aumentar tamaño de letra">A+</button>
+                    <select id="language-select-mobile" onchange="setLocale(this.value)" title="Idioma" data-i18n-title="nav.language" class="text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded px-1 py-0.5">
+                        <option value="es">ES</option>
+                        <option value="en">EN</option>
+                    </select>
+                    <div class="flex items-center gap-0.5" title="Tamaño de letra" data-i18n-title="nav.font_size">
+                        <button class="text-size-btn text-size-decrease-btn" onclick="decreaseTextSize()" title="Reducir tamaño de letra" data-i18n-title="nav.decrease_font" aria-label="Reducir tamaño de letra" data-i18n-aria-label="nav.decrease_font">A-</button>
+                        <button class="text-size-btn text-size-increase-btn" onclick="increaseTextSize()" title="Aumentar tamaño de letra" data-i18n-title="nav.increase_font" aria-label="Aumentar tamaño de letra" data-i18n-aria-label="nav.increase_font">A+</button>
                     </div>
                     <button id="dark-mode-toggle-mobile" onclick="toggleDarkMode()"
-                        class="text-gray-600 dark:text-yellow-400">
+                        class="text-gray-600 dark:text-yellow-400" title="Cambiar modo oscuro/claro" data-i18n-title="nav.toggle_dark_mode">
                         <i class="fas fa-moon"></i>
                     </button>
                     <button id="mobile-menu-btn" class="text-gray-700 dark:text-slate-300 hover:text-cenat-green">
@@ -148,38 +158,38 @@
             <!-- Mobile Menu -->
             <div id="mobile-menu" class="hidden md:hidden pb-4 dark:bg-slate-800">
                 <a href="#/" class="block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition">
-                    <i class="fas fa-home mr-1"></i> Inicio
+                    <i class="fas fa-home mr-1"></i> <span data-i18n="nav.home">Inicio</span>
                 </a>
                 <a href="#/my-courses" id="my-courses-link-mobile"
                     class="block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition">
-                    <i class="fas fa-book mr-1"></i> Mis Cursos
+                    <i class="fas fa-book mr-1"></i> <span data-i18n="nav.my_courses">Mis Cursos</span>
                 </a>
                 <a href="#/admin" id="admin-link-mobile"
                     class="block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition"
                     style="display:none;">
-                    <i class="fas fa-cog mr-1"></i> Administración
+                    <i class="fas fa-cog mr-1"></i> <span data-i18n="nav.admin">Administración</span>
                 </a>
                 <a href="#/teacher/courses" id="teacher-link-mobile"
                     class="block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition"
                     style="display:none;">
-                    <i class="fas fa-chalkboard-teacher mr-1"></i> Mis Cursos (Profesor)
+                    <i class="fas fa-chalkboard-teacher mr-1"></i> <span data-i18n="nav.teacher_courses">Mis Cursos (Profesor)</span>
                 </a>
                 <div id="user-menu-container-mobile">
                     <a href="#/profile"
                         class="block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition">
-                        <i class="fas fa-user mr-1"></i> Mi Perfil
+                        <i class="fas fa-user mr-1"></i> <span data-i18n="nav.profile">Mi Perfil</span>
                     </a>
                     <button id="logout-btn-mobile"
                         class="w-full text-left block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition">
-                        <i class="fas fa-sign-out-alt mr-1"></i> Cerrar Sesión
+                        <i class="fas fa-sign-out-alt mr-1"></i> <span data-i18n="nav.logout">Cerrar Sesión</span>
                     </button>
                 </div>
                 <div id="guest-actions-mobile" style="display:none;">
                     <a href="#/login" class="block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition">
-                        <i class="fas fa-sign-in-alt mr-1"></i> Iniciar sesión
+                        <i class="fas fa-sign-in-alt mr-1"></i> <span data-i18n="nav.login">Iniciar sesión</span>
                     </a>
                     <a href="#/register" class="block py-2 text-cenat-green font-semibold hover:text-cenat-green-hover transition">
-                        <i class="fas fa-user-plus mr-1"></i> Regístrate
+                        <i class="fas fa-user-plus mr-1"></i> <span data-i18n="nav.register">Regístrate</span>
                     </a>
                 </div>
             </div>
@@ -191,7 +201,7 @@
         <div class="flex items-center justify-center min-h-screen">
             <div class="text-center">
                 <i class="fas fa-spinner fa-spin text-4xl text-cenat-green"></i>
-                <p class="mt-4 text-gray-600 dark:text-slate-400">Cargando...</p>
+                <p class="mt-4 text-gray-600 dark:text-slate-400" data-i18n="common.loading">Cargando...</p>
             </div>
         </div>
     </main>
@@ -201,8 +211,8 @@
         class="bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 mt-auto transition-colors duration-300">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div class="text-center text-gray-600 dark:text-slate-400 text-sm">
-                <p>&copy; 2026 LANBA - Centro Nacional de Alta Tecnología (CeNAT)</p>
-                <p class="mt-1">Desarrollado por Mauricio Hidalgo Garzón - TCU UFIDE</p>
+                <p data-i18n="footer.copyright">&copy; 2026 LANBA - Centro Nacional de Alta Tecnología (CeNAT)</p>
+                <p class="mt-1" data-i18n="footer.developed_by">Desarrollado por Mauricio Hidalgo Garzón - TCU UFIDE</p>
             </div>
         </div>
     </footer>
@@ -225,6 +235,7 @@
     <script src="/js/darkmode.js"></script>
     <script src="/js/textsize.js"></script>
     <script src="/js/utils.js"></script>
+    <script src="/js/i18n.js"></script>
     <script src="/js/api.js"></script>
     <script src="/js/auth.js"></script>
     <script src="/js/router.js"></script>

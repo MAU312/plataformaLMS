@@ -20,10 +20,10 @@ window.renderHome = async function(params) {
         <div class="bg-gradient-to-br from-cenat-green to-cenat-green-light py-16 px-4 sm:px-6 lg:px-8">
             <div class="max-w-7xl mx-auto text-center">
                 <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-4">
-                    ${escapeHtml(getSiteSetting('catalog_title', 'Cursos del LANBA - CeNAT'))}
+                    ${escapeHtml(getSiteSetting('catalog_title', t('home.title_default')))}
                 </h1>
                 <p class="text-lg md:text-xl text-green-100 max-w-2xl mx-auto">
-                    ${escapeHtml(getSiteSetting('catalog_subtitle', 'Explora nuestros cursos educativos y fortalece tus conocimientos en biotecnología ambiental y ciencia abierta.'))}
+                    ${escapeHtml(getSiteSetting('catalog_subtitle', t('home.subtitle_default')))}
                 </p>
             </div>
         </div>
@@ -33,13 +33,13 @@ window.renderHome = async function(params) {
                 <div class="flex items-center justify-between mb-8">
                     <h2 class="text-2xl font-bold text-gray-900">
                         <i class="fas fa-th-large mr-2 text-cenat-green"></i>
-                        Cursos disponibles
+                        ${t('home.available_courses')}
                     </h2>
                     <div class="relative">
                         <input
                             type="text"
                             id="search-courses"
-                            placeholder="Buscar curso..."
+                            placeholder="${escapeAttr(t('home.search_placeholder'))}"
                             class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition w-64"
                         >
                         <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
@@ -86,9 +86,9 @@ async function loadHomeCourses(page) {
         grid.innerHTML = `
             <div class="col-span-full text-center py-12">
                 <i class="fas fa-exclamation-triangle text-5xl text-red-500 mb-4"></i>
-                <p class="text-xl text-gray-600">Error al cargar los cursos</p>
+                <p class="text-xl text-gray-600">${t('errors.load_courses_failed')}</p>
                 <button onclick="window.location.reload()" class="btn-cenat mt-4">
-                    <i class="fas fa-redo mr-2"></i> Reintentar
+                    <i class="fas fa-redo mr-2"></i> ${t('home.retry')}
                 </button>
             </div>
         `;
@@ -115,11 +115,11 @@ function renderCourseCard(course) {
             </p>
         ` : ''}
         <p class="text-gray-600 text-base mb-4 line-clamp-2">
-            ${escapeHtml(course.description || 'Sin descripción disponible')}
+            ${escapeHtml(course.description || t('home.no_description'))}
         </p>
         <div class="flex items-center justify-between text-sm text-gray-500 border-t pt-3">
-            <span><i class="fas fa-play-circle mr-1 text-cenat-green"></i> ${contentCount} contenidos</span>
-            <span><i class="fas fa-users mr-1 text-cenat-green"></i> ${enrolledCount} inscritos</span>
+            <span><i class="fas fa-play-circle mr-1 text-cenat-green"></i> ${t('home.contents_count', { count: contentCount })}</span>
+            <span><i class="fas fa-users mr-1 text-cenat-green"></i> ${t('home.enrolled_count', { count: enrolledCount })}</span>
         </div>
     `;
 
@@ -131,16 +131,16 @@ function renderEmptyState(searchTerm) {
         return `
             <div class="col-span-full empty-state">
                 <i class="fas fa-search"></i>
-                <p class="text-xl text-gray-600 font-medium">No se encontraron cursos</p>
-                <p class="text-gray-500">Intenta con otro término de búsqueda</p>
+                <p class="text-xl text-gray-600 font-medium">${t('home.empty_search_title')}</p>
+                <p class="text-gray-500">${t('home.empty_search_subtitle')}</p>
             </div>
         `;
     }
     return `
         <div class="col-span-full empty-state">
             <i class="fas fa-book-open"></i>
-            <p class="text-xl text-gray-600 font-medium">No hay cursos disponibles aún</p>
-            <p class="text-gray-500">Vuelve pronto para ver nuevos contenidos</p>
+            <p class="text-xl text-gray-600 font-medium">${t('home.empty_title')}</p>
+            <p class="text-gray-500">${t('home.empty_subtitle')}</p>
         </div>
     `;
 }

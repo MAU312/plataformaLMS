@@ -5,6 +5,7 @@ import TaskSubmission from '../models/TaskSubmission.js';
 import { deleteFile } from '../middlewares/upload.middleware.js';
 import certificateGenerator, { isValidCertificateStyle, DEFAULT_CERTIFICATE_STYLE } from '../utils/certificate.js';
 import { toCsv } from '../utils/csv.js';
+import { t } from '../utils/i18n.js';
 
 /**
  * Nombre de archivo seguro a partir de un título/nombre real — sin tildes
@@ -49,7 +50,7 @@ export const getAllCourses = async (req, res) => {
     console.error('Error al obtener cursos:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al obtener cursos'
+      message: t(req.locale, 'errors.get_courses_failed')
     });
   }
 };

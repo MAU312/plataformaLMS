@@ -9,6 +9,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import pool from './config/db.js';
 import { UPLOADS_ROOT } from './config/uploads.js';
+import { resolveLocale } from './middlewares/i18n.middleware.js';
 
 const MySQLStore = expressMySQLSession(session);
 
@@ -152,6 +153,10 @@ app.use('/uploads/avatars', express.static(path.join(UPLOADS_ROOT, 'avatars')));
 app.get('/health', (req, res) => {
   res.json({ success: true, status: 'ok' });
 });
+
+// Resuelve req.locale para toda ruta /api/* — leído por los controllers ya
+// traducidos (ver src/utils/i18n.js) al armar el `message` de la respuesta.
+app.use('/api', resolveLocale);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);

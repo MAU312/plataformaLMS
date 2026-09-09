@@ -44,7 +44,7 @@ async function initApp() {
 
     } catch (error) {
         console.error('Error initializing app:', error);
-        showToast('Error al inicializar la aplicación', 'error');
+        showToast(t('errors.app_init_failed'), 'error');
     }
 }
 
