@@ -279,7 +279,13 @@ function toBoolean(value) {
 }
 
 /**
- * Actualizar curso (solo admin)
+ * Actualizar curso — admin siempre; para un curso HIJO de un módulo,
+ * también el profesor principal (de todo el curso) del curso PADRE (ver
+ * courseIdFromChildCourseParam en course.routes.js, que ya resolvió el
+ * permiso). Un profesor nunca puede tocar `is_active`/`certificate_style`
+ * (se ignoran silenciosamente si vienen en el body), y solo puede editar
+ * un curso que SÍ sea hijo — de un curso normal solo gestiona contenido,
+ * no su info (esa distinción no la resuelve el middleware, se valida acá).
  */
 export const updateCourse = async (req, res) => {
   try {
@@ -294,7 +300,16 @@ export const updateCourse = async (req, res) => {
       });
     }
 
-    if (certificate_style !== undefined && !isValidCertificateStyle(certificate_style)) {
+    const isAdminUser = req.session.user.role === 'admin' || Boolean(req.session.user.admin_access);
+    if (!isAdminUser && !course.parent_module_id) {
+      if (req.file) deleteFile(`/uploads/thumbnails/${req.file.filename}`);
+      return res.status(403).json({
+        success: false,
+        message: t(req.locale, 'errors.teacher_edit_module_child_only')
+      });
+    }
+
+    if (isAdminUser && certificate_style !== undefined && !isValidCertificateStyle(certificate_style)) {
       if (req.file) deleteFile(`/uploads/thumbnails/${req.file.filename}`);
       return res.status(400).json({ success: false, message: t(req.locale, 'errors.invalid_certificate_style') });
     }
@@ -303,9 +318,15 @@ export const updateCourse = async (req, res) => {
     const updateData = {};
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
-    // FormData envía "true"/"false" como string; lo convertimos a 0/1 real
-    if (is_active !== undefined) updateData.is_active = toBoolean(is_active) ? 1 : 0;
-    if (certificate_style !== undefined) updateData.certificate_style = certificate_style;
+    // is_active/certificate_style: solo un admin puede tocarlos — un
+    // profesor editando un curso hijo del que es "profesor principal"
+    // solo llega hasta acá con título/descripción/miniatura/profesores,
+    // aunque mandara estos dos campos en el body se ignoran.
+    if (isAdminUser) {
+      // FormData envía "true"/"false" como string; lo convertimos a 0/1 real
+      if (is_active !== undefined) updateData.is_active = toBoolean(is_active) ? 1 : 0;
+      if (certificate_style !== undefined) updateData.certificate_style = certificate_style;
+    }
 
     // Si se subió nueva miniatura
     if (req.file) {

@@ -194,7 +194,8 @@ test('updateCourse: borra la miniatura anterior solo DESPUÉS de confirmar el UP
   const req = mockReq({
     params: { id: 1 },
     body: { title: 'Curso' },
-    file: { filename: 'nueva.png' }
+    file: { filename: 'nueva.png' },
+    session: { user: { id: 1, role: 'admin' } }
   });
   const res = mockRes();
 
@@ -212,7 +213,8 @@ test('updateCourse: con teacher_ids en el body, reemplaza los profesores asignad
   const assignCall = t.mock.method(Course, 'assignTeachers', async () => true);
   const req = mockReq({
     params: { id: 1 },
-    body: { title: 'Curso', teacher_ids: JSON.stringify([7]) }
+    body: { title: 'Curso', teacher_ids: JSON.stringify([7]) },
+    session: { user: { id: 1, role: 'admin' } }
   });
   const res = mockRes();
 
@@ -226,7 +228,7 @@ test('updateCourse: sin teacher_ids en el body, NO toca la asignación de profes
   t.mock.method(Course, 'findById', async () => ({ id: 1, title: 'Curso', thumbnail: null }));
   t.mock.method(Course, 'update', async () => true);
   const assignCall = t.mock.method(Course, 'assignTeachers', async () => true);
-  const req = mockReq({ params: { id: 1 }, body: { title: 'Curso actualizado' } });
+  const req = mockReq({ params: { id: 1 }, body: { title: 'Curso actualizado' }, session: { user: { id: 1, role: 'admin' } } });
   const res = mockRes();
 
   await courseController.updateCourse(req, res);
@@ -238,7 +240,7 @@ test('updateCourse: sin teacher_ids en el body, NO toca la asignación de profes
 test('updateCourse: actualiza certificate_style cuando viene un id válido', async (t) => {
   t.mock.method(Course, 'findById', async () => ({ id: 1, title: 'Curso', thumbnail: null }));
   const updateCall = t.mock.method(Course, 'update', async () => true);
-  const req = mockReq({ params: { id: 1 }, body: { certificate_style: 'minimal' } });
+  const req = mockReq({ params: { id: 1 }, body: { certificate_style: 'minimal' }, session: { user: { id: 1, role: 'admin' } } });
   const res = mockRes();
 
   await courseController.updateCourse(req, res);
@@ -250,12 +252,51 @@ test('updateCourse: actualiza certificate_style cuando viene un id válido', asy
 test('updateCourse: 400 si certificate_style no es un estilo válido, sin llegar a tocar Course.update', async (t) => {
   t.mock.method(Course, 'findById', async () => ({ id: 1, title: 'Curso', thumbnail: null }));
   const updateCall = t.mock.method(Course, 'update', async () => true);
-  const req = mockReq({ params: { id: 1 }, body: { certificate_style: 'no-existe' } });
+  const req = mockReq({ params: { id: 1 }, body: { certificate_style: 'no-existe' }, session: { user: { id: 1, role: 'admin' } } });
   const res = mockRes();
 
   await courseController.updateCourse(req, res);
 
   assert.equal(res.statusCode, 400);
+  assert.equal(updateCall.mock.calls.length, 0);
+});
+
+test('updateCourse: un profesor (no admin) SÍ puede editar título/descripción/profesores de un curso hijo de módulo, pero is_active/certificate_style se ignoran', async (t) => {
+  t.mock.method(Course, 'findById', async () => ({ id: 10, title: 'Curso hijo', thumbnail: null, parent_module_id: 2 }));
+  t.mock.method(User, 'findByRole', async () => ([{ id: 7 }]));
+  const assignCall = t.mock.method(Course, 'assignTeachers', async () => true);
+  const updateCall = t.mock.method(Course, 'update', async () => true);
+  const req = mockReq({
+    params: { id: 10 },
+    body: { title: 'Nuevo título', description: 'Nueva desc', teacher_ids: JSON.stringify([7]), is_active: 'false', certificate_style: 'modern' },
+    session: { user: { id: 80, role: 'teacher' } }
+  });
+  const res = mockRes();
+
+  await courseController.updateCourse(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(assignCall.mock.calls[0].arguments, [10, [7]]);
+  const appliedFields = updateCall.mock.calls[0].arguments[1];
+  assert.equal(appliedFields.title, 'Nuevo título');
+  assert.equal(appliedFields.description, 'Nueva desc');
+  assert.equal('is_active' in appliedFields, false, 'un profesor no debe poder tocar is_active');
+  assert.equal('certificate_style' in appliedFields, false, 'un profesor no debe poder tocar certificate_style');
+});
+
+test('updateCourse: un profesor (no admin) NO puede editar un curso que no sea hijo de un módulo (403)', async (t) => {
+  t.mock.method(Course, 'findById', async () => ({ id: 5, title: 'Curso normal', thumbnail: null, parent_module_id: null }));
+  const updateCall = t.mock.method(Course, 'update', async () => true);
+  const req = mockReq({
+    params: { id: 5 },
+    body: { title: 'Intento de cambio' },
+    session: { user: { id: 80, role: 'teacher' } }
+  });
+  const res = mockRes();
+
+  await courseController.updateCourse(req, res);
+
+  assert.equal(res.statusCode, 403);
   assert.equal(updateCall.mock.calls.length, 0);
 });
 

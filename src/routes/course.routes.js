@@ -1,4 +1,5 @@
 import express from 'express';
+import Course from '../models/Course.js';
 import * as courseController from '../controllers/course.controller.js';
 import * as courseModuleController from '../controllers/courseModule.controller.js';
 import { isAuthenticated, isAdmin, requireCourseManager } from '../middlewares/auth.middleware.js';
@@ -7,6 +8,26 @@ import { verifyFileSignature } from '../middlewares/fileSignature.middleware.js'
 import { enrollLimiter, courseCreateLimiter } from '../middlewares/rateLimit.middleware.js';
 
 const router = express.Router();
+
+/**
+ * A qué curso hay que pedirle permisos para gestionar la INFO (título/
+ * descripción/miniatura/profesores asignados) del curso `:id`: si es un
+ * curso hijo de un módulo, al curso PADRE — así el profesor principal
+ * del padre (course_teachers.module_id NULL, "de todo el curso") puede
+ * editar sus cursos hijo, mismo criterio que ya usa courseIdFromModuleParam
+ * en courseModule.routes.js para crear/borrar el propio módulo. Si `:id`
+ * NO es un curso hijo, resuelve a sí mismo — mismo comportamiento de
+ * siempre (ej. un profesor de todo un curso normal consultando la lista
+ * de profesores de ESE curso). `updateCourse` valida aparte que un
+ * profesor (no admin) solo pueda editar la info de un curso que SÍ sea
+ * hijo — esta función solo resuelve el permiso, no decide qué campos se
+ * pueden tocar.
+ */
+async function courseIdFromChildCourseParam(req) {
+  const course = await Course.findById(req.params.id);
+  if (!course) return null;
+  return course.parent_module_id ? course.parent_course_id : course.id;
+}
 
 /**
  * GET /api/courses
@@ -58,13 +79,16 @@ router.post(
 
 /**
  * PUT /api/courses/:id
- * Actualizar curso
- * Solo administradores
+ * Actualizar curso.
+ * Admin siempre; para un curso HIJO de un módulo, también el profesor
+ * principal (de todo el curso) del curso PADRE — solo puede tocar
+ * título/descripción/miniatura/profesores asignados, `updateCourse`
+ * ignora is_active/certificate_style si quien llama no es admin.
  */
 router.put(
   '/:id',
   isAuthenticated,
-  isAdmin,
+  requireCourseManager(courseIdFromChildCourseParam),
   uploadThumbnail.single('thumbnail'),
   verifyFileSignature('image'),
   courseController.updateCourse
@@ -129,10 +153,13 @@ router.get('/:id/students/:studentId/grades/export', isAuthenticated, requireCou
 
 /**
  * GET /api/courses/:id/teachers
- * Profesores asignados al curso
- * Admin, o el propio profesor asignado a ese curso
+ * Profesores asignados al curso.
+ * Admin, el propio profesor principal asignado a ese curso, o — si es un
+ * curso hijo de un módulo — el profesor principal del curso padre (mismo
+ * resolver que PUT /:id, para poder poblar los checkboxes al editar un
+ * curso hijo).
  */
-router.get('/:id/teachers', isAuthenticated, requireCourseManager((req) => req.params.id), courseController.getCourseTeachers);
+router.get('/:id/teachers', isAuthenticated, requireCourseManager(courseIdFromChildCourseParam), courseController.getCourseTeachers);
 
 /**
  * GET /api/courses/:id/modules

@@ -240,7 +240,9 @@ window.renderCourseDetail = async function(params) {
                                     ${videos.map((video, index) => renderContentRow(video, index === 0, isLoggedIn && isEnrolled, 'video', hasAccess)).join('')}
                                 </div>
                             ` : `
-                                <p class="text-sm text-gray-400">${t('courseDetail.videos_grouped_notice')}</p>
+                                <div class="bg-white rounded-lg border border-gray-100 p-3">
+                                    <p class="text-sm text-gray-500">${t('courseDetail.videos_grouped_notice')}</p>
+                                </div>
                             `}
                         ` : ''}
 
@@ -453,7 +455,7 @@ function renderUrlContentRow(content, canTrackProgress, hasAccess) {
     const youtubeId = hasAccess ? getYoutubeVideoId(content.url) : null;
     const vimeoUrl = hasAccess && !youtubeId ? getVimeoEmbedUrl(content.url) : null;
     return `
-        <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 transition">
+        <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-white transition">
             ${canTrackProgress ? `
                 <button class="content-checkbox flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition ${completed ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-cenat-green'}"
                     data-content-id="${content.id}" data-completed="${completed == 1 || completed === true ? 'true' : 'false'}" title="${escapeAttr(completed ? t('courseDetail.mark_as_pending') : t('courseDetail.mark_as_completed'))}">
