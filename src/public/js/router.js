@@ -192,7 +192,7 @@ async function handleRoute() {
     }
     
     if (route.requireAdmin && !isAdmin()) {
-        showToast('No tienes permisos para acceder a esta sección', 'error');
+        showToast(t('errors.no_permission'), 'error');
         window.location.hash = '#/';
         return;
     }
@@ -205,7 +205,7 @@ async function handleRoute() {
         await route.render(params);
     } catch (error) {
         console.error('Error rendering route:', error);
-        showToast('Error al cargar la página', 'error');
+        showToast(t('errors.page_load_failed'), 'error');
     }
 
     // Cada vista es una página nueva para el usuario — sin esto, navegar

@@ -21,15 +21,15 @@ window.renderAdminCourses = async function(params) {
         <div class="flex items-center justify-between mb-6">
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
                 <i class="fas fa-book text-cenat-green mr-2"></i>
-                Gestión de Cursos
+                ${t('admin.courses.title')}
             </h1>
             <a href="#/admin/courses/create" class="btn-cenat">
-                <i class="fas fa-plus mr-2"></i> Nuevo Curso
+                <i class="fas fa-plus mr-2"></i> ${t('admin.courses.new_course')}
             </a>
         </div>
 
         <div class="relative mb-4">
-            <input type="text" id="search-admin-courses" placeholder="Buscar curso..."
+            <input type="text" id="search-admin-courses" placeholder="${t('home.search_placeholder')}"
                 class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
             <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
         </div>
@@ -66,7 +66,7 @@ async function loadAdminCourses(page) {
     } catch (error) {
         if (token !== adminCoursesRequestToken) return;
         console.error('Error loading courses:', error);
-        showToast('Error al cargar los cursos', 'error');
+        showToast(t('admin.courses.load_failed'), 'error');
     }
 }
 
@@ -79,9 +79,9 @@ function renderCoursesTable(courses, page, pagination) {
         container.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-book-open"></i>
-                <p class="text-xl text-gray-600 dark:text-slate-400 font-medium">No hay cursos</p>
+                <p class="text-xl text-gray-600 dark:text-slate-400 font-medium">${t('admin.courses.empty')}</p>
                 <a href="#/admin/courses/create" class="btn-cenat mt-4">
-                    <i class="fas fa-plus mr-2"></i> Crear el primer curso
+                    <i class="fas fa-plus mr-2"></i> ${t('admin.courses.create_first')}
                 </a>
             </div>`;
         paginationContainer.innerHTML = '';
@@ -93,12 +93,12 @@ function renderCoursesTable(courses, page, pagination) {
             <table class="w-full text-sm">
                 <thead class="bg-gray-50 dark:bg-slate-700">
                     <tr class="text-left text-gray-500 dark:text-slate-400">
-                        <th class="py-3 px-4">Título</th>
-                        <th class="py-3 px-4">Estado</th>
-                        <th class="py-3 px-4">Contenidos</th>
-                        <th class="py-3 px-4">Inscritos</th>
-                        <th class="py-3 px-4">Creado</th>
-                        <th class="py-3 px-4 text-right">Acciones</th>
+                        <th class="py-3 px-4">${t('admin.courses.col_title')}</th>
+                        <th class="py-3 px-4">${t('admin.courses.col_status')}</th>
+                        <th class="py-3 px-4">${t('admin.courses.col_contents')}</th>
+                        <th class="py-3 px-4">${t('admin.courses.col_enrolled')}</th>
+                        <th class="py-3 px-4">${t('admin.courses.col_created')}</th>
+                        <th class="py-3 px-4 text-right">${t('admin.courses.col_actions')}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -109,24 +109,24 @@ function renderCoursesTable(courses, page, pagination) {
                             <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">${escapeHtml(course.title)}</td>
                             <td class="py-3 px-4">
                                 <span class="badge ${isActive ? 'badge-active' : 'badge-inactive'}">
-                                    ${isActive ? 'Activo' : 'Inactivo'}
+                                    ${isActive ? t('admin.status_active') : t('admin.status_inactive')}
                                 </span>
                             </td>
                             <td class="py-3 px-4 text-gray-600 dark:text-slate-300">${course.content_count || 0}</td>
                             <td class="py-3 px-4 text-gray-600 dark:text-slate-300">${course.enrolled_count || 0}</td>
                             <td class="py-3 px-4 text-gray-500 dark:text-slate-400">${formatDate(course.created_at)}</td>
                             <td class="py-3 px-4 text-right space-x-3 whitespace-nowrap">
-                                <a href="#/course/${course.id}" class="text-gray-500 hover:text-cenat-green" title="Ver curso">
+                                <a href="#/course/${course.id}" class="text-gray-500 hover:text-cenat-green" title="${t('admin.courses.view_course')}">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <a href="#/admin/courses/${course.id}/edit" class="text-cenat-green hover:text-cenat-green-hover" title="Editar">
+                                <a href="#/admin/courses/${course.id}/edit" class="text-cenat-green hover:text-cenat-green-hover" title="${t('admin.courses.edit')}">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <a href="#/admin/courses/${course.id}/students" class="text-gray-500 hover:text-cenat-green" title="Ver estudiantes inscritos">
+                                <a href="#/admin/courses/${course.id}/students" class="text-gray-500 hover:text-cenat-green" title="${t('admin.courses.view_students')}">
                                     <i class="fas fa-user-graduate"></i>
                                 </a>
                                 <button onclick="toggleCourseActive(${course.id})"
-                                    title="${isActive ? 'Desactivar curso' : 'Activar curso'}"
+                                    title="${isActive ? t('admin.courses.deactivate') : t('admin.courses.activate')}"
                                     class="hover:opacity-80 transition">
                                     <i class="fas ${isActive ? 'fa-eye-slash text-yellow-500' : 'fa-eye text-green-500'} text-lg"></i>
                                 </button>
@@ -163,10 +163,10 @@ async function toggleCourseActive(id) {
         // Actualizar en la página actual sin volver a pedirla al servidor
         course.is_active = newState;
 
-        showToast(newState ? 'Curso activado' : 'Curso desactivado', newState ? 'success' : 'warning');
+        showToast(newState ? t('admin.courses.activated') : t('admin.courses.deactivated'), newState ? 'success' : 'warning');
         renderCoursesTable(currentPageCourses, currentCoursePage, currentCoursesPagination);
     } catch (error) {
-        showToast(error.message || 'Error al cambiar estado del curso', 'error');
+        showToast(error.message || t('admin.courses.toggle_failed'), 'error');
     }
 }
 

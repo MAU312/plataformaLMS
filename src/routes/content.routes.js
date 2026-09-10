@@ -11,6 +11,7 @@ import { isAuthenticated, requireCourseManager } from '../middlewares/auth.middl
 import { uploadVideo, uploadFile, uploadSubmission, uploadContentImage } from '../middlewares/upload.middleware.js';
 import { verifyFileSignature } from '../middlewares/fileSignature.middleware.js';
 import { submitTaskLimiter, forumPostLimiter } from '../middlewares/rateLimit.middleware.js';
+import { t } from '../utils/i18n.js';
 
 const router = express.Router();
 
@@ -250,16 +251,16 @@ router.post(
     try {
       const content = await Content.findById(req.params.id);
       if (!content) {
-        return res.status(404).json({ success: false, message: 'Tarea no encontrada' });
+        return res.status(404).json({ success: false, message: t(req.locale, 'errors.task_not_found') });
       }
       if (content.type !== 'task') {
-        return res.status(400).json({ success: false, message: 'Este contenido no es una tarea' });
+        return res.status(400).json({ success: false, message: t(req.locale, 'errors.content_not_task') });
       }
       const enrolled = await Course.isUserEnrolled(content.course_id, req.session.user.id);
       if (!enrolled) {
         return res.status(403).json({
           success: false,
-          message: 'Debes estar inscrito en este curso para entregar esta tarea'
+          message: t(req.locale, 'errors.enroll_to_submit_task')
         });
       }
       req.taskContent = content;
@@ -314,16 +315,16 @@ router.post(
     try {
       const content = await Content.findById(req.params.id);
       if (!content) {
-        return res.status(404).json({ success: false, message: 'Contenido no encontrado' });
+        return res.status(404).json({ success: false, message: t(req.locale, 'errors.content_not_found') });
       }
       if (!['quiz', 'survey'].includes(content.type)) {
-        return res.status(400).json({ success: false, message: 'Este contenido no es un cuestionario ni una encuesta' });
+        return res.status(400).json({ success: false, message: t(req.locale, 'errors.not_quiz_or_survey') });
       }
       const enrolled = await Course.isUserEnrolled(content.course_id, req.session.user.id);
       if (!enrolled) {
         return res.status(403).json({
           success: false,
-          message: 'Debes estar inscrito en este curso para responder'
+          message: t(req.locale, 'errors.enroll_to_answer_generic')
         });
       }
       req.quizContent = content;

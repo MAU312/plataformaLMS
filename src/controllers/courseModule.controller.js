@@ -3,6 +3,7 @@ import CourseModule from '../models/CourseModule.js';
 import { deleteFile } from '../middlewares/upload.middleware.js';
 import { isValidCertificateStyle, DEFAULT_CERTIFICATE_STYLE } from '../utils/certificate.js';
 import { resolveValidTeacherIds } from './course.controller.js';
+import { t } from '../utils/i18n.js';
 
 /**
  * POST /api/courses/:id/modules
@@ -16,12 +17,12 @@ export const createModule = async (req, res) => {
     const { title } = req.body;
 
     if (!title || !title.trim()) {
-      return res.status(400).json({ success: false, message: 'El título del módulo es requerido' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.module_title_required') });
     }
 
     const course = await Course.findById(id);
     if (!course) {
-      return res.status(404).json({ success: false, message: 'Curso no encontrado' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.course_not_found') });
     }
 
     // Nesting de un solo nivel: un curso que YA es hijo de un módulo no
@@ -32,7 +33,7 @@ export const createModule = async (req, res) => {
     if (course.parent_module_id) {
       return res.status(400).json({
         success: false,
-        message: 'Un curso que ya es parte de un módulo no puede tener sus propios módulos'
+        message: t(req.locale, 'errors.course_already_in_module')
       });
     }
 
@@ -40,12 +41,12 @@ export const createModule = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Módulo creado exitosamente',
+      message: t(req.locale, 'success.module_created'),
       data: { id: moduleId }
     });
   } catch (error) {
     console.error('Error al crear módulo:', error);
-    res.status(500).json({ success: false, message: 'Error al crear módulo' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.create_module_failed') });
   }
 };
 
@@ -61,14 +62,14 @@ export const getModules = async (req, res) => {
     const { id } = req.params;
     const course = await Course.findById(id);
     if (!course) {
-      return res.status(404).json({ success: false, message: 'Curso no encontrado' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.course_not_found') });
     }
 
     const modules = await CourseModule.findByCourse(id);
     res.json({ success: true, data: modules });
   } catch (error) {
     console.error('Error al obtener módulos del curso:', error);
-    res.status(500).json({ success: false, message: 'Error al obtener módulos del curso' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.get_course_modules_failed') });
   }
 };
 
@@ -83,11 +84,11 @@ export const updateModule = async (req, res) => {
 
     const module = await CourseModule.findById(moduleId);
     if (!module) {
-      return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.module_not_found') });
     }
 
     if (title !== undefined && !title.trim()) {
-      return res.status(400).json({ success: false, message: 'El título del módulo es requerido' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.module_title_required') });
     }
 
     await CourseModule.update(moduleId, {
@@ -95,10 +96,10 @@ export const updateModule = async (req, res) => {
       order_index
     });
 
-    res.json({ success: true, message: 'Módulo actualizado exitosamente' });
+    res.json({ success: true, message: t(req.locale, 'success.module_updated') });
   } catch (error) {
     console.error('Error al actualizar módulo:', error);
-    res.status(500).json({ success: false, message: 'Error al actualizar módulo' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.update_module_failed') });
   }
 };
 
@@ -114,22 +115,22 @@ export const deleteModule = async (req, res) => {
 
     const module = await CourseModule.findById(moduleId);
     if (!module) {
-      return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.module_not_found') });
     }
 
     const hasChildren = await CourseModule.hasChildCourses(moduleId);
     if (hasChildren) {
       return res.status(400).json({
         success: false,
-        message: 'El módulo todavía tiene cursos adentro. Bórralos o desanídalos antes de eliminar el módulo.'
+        message: t(req.locale, 'errors.module_not_empty')
       });
     }
 
     await CourseModule.delete(moduleId);
-    res.json({ success: true, message: 'Módulo eliminado exitosamente' });
+    res.json({ success: true, message: t(req.locale, 'success.module_deleted') });
   } catch (error) {
     console.error('Error al eliminar módulo:', error);
-    res.status(500).json({ success: false, message: 'Error al eliminar módulo' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.delete_module_failed') });
   }
 };
 
@@ -148,17 +149,17 @@ export const createModuleCourse = async (req, res) => {
     const module = await CourseModule.findById(moduleId);
     if (!module) {
       if (req.file) deleteFile(`/uploads/thumbnails/${req.file.filename}`);
-      return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.module_not_found') });
     }
 
     if (!title) {
       if (req.file) deleteFile(`/uploads/thumbnails/${req.file.filename}`);
-      return res.status(400).json({ success: false, message: 'El título es requerido' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.title_required') });
     }
 
     if (certificate_style !== undefined && certificate_style !== '' && !isValidCertificateStyle(certificate_style)) {
       if (req.file) deleteFile(`/uploads/thumbnails/${req.file.filename}`);
-      return res.status(400).json({ success: false, message: 'Estilo de certificado inválido' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.invalid_certificate_style') });
     }
 
     let thumbnail = null;
@@ -188,7 +189,7 @@ export const createModuleCourse = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Curso creado dentro del módulo exitosamente',
+      message: t(req.locale, 'success.module_course_created'),
       data: { id: courseId }
     });
   } catch (error) {
@@ -196,7 +197,7 @@ export const createModuleCourse = async (req, res) => {
     if (req.file) {
       deleteFile(`/uploads/thumbnails/${req.file.filename}`);
     }
-    res.status(500).json({ success: false, message: 'Error al crear curso dentro del módulo' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.create_module_course_failed') });
   }
 };
 
@@ -215,18 +216,18 @@ export const removeModuleCourse = async (req, res) => {
 
     const module = await CourseModule.findById(moduleId);
     if (!module) {
-      return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.module_not_found') });
     }
 
     const childCourse = await Course.findById(childId);
     if (!childCourse || String(childCourse.parent_module_id) !== String(moduleId)) {
-      return res.status(404).json({ success: false, message: 'Ese curso no pertenece a este módulo' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.course_not_in_module') });
     }
 
     await Course.setParentModule(childId, null);
-    res.json({ success: true, message: 'Curso desvinculado del módulo — ahora es un curso independiente' });
+    res.json({ success: true, message: t(req.locale, 'success.module_course_unlinked') });
   } catch (error) {
     console.error('Error al desvincular curso del módulo:', error);
-    res.status(500).json({ success: false, message: 'Error al desvincular curso del módulo' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.unlink_module_course_failed') });
   }
 };

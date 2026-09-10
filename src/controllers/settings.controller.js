@@ -1,5 +1,6 @@
 import SiteSetting from '../models/SiteSetting.js';
 import { deleteFile } from '../middlewares/upload.middleware.js';
+import { t } from '../utils/i18n.js';
 
 // Únicas claves que este endpoint sabe leer/escribir — evita que alguien
 // use PUT /api/settings para meter una clave arbitraria en la tabla.
@@ -18,7 +19,7 @@ export const getSettings = async (req, res) => {
     res.json({ success: true, data: settings });
   } catch (error) {
     console.error('Error al obtener la configuración del sitio:', error);
-    res.status(500).json({ success: false, message: 'Error al obtener la configuración' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.get_settings_failed') });
   }
 };
 
@@ -46,7 +47,7 @@ export const updateSettings = async (req, res) => {
         uploadedFiles.forEach((f) => deleteFile(`/uploads/site/${f.filename}`));
         return res.status(400).json({
           success: false,
-          message: `El texto es demasiado largo (máximo ${MAX_TEXT_LENGTH} caracteres)`
+          message: t(req.locale, 'errors.settings_text_too_long', { max: MAX_TEXT_LENGTH })
         });
       }
     }
@@ -74,10 +75,10 @@ export const updateSettings = async (req, res) => {
       }
     }
 
-    res.json({ success: true, message: 'Configuración actualizada exitosamente' });
+    res.json({ success: true, message: t(req.locale, 'success.settings_updated') });
   } catch (error) {
     console.error('Error al actualizar la configuración del sitio:', error);
     uploadedFiles.filter((f) => !committed.has(f)).forEach((f) => deleteFile(`/uploads/site/${f.filename}`));
-    res.status(500).json({ success: false, message: 'Error al actualizar la configuración' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.update_settings_failed') });
   }
 };

@@ -1,6 +1,7 @@
 import { fileTypeFromFile } from 'file-type';
 import fs from 'fs/promises';
 import path from 'path';
+import { t } from '../utils/i18n.js';
 
 /**
  * La extensión y el mimetype que llegan en la petición los controla por
@@ -75,7 +76,7 @@ export function verifyFileSignature(kind) {
           await Promise.all(files.map((f) => fs.unlink(f.path).catch(() => {})));
           return res.status(400).json({
             success: false,
-            message: 'El contenido del archivo no coincide con su extensión. Verifica que no esté corrupto o haya sido renombrado.'
+            message: t(req.locale, 'errors.file_signature_mismatch')
           });
         }
       }

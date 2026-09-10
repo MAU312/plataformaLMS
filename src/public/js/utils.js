@@ -447,21 +447,21 @@ function renderCourseCardShell({ course, navigateToPath, heightClass = 'h-40', s
  */
 function renderTeacherCheckboxesHTML(teachers, selectedIds = [], modules = [], moduleScopeByTeacherId = {}) {
     if (teachers.length === 0) {
-        return `<p class="text-sm text-gray-400 dark:text-slate-500">No hay usuarios con rol "Profesor" todavía. Puedes crearlos desde Usuarios y asignarlos después.</p>`;
+        return `<p class="text-sm text-gray-400 dark:text-slate-500">${t('courseForm.no_teachers_yet')}</p>`;
     }
-    return teachers.map(t => {
-        const checked = selectedIds.includes(t.id);
-        const currentModule = moduleScopeByTeacherId[t.id];
+    return teachers.map(teacher => {
+        const checked = selectedIds.includes(teacher.id);
+        const currentModule = moduleScopeByTeacherId[teacher.id];
         return `
         <div class="teacher-row flex items-center gap-2 py-1 flex-wrap">
             <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
-                <input type="checkbox" name="teacher_ids" value="${t.id}" data-teacher-id="${t.id}"
+                <input type="checkbox" name="teacher_ids" value="${teacher.id}" data-teacher-id="${teacher.id}"
                     class="teacher-checkbox rounded border-gray-300 text-cenat-green focus:ring-cenat-green" ${checked ? 'checked' : ''}>
-                ${escapeHtml(t.name)} <span class="text-gray-400 dark:text-slate-500">(${escapeHtml(t.email)})</span>
+                ${escapeHtml(teacher.name)} <span class="text-gray-400 dark:text-slate-500">(${escapeHtml(teacher.email)})</span>
             </label>
             ${modules.length > 0 ? `
-                <select class="teacher-module-select text-xs border border-gray-300 rounded px-1 py-0.5" data-teacher-id="${t.id}" ${checked ? '' : 'disabled'} title="A qué carpeta queda escopeado este profesor">
-                    <option value="">Todo el curso</option>
+                <select class="teacher-module-select text-xs border border-gray-300 rounded px-1 py-0.5" data-teacher-id="${teacher.id}" ${checked ? '' : 'disabled'} title="${t('courseForm.teacher_module_scope_title')}">
+                    <option value="">${t('courseForm.whole_course_option')}</option>
                     ${modules.map(m => `<option value="${m.id}" ${String(currentModule) === String(m.id) ? 'selected' : ''}>${escapeHtml(m.title)}</option>`).join('')}
                 </select>
             ` : ''}
@@ -498,7 +498,7 @@ async function loadTeacherCheckboxes(containerId, selectedIds = [], modules = []
         container.innerHTML = renderTeacherCheckboxesHTML(response.data || [], selectedIds, modules, moduleScopeByTeacherId);
         initTeacherModuleToggle(containerId);
     } catch (error) {
-        container.innerHTML = `<p class="text-sm text-red-500">Error al cargar la lista de profesores</p>`;
+        container.innerHTML = `<p class="text-sm text-red-500">${t('courseForm.load_teachers_failed')}</p>`;
     }
 }
 
@@ -530,14 +530,16 @@ function getTeacherModuleScopes(containerId) {
 // mantiene esta copia acá en vez de pedirlos al backend porque son estilos
 // fijos del código (no algo que el admin pueda crear/editar), igual que
 // "Tipo de pregunta" en el editor de cuestionarios.
-const CERTIFICATE_STYLES = [
-    { id: 'classic', label: 'Clásico (marco verde)' },
-    { id: 'modern', label: 'Moderno (franja superior)' },
-    { id: 'minimal', label: 'Minimalista' }
-];
+function getCertificateStyles() {
+    return [
+        { id: 'classic', label: t('courseForm.certificate_classic') },
+        { id: 'modern', label: t('courseForm.certificate_modern') },
+        { id: 'minimal', label: t('courseForm.certificate_minimal') }
+    ];
+}
 
 function renderCertificateStyleOptions(selectedId) {
-    return CERTIFICATE_STYLES.map(s => `
+    return getCertificateStyles().map(s => `
         <option value="${s.id}" ${s.id === selectedId ? 'selected' : ''}>${escapeHtml(s.label)}</option>
     `).join('');
 }

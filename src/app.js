@@ -10,6 +10,7 @@ import morgan from 'morgan';
 import pool from './config/db.js';
 import { UPLOADS_ROOT } from './config/uploads.js';
 import { resolveLocale } from './middlewares/i18n.middleware.js';
+import { t } from './utils/i18n.js';
 
 const MySQLStore = expressMySQLSession(session);
 
@@ -174,7 +175,7 @@ app.use('/api/settings', settingsRoutes);
 // `fetch(...).json()` del cliente fallaba con un confuso "Unexpected
 // token '<'" en vez de un 404 claro.
 app.use('/api', (req, res) => {
-  res.status(404).json({ success: false, message: 'Endpoint no encontrado' });
+  res.status(404).json({ success: false, message: t(req.locale, 'errors.endpoint_not_found') });
 });
 
 // =============================================
@@ -196,8 +197,8 @@ app.get('/*splat', (req, res) => {
 app.use((err, req, res, next) => {
   if (err && err.name === 'MulterError') {
     const messages = {
-      LIMIT_FILE_SIZE: 'El archivo excede el tamaño máximo permitido',
-      LIMIT_UNEXPECTED_FILE: 'Campo de archivo inesperado'
+      LIMIT_FILE_SIZE: t(req.locale, 'errors.multer_file_too_large'),
+      LIMIT_UNEXPECTED_FILE: t(req.locale, 'errors.multer_unexpected_field')
     };
     return res.status(400).json({
       success: false,
@@ -223,8 +224,8 @@ app.use((err, req, res, next) => {
   // inesperados: MySQL, bugs, etc.) se ocultan en producción para no
   // filtrar detalles internos del servidor.
   const message = (status < 500 || isDev)
-    ? (err.message || 'Error interno del servidor')
-    : 'Error interno del servidor. Intenta de nuevo más tarde.';
+    ? (err.message || t(req.locale, 'errors.internal_server_error'))
+    : t(req.locale, 'errors.internal_server_error_retry');
 
   res.status(status).json({
     success: false,

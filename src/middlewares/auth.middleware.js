@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import Course from '../models/Course.js';
 import User from '../models/User.js';
+import { t } from '../utils/i18n.js';
 
 /**
  * Middleware de autenticación
@@ -15,7 +16,7 @@ export const isAuthenticated = async (req, res, next) => {
   if (!req.session || !req.session.user) {
     return res.status(401).json({
       success: false,
-      message: 'No autorizado. Debes iniciar sesión.'
+      message: t(req.locale, 'errors.unauthorized')
     });
   }
 
@@ -26,7 +27,7 @@ export const isAuthenticated = async (req, res, next) => {
       return req.session.destroy(() => {
         res.status(401).json({
           success: false,
-          message: 'Tu sesión ya no es válida. Inicia sesión de nuevo.'
+          message: t(req.locale, 'errors.session_invalid')
         });
       });
     }
@@ -53,7 +54,7 @@ export const isAdmin = (req, res, next) => {
 
   return res.status(403).json({
     success: false,
-    message: 'Acceso denegado. Se requieren permisos de administrador.'
+    message: t(req.locale, 'errors.admin_access_required')
   });
 };
 
@@ -67,7 +68,7 @@ export const isStudent = (req, res, next) => {
   
   return res.status(403).json({
     success: false,
-    message: 'Acceso denegado. Solo para estudiantes.'
+    message: t(req.locale, 'errors.students_only')
   });
 };
 
@@ -118,7 +119,7 @@ export function requireCourseManager(resolveCourseId, resolveFolderId) {
 
   return async (req, res, next) => {
     if (!req.session || !req.session.user) {
-      return deny(req, res, 401, 'No autorizado. Debes iniciar sesión.');
+      return deny(req, res, 401, t(req.locale, 'errors.unauthorized'));
     }
 
     if (req.session.user.role === 'admin' || req.session.user.admin_access) {
@@ -126,21 +127,21 @@ export function requireCourseManager(resolveCourseId, resolveFolderId) {
     }
 
     if (req.session.user.role !== 'teacher') {
-      return deny(req, res, 403, 'Acceso denegado. Se requieren permisos de administrador o profesor del curso.');
+      return deny(req, res, 403, t(req.locale, 'errors.admin_or_course_teacher_required'));
     }
 
     try {
       const courseId = await resolveCourseId(req);
 
       if (!courseId) {
-        return deny(req, res, 404, 'Curso no encontrado');
+        return deny(req, res, 404, t(req.locale, 'errors.course_not_found'));
       }
 
       const folderId = resolveFolderId ? await resolveFolderId(req) : null;
       const canManage = await Course.canManageContent(courseId, req.session.user.id, folderId);
 
       if (!canManage) {
-        return deny(req, res, 403, 'Acceso denegado. No eres profesor asignado a este curso (o a este módulo).');
+        return deny(req, res, 403, t(req.locale, 'errors.not_assigned_teacher'));
       }
 
       next();

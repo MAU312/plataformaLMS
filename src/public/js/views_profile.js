@@ -37,7 +37,7 @@ window.renderProfile = async function(params) {
                                     : user.name.charAt(0).toUpperCase()
                                 }
                             </div>
-                            <button id="edit-avatar-btn" type="button" title="Cambiar foto de perfil" aria-label="Cambiar foto de perfil"
+                            <button id="edit-avatar-btn" type="button" title="${t('profile.edit_avatar_title')}" aria-label="${t('profile.edit_avatar_title')}"
                                 class="absolute -bottom-1 -right-1 w-7 h-7 bg-cenat-green text-white rounded-full flex items-center justify-center border-2 border-white hover:bg-cenat-green-hover transition">
                                 <i class="fas fa-camera text-xs"></i>
                             </button>
@@ -47,11 +47,11 @@ window.renderProfile = async function(params) {
                             <h1 class="text-2xl font-bold text-gray-900">${escapeHtml(user.name)}</h1>
                             <p class="text-gray-600">${escapeHtml(user.email)}</p>
                             <span class="badge ${user.role === 'admin' ? 'badge-admin' : user.role === 'teacher' ? 'badge-teacher' : 'badge-student'} mt-2 inline-block">
-                                ${user.role === 'admin' ? 'Administrador' : user.role === 'teacher' ? 'Profesor' : 'Estudiante'}
+                                ${user.role === 'admin' ? t('profile.role_admin') : user.role === 'teacher' ? t('profile.role_teacher') : t('profile.role_student')}
                             </span>
                             ${user.avatar_url ? `
                                 <button id="remove-avatar-btn" type="button" class="block text-xs text-gray-400 hover:text-red-500 mt-2">
-                                    <i class="fas fa-trash mr-1"></i>Quitar foto
+                                    <i class="fas fa-trash mr-1"></i>${t('profile.remove_photo')}
                                 </button>
                             ` : ''}
                         </div>
@@ -62,7 +62,7 @@ window.renderProfile = async function(params) {
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                         <h2 class="text-lg font-bold text-gray-900 mb-4">
                             <i class="fas fa-chart-line text-cenat-green mr-2"></i>
-                            Mi progreso (${enrolledCourses.length} cursos)
+                            ${t('profile.my_progress', { count: enrolledCourses.length })}
                         </h2>
                         ${enrolledCourses.length > 0 ? `
                             <div class="space-y-4">
@@ -79,7 +79,7 @@ window.renderProfile = async function(params) {
                                 `).join('')}
                             </div>
                         ` : `
-                            <p class="text-gray-500 text-center py-6">No estás inscrito en ningún curso aún</p>
+                            <p class="text-gray-500 text-center py-6">${t('profile.not_enrolled_yet')}</p>
                         `}
                     </div>
                 ` : ''}
@@ -88,7 +88,7 @@ window.renderProfile = async function(params) {
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                         <h2 class="text-lg font-bold text-gray-900 mb-4">
                             <i class="fas fa-chalkboard-teacher text-cenat-green mr-2"></i>
-                            Cursos asignados (${teachingCourses.length})
+                            ${t('profile.assigned_courses', { count: teachingCourses.length })}
                         </h2>
                         ${teachingCourses.length > 0 ? `
                             <div class="space-y-3">
@@ -96,14 +96,14 @@ window.renderProfile = async function(params) {
                                     <div class="border border-gray-100 rounded-lg p-4 flex items-center justify-between gap-3">
                                         <a href="#/teacher/courses/${course.id}/edit" class="font-medium text-gray-900 hover:text-cenat-green truncate">${escapeHtml(course.title)}</a>
                                         <div class="flex items-center gap-4 text-sm text-gray-500 flex-shrink-0">
-                                            <span><i class="fas fa-users mr-1"></i>${course.enrolled_count || 0} inscritos</span>
-                                            <span><i class="fas fa-layer-group mr-1"></i>${course.content_count || 0} contenidos</span>
+                                            <span><i class="fas fa-users mr-1"></i>${t('profile.enrolled_count_suffix', { count: course.enrolled_count || 0 })}</span>
+                                            <span><i class="fas fa-layer-group mr-1"></i>${t('profile.contents_count_suffix', { count: course.content_count || 0 })}</span>
                                         </div>
                                     </div>
                                 `).join('')}
                             </div>
                         ` : `
-                            <p class="text-gray-500 text-center py-6">Aún no tienes cursos asignados</p>
+                            <p class="text-gray-500 text-center py-6">${t('profile.no_assigned_courses')}</p>
                         `}
                     </div>
                 ` : ''}
@@ -114,7 +114,7 @@ window.renderProfile = async function(params) {
 
     } catch (error) {
         console.error('Error loading profile:', error);
-        showToast('Error al cargar el perfil', 'error');
+        showToast(t('profile.load_failed'), 'error');
     }
 };
 
@@ -134,7 +134,7 @@ function setupAvatarControls() {
         fileInput.addEventListener('change', async () => {
             const file = fileInput.files[0];
             if (!file) return;
-            if (!checkFileSize(file, 5 * 1024 * 1024, 'La foto de perfil')) return;
+            if (!checkFileSize(file, 5 * 1024 * 1024, t('profile.avatar_field_label'))) return;
 
             const formData = new FormData();
             formData.append('avatar', file);
@@ -144,9 +144,9 @@ function setupAvatarControls() {
                 const response = await usersAPI.uploadAvatar(formData);
                 updateCurrentUserAvatar(response.data.avatar_url);
                 updateProfileAvatarUI(response.data.avatar_url);
-                showToast('Foto de perfil actualizada exitosamente', 'success');
+                showToast(t('profile.avatar_updated'), 'success');
             } catch (error) {
-                showToast(error.message || 'Error al actualizar la foto de perfil', 'error');
+                showToast(error.message || t('profile.avatar_update_failed'), 'error');
             } finally {
                 editBtn.disabled = false;
             }
@@ -157,15 +157,15 @@ function setupAvatarControls() {
 }
 
 async function handleRemoveAvatarClick() {
-    if (!(await confirmAction('¿Estás seguro de que deseas quitar tu foto de perfil?'))) return;
+    if (!(await confirmAction(t('profile.remove_confirm')))) return;
 
     try {
         await usersAPI.removeAvatar();
         updateCurrentUserAvatar(null);
         updateProfileAvatarUI(null);
-        showToast('Foto de perfil eliminada exitosamente', 'success');
+        showToast(t('profile.avatar_removed'), 'success');
     } catch (error) {
-        showToast(error.message || 'Error al quitar la foto de perfil', 'error');
+        showToast(error.message || t('profile.avatar_remove_failed'), 'error');
     }
 }
 
@@ -196,7 +196,7 @@ function updateProfileAvatarUI(avatarUrl) {
         btn.id = 'remove-avatar-btn';
         btn.type = 'button';
         btn.className = 'block text-xs text-gray-400 hover:text-red-500 mt-2';
-        btn.innerHTML = '<i class="fas fa-trash mr-1"></i>Quitar foto';
+        btn.innerHTML = `<i class="fas fa-trash mr-1"></i>${t('profile.remove_photo')}`;
         nameContainer.appendChild(btn);
         setupRemoveAvatarButton();
     } else if (!avatarUrl && existingRemoveBtn) {

@@ -17,7 +17,7 @@ window.renderAdminCourseStudents = async function(params) {
 
         app.innerHTML = renderAdminLayout(`
             <a href="#/admin/courses" class="text-cenat-green hover:underline text-sm mb-4 inline-block">
-                <i class="fas fa-arrow-left mr-1"></i> Volver a cursos
+                <i class="fas fa-arrow-left mr-1"></i> ${t('admin.back_to_courses')}
             </a>
 
             <div class="flex items-start justify-between gap-4 flex-wrap mb-1">

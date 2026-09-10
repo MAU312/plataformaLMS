@@ -12,7 +12,7 @@ window.renderAdminEditCourse = async function(params) {
         const course = response.data;
 
         if (!course) {
-            showToast('Curso no encontrado', 'error');
+            showToast(t('admin.editCourse.not_found'), 'error');
             navigateTo('/admin/courses');
             return;
         }
@@ -23,16 +23,16 @@ window.renderAdminEditCourse = async function(params) {
 
         app.innerHTML = renderAdminLayout(`
             <a href="#/admin/courses" class="text-cenat-green hover:underline text-sm mb-4 inline-block">
-                <i class="fas fa-arrow-left mr-1"></i> Volver a cursos
+                <i class="fas fa-arrow-left mr-1"></i> ${t('admin.back_to_courses')}
             </a>
 
             <div class="flex items-center justify-between mb-6">
                 <h1 class="text-2xl font-bold text-gray-900">
                     <i class="fas fa-edit text-cenat-green mr-2"></i>
-                    Editar Curso
+                    ${t('admin.editCourse.title')}
                 </h1>
                 <a href="#/course/${course.id}" class="text-gray-500 hover:text-cenat-green text-sm">
-                    <i class="fas fa-eye mr-1"></i> Ver curso
+                    <i class="fas fa-eye mr-1"></i> ${t('teacherCourse.view_course')}
                 </a>
             </div>
 
@@ -41,19 +41,19 @@ window.renderAdminEditCourse = async function(params) {
                 <div class="lg:col-span-1">
                     <form id="edit-course-form" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Título *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">${t('contentManager.edit.title_label')}</label>
                             <input type="text" id="title" name="title" required value="${escapeAttr(course.title)}"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition">
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">${t('admin.editCourse.description_label')}</label>
                             <textarea id="description" name="description" rows="4"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition">${escapeHtml(course.description || '')}</textarea>
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Imagen de portada</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">${t('admin.editCourse.thumbnail_label')}</label>
                             ${course.thumbnail ? `<img src="${escapeAttr(course.thumbnail)}" class="h-24 rounded-lg object-cover mb-2">` : ''}
                             <input type="file" id="thumbnail" name="thumbnail" accept="image/*"
                                 class="w-full text-sm text-gray-600">
@@ -61,36 +61,36 @@ window.renderAdminEditCourse = async function(params) {
 
                         <div class="flex items-center gap-2">
                             <input type="checkbox" id="is_active" ${course.is_active ? 'checked' : ''} class="w-4 h-4 text-cenat-green rounded">
-                            <label for="is_active" class="text-sm text-gray-700">Curso activo (visible para estudiantes)</label>
+                            <label for="is_active" class="text-sm text-gray-700">${t('admin.editCourse.active_checkbox_label')}</label>
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Estilo de certificado</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">${t('admin.editCourse.certificate_style_label')}</label>
                             <select id="certificate_style"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition">
                                 ${renderCertificateStyleOptions(course.certificate_style || 'classic')}
                             </select>
-                            <p class="mt-1 text-xs text-gray-500">El diseño del certificado PDF que descarga un estudiante al completar este curso.</p>
+                            <p class="mt-1 text-xs text-gray-500">${t('courseForm.certificate_hint')}</p>
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Profesores asignados</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">${t('admin.editCourse.teachers_label')}</label>
                             <div id="teacher-checkboxes" class="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto">
-                                <p class="text-sm text-gray-400">Cargando profesores...</p>
+                                <p class="text-sm text-gray-400">${t('contentManager.modules.loading_teachers')}</p>
                             </div>
                         </div>
 
                         <button type="submit" id="submit-edit-btn" class="btn-cenat w-full">
-                            <i class="fas fa-save mr-2"></i> Guardar Cambios
+                            <i class="fas fa-save mr-2"></i> ${t('admin.save_changes')}
                         </button>
                     </form>
 
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-6">
-                        <h3 class="font-semibold text-gray-900 mb-2">Estadísticas</h3>
+                        <h3 class="font-semibold text-gray-900 mb-2">${t('admin.editCourse.stats_heading')}</h3>
                         <ul class="text-sm text-gray-600 space-y-2">
-                            <li class="flex justify-between"><span>Inscritos:</span> <strong>${course.enrolled_count || 0}</strong></li>
-                            <li class="flex justify-between"><span>Videos:</span> <strong>${videos.length}</strong></li>
-                            <li class="flex justify-between"><span>Archivos:</span> <strong>${files.length}</strong></li>
+                            <li class="flex justify-between"><span>${t('admin.editCourse.stat_enrolled')}</span> <strong>${course.enrolled_count || 0}</strong></li>
+                            <li class="flex justify-between"><span>${t('admin.editCourse.stat_videos')}</span> <strong>${videos.length}</strong></li>
+                            <li class="flex justify-between"><span>${t('admin.editCourse.stat_files')}</span> <strong>${files.length}</strong></li>
                         </ul>
                     </div>
                 </div>
@@ -119,7 +119,7 @@ window.renderAdminEditCourse = async function(params) {
 
     } catch (error) {
         console.error('Error loading course:', error);
-        showToast('Error al cargar el curso', 'error');
+        showToast(t('courseDetail.load_failed'), 'error');
     }
 };
 
@@ -131,10 +131,10 @@ async function handleUpdateCourse(courseId) {
     const thumbnailFile = document.getElementById('thumbnail').files[0];
 
     if (!title) {
-        showToast('El título es requerido', 'error');
+        showToast(t('contentManager.title_required'), 'error');
         return;
     }
-    if (thumbnailFile && !checkFileSize(thumbnailFile, 5 * 1024 * 1024, 'La miniatura')) return;
+    if (thumbnailFile && !checkFileSize(thumbnailFile, 5 * 1024 * 1024, t('contentManager.modules.thumbnail_field_label'))) return;
 
     const formData = new FormData();
     formData.append('title', title);
@@ -149,10 +149,10 @@ async function handleUpdateCourse(courseId) {
 
     try {
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Guardando...';
+        submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> ${t('contentManager.saving')}`;
 
         await coursesAPI.update(courseId, formData);
-        showToast('Curso actualizado exitosamente', 'success');
+        showToast(t('admin.editCourse.updated'), 'success');
 
         // Re-renderiza la vista completa con los datos frescos del
         // servidor — sin esto, la miniatura recién subida seguía
@@ -161,8 +161,8 @@ async function handleUpdateCourse(courseId) {
         await renderAdminEditCourse({ id: courseId });
 
     } catch (error) {
-        showToast(error.message || 'Error al actualizar el curso', 'error');
+        showToast(error.message || t('admin.editCourse.update_failed'), 'error');
         submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i> Guardar Cambios';
+        submitBtn.innerHTML = `<i class="fas fa-save mr-2"></i> ${t('admin.save_changes')}`;
     }
 }

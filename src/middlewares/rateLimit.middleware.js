@@ -1,4 +1,5 @@
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import { t } from '../utils/i18n.js';
 
 /**
  * Genera la key del rate limiter a partir del usuario autenticado en vez de
@@ -17,10 +18,10 @@ export const loginLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: {
+  message: (req, res) => ({
     success: false,
-    message: 'Demasiados intentos de inicio de sesión. Intenta de nuevo en 15 minutos.'
-  }
+    message: t(req.locale, 'errors.too_many_login_attempts')
+  })
 });
 
 /**
@@ -32,10 +33,10 @@ export const registerLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  message: {
+  message: (req, res) => ({
     success: false,
-    message: 'Demasiados registros desde esta red. Intenta de nuevo más tarde.'
-  }
+    message: t(req.locale, 'errors.too_many_registrations')
+  })
 });
 
 /**
@@ -49,10 +50,10 @@ export const enrollLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: byUser,
-  message: {
+  message: (req, res) => ({
     success: false,
-    message: 'Demasiadas solicitudes de inscripción. Intenta de nuevo en unos minutos.'
-  }
+    message: t(req.locale, 'errors.too_many_enrollment_requests')
+  })
 });
 
 /**
@@ -66,10 +67,10 @@ export const forgotPasswordLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  message: {
+  message: (req, res) => ({
     success: false,
-    message: 'Demasiadas solicitudes de recuperación. Intenta de nuevo en unos minutos.'
-  }
+    message: t(req.locale, 'errors.too_many_recovery_requests')
+  })
 });
 
 /**
@@ -85,10 +86,10 @@ export const resetPasswordLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: {
+  message: (req, res) => ({
     success: false,
-    message: 'Demasiados intentos. Intenta de nuevo en unos minutos.'
-  }
+    message: t(req.locale, 'errors.too_many_attempts')
+  })
 });
 
 /**
@@ -102,10 +103,10 @@ export const courseCreateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: byUser,
-  message: {
+  message: (req, res) => ({
     success: false,
-    message: 'Demasiados cursos creados en poco tiempo. Intenta de nuevo más tarde.'
-  }
+    message: t(req.locale, 'errors.too_many_courses_created')
+  })
 });
 
 /**
@@ -120,10 +121,10 @@ export const userCreateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: byUser,
-  message: {
+  message: (req, res) => ({
     success: false,
-    message: 'Demasiados usuarios creados en poco tiempo. Intenta de nuevo más tarde.'
-  }
+    message: t(req.locale, 'errors.too_many_users_created')
+  })
 });
 
 /**
@@ -138,10 +139,10 @@ export const forumPostLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: byUser,
-  message: {
+  message: (req, res) => ({
     success: false,
-    message: 'Demasiadas publicaciones en el foro. Intenta de nuevo en unos minutos.'
-  }
+    message: t(req.locale, 'errors.too_many_forum_posts')
+  })
 });
 
 /**
@@ -156,8 +157,8 @@ export const submitTaskLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: byUser,
-  message: {
+  message: (req, res) => ({
     success: false,
-    message: 'Demasiados intentos de entrega. Intenta de nuevo más tarde.'
-  }
+    message: t(req.locale, 'errors.too_many_submission_attempts')
+  })
 });

@@ -9,34 +9,34 @@ window.renderAdminCreateCourse = async function(params) {
     app.innerHTML = renderAdminLayout(`
         <div class="max-w-2xl">
             <a href="#/admin/courses" class="text-cenat-green hover:underline text-sm mb-4 inline-block">
-                <i class="fas fa-arrow-left mr-1"></i> Volver a cursos
+                <i class="fas fa-arrow-left mr-1"></i> ${t('admin.back_to_courses')}
             </a>
             <h1 class="text-2xl font-bold text-gray-900 mb-6">
                 <i class="fas fa-plus-circle text-cenat-green mr-2"></i>
-                Crear Nuevo Curso
+                ${t('admin.createCourse.title')}
             </h1>
 
             <form id="create-course-form" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Título del curso *</label>
-                    <input type="text" id="title" name="title" required 
+                    <label class="block text-sm font-medium text-gray-700 mb-1">${t('admin.createCourse.title_label')}</label>
+                    <input type="text" id="title" name="title" required
                         class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
-                        placeholder="Ej: Introducción a la Biotecnología Ambiental">
+                        placeholder="${t('admin.createCourse.title_placeholder')}">
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">${t('admin.createCourse.description_label')}</label>
                     <textarea id="description" name="description" rows="4"
                         class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
-                        placeholder="Describe brevemente de qué trata el curso..."></textarea>
+                        placeholder="${t('admin.createCourse.description_placeholder')}"></textarea>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Imagen de portada (opcional)</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">${t('admin.createCourse.thumbnail_label')}</label>
                     <div class="file-drop-zone" id="thumbnail-drop-zone">
                         <i class="fas fa-image text-3xl text-gray-400 mb-2"></i>
-                        <p class="text-sm text-gray-500">Click para seleccionar una imagen o arrástrala aquí</p>
-                        <p class="text-xs text-gray-400 mt-1">JPG, PNG, GIF, WEBP (máx. 5MB)</p>
+                        <p class="text-sm text-gray-500">${t('admin.createCourse.thumbnail_drop_hint')}</p>
+                        <p class="text-xs text-gray-400 mt-1">${t('admin.createCourse.thumbnail_formats_hint')}</p>
                         <input type="file" id="thumbnail" name="thumbnail" accept="image/*" class="hidden">
                     </div>
                     <div id="thumbnail-preview" class="mt-3 hidden">
@@ -45,28 +45,28 @@ window.renderAdminCreateCourse = async function(params) {
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Estilo de certificado</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">${t('admin.createCourse.certificate_style_label')}</label>
                     <select id="certificate_style"
                         class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition">
                         ${renderCertificateStyleOptions('classic')}
                     </select>
-                    <p class="mt-1 text-xs text-gray-500">El diseño del certificado PDF que descarga un estudiante al completar este curso.</p>
+                    <p class="mt-1 text-xs text-gray-500">${t('courseForm.certificate_hint')}</p>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Profesores asignados</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">${t('admin.createCourse.teachers_label')}</label>
                     <div id="teacher-checkboxes" class="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto">
-                        <p class="text-sm text-gray-400">Cargando profesores...</p>
+                        <p class="text-sm text-gray-400">${t('contentManager.modules.loading_teachers')}</p>
                     </div>
-                    <p class="mt-1 text-xs text-gray-500">Opcional. Los profesores asignados podrán editar el contenido de este curso.</p>
+                    <p class="mt-1 text-xs text-gray-500">${t('admin.createCourse.teachers_hint')}</p>
                 </div>
 
                 <div class="flex gap-3 pt-2">
                     <button type="submit" id="submit-btn" class="btn-cenat">
-                        <i class="fas fa-save mr-2"></i> Crear Curso
+                        <i class="fas fa-save mr-2"></i> ${t('admin.createCourse.submit')}
                     </button>
                     <a href="#/admin/courses" class="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition">
-                        Cancelar
+                        ${t('contentManager.cancel')}
                     </a>
                 </div>
             </form>
@@ -85,10 +85,10 @@ window.renderAdminCreateCourse = async function(params) {
         const thumbnailFile = document.getElementById('thumbnail').files[0];
 
         if (!title) {
-            showToast('El título es requerido', 'error');
+            showToast(t('contentManager.title_required'), 'error');
             return;
         }
-        if (thumbnailFile && !checkFileSize(thumbnailFile, 5 * 1024 * 1024, 'La miniatura')) return;
+        if (thumbnailFile && !checkFileSize(thumbnailFile, 5 * 1024 * 1024, t('contentManager.modules.thumbnail_field_label'))) return;
 
         const formData = new FormData();
         formData.append('title', title);
@@ -101,16 +101,16 @@ window.renderAdminCreateCourse = async function(params) {
 
         try {
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Creando...';
+            submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> ${t('contentManager.creating')}`;
 
             const response = await coursesAPI.create(formData);
-            showToast('Curso creado exitosamente', 'success');
+            showToast(t('admin.createCourse.created'), 'success');
             navigateTo(`/admin/courses/${response.data.id}/edit`);
 
         } catch (error) {
-            showToast(error.message || 'Error al crear el curso', 'error');
+            showToast(error.message || t('admin.createCourse.create_failed'), 'error');
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i> Crear Curso';
+            submitBtn.innerHTML = `<i class="fas fa-save mr-2"></i> ${t('admin.createCourse.submit')}`;
         }
     });
 };

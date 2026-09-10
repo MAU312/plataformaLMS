@@ -21,20 +21,20 @@ window.renderAdminUsers = async function(params) {
         <div class="flex items-center justify-between mb-6 gap-4 flex-wrap">
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
                 <i class="fas fa-users text-cenat-green mr-2"></i>
-                Gestión de Usuarios
+                ${t('admin.users.title')}
             </h1>
             <div class="flex gap-2">
                 <button onclick="openBulkImportModal()" class="border border-cenat-green text-cenat-green px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-50 dark:hover:bg-slate-700 transition">
-                    <i class="fas fa-file-csv"></i> Importar CSV
+                    <i class="fas fa-file-csv"></i> ${t('admin.users.import_csv')}
                 </button>
                 <button onclick="openCreateUserModal()" class="btn-cenat">
-                    <i class="fas fa-user-plus"></i> Crear usuario
+                    <i class="fas fa-user-plus"></i> ${t('admin.users.create_user')}
                 </button>
             </div>
         </div>
 
         <div class="relative mb-4">
-            <input type="text" id="search-admin-users" placeholder="Buscar usuario por nombre o email..."
+            <input type="text" id="search-admin-users" placeholder="${t('admin.users.search_placeholder')}"
                 class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
             <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
         </div>
@@ -64,7 +64,7 @@ function openCreateUserModal() {
         <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-w-md w-full fade-in">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-xl font-bold text-gray-900 dark:text-white">
-                    <i class="fas fa-user-plus text-cenat-green mr-2"></i> Crear usuario
+                    <i class="fas fa-user-plus text-cenat-green mr-2"></i> ${t('admin.users.createModal.title')}
                 </h2>
                 <button onclick="closeCreateUserModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-slate-200">
                     <i class="fas fa-times text-lg"></i>
@@ -73,41 +73,41 @@ function openCreateUserModal() {
 
             <form id="create-user-form" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Nombre completo *</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.createModal.name_label')}</label>
                     <input type="text" id="new-user-name" required
                         class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Email *</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.createModal.email_label')}</label>
                     <input type="email" id="new-user-email" required
                         class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Nombre de usuario (opcional)</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.createModal.username_label')}</label>
                     <input type="text" id="new-user-username" minlength="3" maxlength="50"
-                        placeholder="Para iniciar sesión sin el correo"
+                        placeholder="${t('admin.users.createModal.username_placeholder')}"
                         class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Contraseña *</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.createModal.password_label')}</label>
                     <input type="password" id="new-user-password" required minlength="6"
-                        placeholder="Mínimo 6 caracteres"
+                        placeholder="${t('auth.register.password_hint')}"
                         class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Rol *</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.createModal.role_label')}</label>
                     <select id="new-user-role"
                         class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
-                        <option value="student" selected>Estudiante</option>
-                        <option value="teacher">Profesor</option>
-                        <option value="admin">Admin</option>
+                        <option value="student" selected>${t('admin.users.role_student')}</option>
+                        <option value="teacher">${t('admin.users.role_teacher')}</option>
+                        <option value="admin">${t('admin.users.role_admin')}</option>
                     </select>
                 </div>
 
                 <div class="flex items-center gap-3 pt-2">
-                    <button type="submit" class="btn-cenat flex-1">Crear usuario</button>
+                    <button type="submit" class="btn-cenat flex-1">${t('admin.users.createModal.submit')}</button>
                     <button type="button" onclick="closeCreateUserModal()" class="text-gray-600 dark:text-slate-300 px-4 py-2 text-sm">
-                        Cancelar
+                        ${t('contentManager.cancel')}
                     </button>
                 </div>
             </form>
@@ -137,15 +137,15 @@ async function handleCreateUserSubmit(e) {
     };
 
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Creando...';
+    submitBtn.textContent = t('contentManager.creating');
 
     try {
         await usersAPI.create(data);
-        showToast('Usuario creado exitosamente', 'success');
+        showToast(t('admin.users.createModal.created'), 'success');
         closeCreateUserModal();
         loadAdminUsers(currentUserPage);
     } catch (error) {
-        showToast(error.message || 'Error al crear el usuario', 'error');
+        showToast(error.message || t('admin.users.createModal.create_failed'), 'error');
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
     }
@@ -169,7 +169,7 @@ async function openBulkImportModal() {
         <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-w-md w-full fade-in">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-xl font-bold text-gray-900 dark:text-white">
-                    <i class="fas fa-file-csv text-cenat-green mr-2"></i> Importar estudiantes por CSV
+                    <i class="fas fa-file-csv text-cenat-green mr-2"></i> ${t('admin.users.bulkImport.title')}
                 </h2>
                 <button onclick="closeBulkImportModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-slate-200">
                     <i class="fas fa-times text-lg"></i>
@@ -179,26 +179,25 @@ async function openBulkImportModal() {
             <div id="bulk-import-body">
                 <form id="bulk-import-form" class="space-y-4">
                     <p class="text-sm text-gray-600 dark:text-slate-400">
-                        Archivo .csv con columnas <strong>nombre</strong> y <strong>email</strong> (máximo 100 filas).
-                        A cada estudiante nuevo se le genera una contraseña temporal y se le envía por correo.
+                        ${t('admin.users.bulkImport.description')}
                     </p>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Archivo CSV *</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.bulkImport.file_label')}</label>
                         <input type="file" id="bulk-import-file" accept=".csv" required
                             class="w-full text-sm text-gray-700 dark:text-slate-300">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Matricular en un curso (opcional)</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.bulkImport.course_label')}</label>
                         <select id="bulk-import-course"
                             class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
-                            <option value="">Solo crear las cuentas, sin matricular</option>
+                            <option value="">${t('admin.users.bulkImport.no_course_option')}</option>
                         </select>
                     </div>
 
                     <div class="flex items-center gap-3 pt-2">
-                        <button type="submit" class="btn-cenat flex-1">Importar</button>
+                        <button type="submit" class="btn-cenat flex-1">${t('admin.users.bulkImport.submit')}</button>
                         <button type="button" onclick="closeBulkImportModal()" class="text-gray-600 dark:text-slate-300 px-4 py-2 text-sm">
-                            Cancelar
+                            ${t('contentManager.cancel')}
                         </button>
                     </div>
                 </form>
@@ -245,7 +244,7 @@ async function handleBulkImportSubmit(e) {
     if (courseId) formData.append('course_id', courseId);
 
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Importando...';
+    submitBtn.textContent = t('admin.users.bulkImport.importing');
 
     try {
         const response = await usersAPI.bulkImport(formData);
@@ -253,9 +252,9 @@ async function handleBulkImportSubmit(e) {
         renderBulkImportResults(response.data.results);
         loadAdminUsers(currentUserPage);
     } catch (error) {
-        showToast(error.message || 'Error al importar el CSV', 'error');
+        showToast(error.message || t('admin.users.bulkImport.import_failed'), 'error');
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Importar';
+        submitBtn.textContent = t('admin.users.bulkImport.submit');
     }
 }
 
@@ -270,9 +269,9 @@ function renderBulkImportResults(results) {
     if (!body) return;
 
     const statusBadge = {
-        created: '<span class="badge badge-active">Creado</span>',
-        skipped_existing: '<span class="badge badge-inactive">Ya existía</span>',
-        error: '<span class="badge bg-red-100 text-red-700">Error</span>'
+        created: `<span class="badge badge-active">${t('admin.users.bulkImport.status_created')}</span>`,
+        skipped_existing: `<span class="badge badge-inactive">${t('admin.users.bulkImport.status_existing')}</span>`,
+        error: `<span class="badge bg-red-100 text-red-700">${t('admin.users.bulkImport.status_error')}</span>`
     };
 
     body.innerHTML = `
@@ -280,14 +279,14 @@ function renderBulkImportResults(results) {
             ${results.map(r => `
                 <div class="flex items-center justify-between gap-2 text-sm border-b border-gray-100 dark:border-slate-700 pb-2">
                     <div class="min-w-0">
-                        <p class="text-gray-900 dark:text-white truncate">Fila ${r.row}${r.email ? ' — ' + escapeHtml(r.email) : ''}</p>
+                        <p class="text-gray-900 dark:text-white truncate">${t('admin.users.bulkImport.row_prefix', { row: r.row })}${r.email ? ' — ' + escapeHtml(r.email) : ''}</p>
                         ${r.message ? `<p class="text-xs text-gray-500 dark:text-slate-400">${escapeHtml(r.message)}</p>` : ''}
                     </div>
                     ${statusBadge[r.status] || ''}
                 </div>
             `).join('')}
         </div>
-        <button onclick="closeBulkImportModal()" class="btn-cenat w-full mt-4">Cerrar</button>
+        <button onclick="closeBulkImportModal()" class="btn-cenat w-full mt-4">${t('admin.users.bulkImport.close')}</button>
     `;
 }
 
@@ -313,7 +312,7 @@ async function loadAdminUsers(page) {
     } catch (error) {
         if (token !== adminUsersRequestToken) return;
         console.error('Error loading users:', error);
-        showToast('Error al cargar los usuarios', 'error');
+        showToast(t('admin.users.load_failed'), 'error');
     }
 }
 
@@ -326,8 +325,8 @@ function renderUsersTable(users, page, currentUserId, pagination) {
         container.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-users"></i>
-                <p class="text-xl text-gray-600 dark:text-slate-400 font-medium">No se encontraron usuarios</p>
-                <p class="text-gray-500 dark:text-slate-500">Probá con otra búsqueda</p>
+                <p class="text-xl text-gray-600 dark:text-slate-400 font-medium">${t('admin.users.empty')}</p>
+                <p class="text-gray-500 dark:text-slate-500">${t('admin.users.empty_subtitle')}</p>
             </div>`;
         paginationContainer.innerHTML = '';
         return;
@@ -338,13 +337,13 @@ function renderUsersTable(users, page, currentUserId, pagination) {
             <table class="w-full text-sm">
                 <thead class="bg-gray-50 dark:bg-slate-700">
                     <tr class="text-left text-gray-500 dark:text-slate-400">
-                        <th class="py-3 px-4">Nombre</th>
-                        <th class="py-3 px-4">Email</th>
-                        <th class="py-3 px-4">Rol</th>
-                        <th class="py-3 px-4">Estado</th>
-                        <th class="py-3 px-4">Registrado</th>
-                        <th class="py-3 px-4">Último ingreso</th>
-                        <th class="py-3 px-4 text-right">Acciones</th>
+                        <th class="py-3 px-4">${t('admin.users.col_name')}</th>
+                        <th class="py-3 px-4">${t('admin.users.col_email')}</th>
+                        <th class="py-3 px-4">${t('admin.users.col_role')}</th>
+                        <th class="py-3 px-4">${t('admin.users.col_status')}</th>
+                        <th class="py-3 px-4">${t('admin.users.col_registered')}</th>
+                        <th class="py-3 px-4">${t('admin.users.col_last_login')}</th>
+                        <th class="py-3 px-4 text-right">${t('admin.users.col_actions')}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -355,20 +354,20 @@ function renderUsersTable(users, page, currentUserId, pagination) {
                         <tr class="border-t border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 ${!isActive ? 'opacity-60' : ''}">
                             <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">
                                 ${escapeHtml(user.name)}
-                                ${isMe ? '<span class="text-xs text-gray-400 ml-1">(Tú)</span>' : ''}
+                                ${isMe ? `<span class="text-xs text-gray-400 ml-1">${t('admin.users.you_marker')}</span>` : ''}
                             </td>
                             <td class="py-3 px-4 text-gray-600 dark:text-slate-300">${escapeHtml(user.email)}</td>
                             <td class="py-3 px-4">
                                 <select onchange="changeUserRole(${user.id}, this.value)"
                                     class="badge ${user.role === 'admin' ? 'badge-admin' : user.role === 'teacher' ? 'badge-teacher' : 'badge-student'} border-0 cursor-pointer"
                                     ${isMe ? 'disabled' : ''}>
-                                    <option value="student" ${user.role === 'student' ? 'selected' : ''}>Estudiante</option>
-                                    <option value="teacher" ${user.role === 'teacher' ? 'selected' : ''}>Profesor</option>
-                                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                                    <option value="student" ${user.role === 'student' ? 'selected' : ''}>${t('admin.users.role_student')}</option>
+                                    <option value="teacher" ${user.role === 'teacher' ? 'selected' : ''}>${t('admin.users.role_teacher')}</option>
+                                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>${t('admin.users.role_admin')}</option>
                                 </select>
                                 ${user.role === 'teacher' ? `
                                     <button onclick="toggleUserAdminAccess(${user.id})"
-                                        title="${user.admin_access ? 'Quitar acceso adicional de administrador' : 'Dar también acceso de administrador (doble rol)'}"
+                                        title="${user.admin_access ? t('admin.users.remove_admin_access_title') : t('admin.users.grant_admin_access_title')}"
                                         class="ml-1 ${user.admin_access ? 'text-cenat-green' : 'text-gray-300 dark:text-slate-500'} hover:opacity-80 transition">
                                         <i class="fas fa-user-shield"></i>
                                     </button>
@@ -376,15 +375,15 @@ function renderUsersTable(users, page, currentUserId, pagination) {
                             </td>
                             <td class="py-3 px-4">
                                 <span class="badge ${isActive ? 'badge-active' : 'badge-inactive'}">
-                                    ${isActive ? 'Activo' : 'Inactivo'}
+                                    ${isActive ? t('admin.status_active') : t('admin.status_inactive')}
                                 </span>
                             </td>
                             <td class="py-3 px-4 text-gray-500 dark:text-slate-400">${formatDate(user.created_at)}</td>
-                            <td class="py-3 px-4 text-gray-500 dark:text-slate-400">${user.last_login ? formatDate(user.last_login) : 'Nunca'}</td>
+                            <td class="py-3 px-4 text-gray-500 dark:text-slate-400">${user.last_login ? formatDate(user.last_login) : t('admin.users.never_logged_in')}</td>
                             <td class="py-3 px-4 text-right">
                                 <button
                                     onclick="toggleUserActive(${user.id})"
-                                    title="${isActive ? 'Desactivar usuario' : 'Activar usuario'}"
+                                    title="${isActive ? t('admin.users.deactivate_user_title') : t('admin.users.activate_user_title')}"
                                     class="${isMe ? 'opacity-30 cursor-not-allowed' : 'hover:opacity-80'} transition"
                                     ${isMe ? 'disabled' : ''}>
                                     <i class="fas ${isActive ? 'fa-user-slash text-yellow-500' : 'fa-user-check text-green-500'} text-lg"></i>
@@ -416,7 +415,7 @@ async function toggleUserActive(userId) {
         showToast(response.message, newState ? 'success' : 'warning');
         renderUsersTable(currentPageUsers, currentUserPage, getCurrentUser().id, currentUsersPagination);
     } catch (error) {
-        showToast(error.message || 'Error al cambiar estado del usuario', 'error');
+        showToast(error.message || t('admin.users.toggle_active_failed'), 'error');
     }
 }
 
@@ -436,13 +435,13 @@ async function changeUserRole(userId, newRole) {
         // acá mismo para que el ícono de doble rol no quede mostrando un
         // estado que el servidor ya descartó.
         if (newRole !== 'teacher') user.admin_access = false;
-        showToast('Rol actualizado exitosamente', 'success');
+        showToast(t('admin.users.role_updated'), 'success');
         // Re-renderiza para que el color del badge del <select> refleje el
         // nuevo rol — si no, quedaba con el color del rol anterior hasta
         // la próxima carga completa de la tabla.
         renderUsersTable(currentPageUsers, currentUserPage, getCurrentUser().id, currentUsersPagination);
     } catch (error) {
-        showToast(error.message || 'Error al actualizar el rol', 'error');
+        showToast(error.message || t('admin.users.update_role_failed'), 'error');
         loadAdminUsers(currentUserPage);
     }
 }
@@ -457,7 +456,7 @@ async function toggleUserAdminAccess(userId) {
         showToast(response.message, 'success');
         renderUsersTable(currentPageUsers, currentUserPage, getCurrentUser().id, currentUsersPagination);
     } catch (error) {
-        showToast(error.message || 'Error al cambiar el acceso de administrador', 'error');
+        showToast(error.message || t('admin.users.update_admin_access_failed'), 'error');
         loadAdminUsers(currentUserPage);
     }
 }

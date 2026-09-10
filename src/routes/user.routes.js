@@ -4,6 +4,7 @@ import { isAuthenticated, isAdmin } from '../middlewares/auth.middleware.js';
 import { userCreateLimiter } from '../middlewares/rateLimit.middleware.js';
 import { uploadAvatar, uploadCsv } from '../middlewares/upload.middleware.js';
 import { verifyFileSignature } from '../middlewares/fileSignature.middleware.js';
+import { t } from '../utils/i18n.js';
 
 const router = express.Router();
 
@@ -31,7 +32,7 @@ router.get('/by-role/:role', isAuthenticated, (req, res, next) => {
   if (isAdminUser || isTeacherListingTeachers) return next();
   return res.status(403).json({
     success: false,
-    message: 'Acceso denegado. Se requieren permisos de administrador.'
+    message: t(req.locale, 'errors.admin_access_required')
   });
 }, userController.getUsersByRole);
 router.get('/:id', isAuthenticated, isAdmin, userController.getUserById);

@@ -209,13 +209,13 @@ export const createCourse = async (req, res) => {
     if (!title) {
       return res.status(400).json({
         success: false,
-        message: 'El título es requerido'
+        message: t(req.locale, 'errors.title_required')
       });
     }
 
     if (certificate_style !== undefined && certificate_style !== '' && !isValidCertificateStyle(certificate_style)) {
       if (req.file) deleteFile(`/uploads/thumbnails/${req.file.filename}`);
-      return res.status(400).json({ success: false, message: 'Estilo de certificado inválido' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.invalid_certificate_style') });
     }
 
     // Si se subió una miniatura
@@ -247,7 +247,7 @@ export const createCourse = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Curso creado exitosamente',
+      message: t(req.locale, 'success.course_created'),
       data: { id: courseId }
     });
   } catch (error) {
@@ -257,7 +257,7 @@ export const createCourse = async (req, res) => {
     }
     res.status(500).json({
       success: false,
-      message: 'Error al crear curso'
+      message: t(req.locale, 'errors.create_course_failed')
     });
   }
 };
@@ -284,13 +284,13 @@ export const updateCourse = async (req, res) => {
     if (!course) {
       return res.status(404).json({
         success: false,
-        message: 'Curso no encontrado'
+        message: t(req.locale, 'errors.course_not_found')
       });
     }
 
     if (certificate_style !== undefined && !isValidCertificateStyle(certificate_style)) {
       if (req.file) deleteFile(`/uploads/thumbnails/${req.file.filename}`);
-      return res.status(400).json({ success: false, message: 'Estilo de certificado inválido' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.invalid_certificate_style') });
     }
 
     // Preparar datos para actualizar
@@ -339,13 +339,13 @@ export const updateCourse = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Curso actualizado exitosamente'
+      message: t(req.locale, 'success.course_updated')
     });
   } catch (error) {
     console.error('Error al actualizar curso:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al actualizar curso'
+      message: t(req.locale, 'errors.update_course_failed')
     });
   }
 };
@@ -382,7 +382,7 @@ export const deleteCourse = async (req, res) => {
     if (!course) {
       return res.status(404).json({
         success: false,
-        message: 'Curso no encontrado'
+        message: t(req.locale, 'errors.course_not_found')
       });
     }
 
@@ -419,7 +419,7 @@ export const deleteCourse = async (req, res) => {
     if (!deleted) {
       return res.status(400).json({
         success: false,
-        message: 'No se pudo eliminar el curso'
+        message: t(req.locale, 'errors.delete_course_no_rows')
       });
     }
 
@@ -427,13 +427,13 @@ export const deleteCourse = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Curso eliminado exitosamente'
+      message: t(req.locale, 'success.course_deleted')
     });
   } catch (error) {
     console.error('Error al eliminar curso:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al eliminar curso'
+      message: t(req.locale, 'errors.delete_course_failed')
     });
   }
 };
@@ -606,7 +606,7 @@ export const getCourseStudents = async (req, res) => {
 
     const course = await Course.findById(id);
     if (!course) {
-      return res.status(404).json({ success: false, message: 'Curso no encontrado' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.course_not_found') });
     }
 
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -639,7 +639,7 @@ export const getCourseStudents = async (req, res) => {
     });
   } catch (error) {
     console.error('Error al obtener estudiantes del curso:', error);
-    res.status(500).json({ success: false, message: 'Error al obtener estudiantes del curso' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.get_course_students_failed') });
   }
 };
 
@@ -656,14 +656,19 @@ export const exportCourseGrades = async (req, res) => {
 
     const course = await Course.findById(id);
     if (!course) {
-      return res.status(404).json({ success: false, message: 'Curso no encontrado' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.course_not_found') });
     }
 
     const { rows: students } = await Course.getEnrolledStudents(id, { page: 1, limit: 10000 });
     const grades = await Promise.all(students.map((s) => Content.calculateCourseGrade(id, s.id)));
 
     const csv = toCsv(
-      ['Nombre', 'Email', 'Progreso (%)', 'Nota'],
+      [
+        t(req.locale, 'labels.csv_col_name'),
+        t(req.locale, 'labels.csv_col_email'),
+        t(req.locale, 'labels.csv_col_progress'),
+        t(req.locale, 'labels.csv_col_grade')
+      ],
       students.map((s, i) => [s.name, s.email, s.progress, grades[i] ?? ''])
     );
 
@@ -674,7 +679,7 @@ export const exportCourseGrades = async (req, res) => {
     res.send('﻿' + csv);
   } catch (error) {
     console.error('Error al exportar las notas del curso:', error);
-    res.status(500).json({ success: false, message: 'Error al exportar las notas' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.export_grades_failed') });
   }
 };
 
@@ -692,26 +697,34 @@ export const exportStudentGrades = async (req, res) => {
 
     const course = await Course.findById(id);
     if (!course) {
-      return res.status(404).json({ success: false, message: 'Curso no encontrado' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.course_not_found') });
     }
     const student = await User.findById(studentId);
     if (!student) {
-      return res.status(404).json({ success: false, message: 'Estudiante no encontrado' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.student_not_found') });
     }
 
     const { items, total } = await Content.getCourseGradeBreakdown(id, studentId);
 
     const rows = items.map((item) => [item.title, item.type, item.weight_percent, item.earned]);
-    rows.push(['Nota final', '', '', total ?? '']);
+    rows.push([t(req.locale, 'labels.csv_final_grade_label'), '', '', total ?? '']);
 
-    const csv = toCsv(['Contenido', 'Tipo', 'Vale (%)', 'Nota obtenida'], rows);
+    const csv = toCsv(
+      [
+        t(req.locale, 'labels.csv_col_content'),
+        t(req.locale, 'labels.csv_col_type'),
+        t(req.locale, 'labels.csv_col_weight'),
+        t(req.locale, 'labels.csv_col_earned')
+      ],
+      rows
+    );
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="notas-${slugifyFilename(student.name)}-${slugifyFilename(course.title)}.csv"`);
     res.send('﻿' + csv);
   } catch (error) {
     console.error('Error al exportar la nota del estudiante:', error);
-    res.status(500).json({ success: false, message: 'Error al exportar la nota' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.export_student_grade_failed') });
   }
 };
 
@@ -726,7 +739,7 @@ export const getCourseTeachers = async (req, res) => {
 
     const course = await Course.findById(id);
     if (!course) {
-      return res.status(404).json({ success: false, message: 'Curso no encontrado' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.course_not_found') });
     }
 
     const teachers = await Course.getCourseTeachers(id);
@@ -734,7 +747,7 @@ export const getCourseTeachers = async (req, res) => {
     res.json({ success: true, data: { course, teachers } });
   } catch (error) {
     console.error('Error al obtener profesores del curso:', error);
-    res.status(500).json({ success: false, message: 'Error al obtener profesores del curso' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.get_course_teachers_failed') });
   }
 };
 
@@ -747,7 +760,7 @@ export const getTeachingCourses = async (req, res) => {
     res.json({ success: true, data: courses });
   } catch (error) {
     console.error('Error al obtener cursos como profesor:', error);
-    res.status(500).json({ success: false, message: 'Error al obtener cursos' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.get_teaching_courses_failed') });
   }
 };
 
@@ -762,7 +775,7 @@ export const getGlobalStats = async (req, res) => {
     console.error('Error al obtener estadísticas globales:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al obtener estadísticas globales'
+      message: t(req.locale, 'errors.get_global_stats_failed')
     });
   }
 };
@@ -778,7 +791,7 @@ export const getCourseStats = async (req, res) => {
     if (!course) {
       return res.status(404).json({
         success: false,
-        message: 'Curso no encontrado'
+        message: t(req.locale, 'errors.course_not_found')
       });
     }
 
@@ -792,7 +805,7 @@ export const getCourseStats = async (req, res) => {
     console.error('Error al obtener estadísticas:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al obtener estadísticas'
+      message: t(req.locale, 'errors.get_stats_failed')
     });
   }
 };

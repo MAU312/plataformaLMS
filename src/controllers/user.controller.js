@@ -6,6 +6,7 @@ import { deleteFile } from '../middlewares/upload.middleware.js';
 import { parseCsv } from '../utils/csv.js';
 import { generateTempPassword } from '../utils/password.js';
 import mailer from '../config/mailer.js';
+import { t } from '../utils/i18n.js';
 
 const VALID_ROLES = ['admin', 'student', 'teacher'];
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -31,20 +32,20 @@ export const createUser = async (req, res) => {
     const { name, email, username, password, role } = req.body;
 
     if (!name || !email || !password || !role) {
-      return res.status(400).json({ success: false, message: 'Nombre, email, contraseña y rol son requeridos' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.name_email_password_role_required') });
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
     if (!EMAIL_REGEX.test(normalizedEmail)) {
-      return res.status(400).json({ success: false, message: 'El email no tiene un formato válido' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.invalid_email_format') });
     }
 
     if (!VALID_ROLES.includes(role)) {
-      return res.status(400).json({ success: false, message: 'Rol inválido' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.invalid_role') });
     }
 
     if (String(password).length < 6) {
-      return res.status(400).json({ success: false, message: 'La contraseña debe tener al menos 6 caracteres' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.password_min_length') });
     }
 
     let normalizedUsername = null;
@@ -53,7 +54,7 @@ export const createUser = async (req, res) => {
       if (!USERNAME_REGEX.test(normalizedUsername)) {
         return res.status(400).json({
           success: false,
-          message: 'El nombre de usuario debe tener 3-50 caracteres: letras, números, puntos, guiones o guiones bajos'
+          message: t(req.locale, 'errors.invalid_username_format')
         });
       }
     }
@@ -68,16 +69,16 @@ export const createUser = async (req, res) => {
         password: hashedPassword,
         role
       });
-      res.status(201).json({ success: true, message: 'Usuario creado exitosamente', data: { id: userId } });
+      res.status(201).json({ success: true, message: t(req.locale, 'success.user_created'), data: { id: userId } });
     } catch (dbError) {
       if (dbError.code === 'ER_DUP_ENTRY') {
-        return res.status(400).json({ success: false, message: 'El email o nombre de usuario ya está en uso' });
+        return res.status(400).json({ success: false, message: t(req.locale, 'errors.email_or_username_taken') });
       }
       throw dbError;
     }
   } catch (error) {
     console.error('Error al crear usuario:', error);
-    res.status(500).json({ success: false, message: 'Error al crear usuario' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.create_user_failed') });
   }
 };
 
@@ -99,7 +100,7 @@ export const getAllUsers = async (req, res) => {
     });
   } catch (error) {
     console.error('Error al obtener usuarios:', error);
-    res.status(500).json({ success: false, message: 'Error al obtener usuarios' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.get_users_failed') });
   }
 };
 
@@ -109,11 +110,11 @@ export const getAllUsers = async (req, res) => {
 export const getUserById = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    if (!user) return res.status(404).json({ success: false, message: t(req.locale, 'errors.user_not_found') });
     res.json({ success: true, data: user });
   } catch (error) {
     console.error('Error al obtener usuario:', error);
-    res.status(500).json({ success: false, message: 'Error al obtener usuario' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.get_user_by_id_failed') });
   }
 };
 
@@ -125,20 +126,20 @@ export const updateUser = async (req, res) => {
     const { name, email, role } = req.body;
 
     if (!name || !email || !role) {
-      return res.status(400).json({ success: false, message: 'Nombre, email y rol son requeridos' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.name_email_role_required') });
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
     if (!EMAIL_REGEX.test(normalizedEmail)) {
-      return res.status(400).json({ success: false, message: 'El email no tiene un formato válido' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.invalid_email_format') });
     }
 
     if (!VALID_ROLES.includes(role)) {
-      return res.status(400).json({ success: false, message: 'Rol inválido' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.invalid_role') });
     }
 
     const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    if (!user) return res.status(404).json({ success: false, message: t(req.locale, 'errors.user_not_found') });
 
     // Evita que un admin se quite su propio rol por accidente (por ejemplo
     // desde el selector de rol en la tabla de usuarios) y quede bloqueado
@@ -146,7 +147,7 @@ export const updateUser = async (req, res) => {
     if (req.session.user.id === parseInt(req.params.id) && role !== 'admin') {
       return res.status(400).json({
         success: false,
-        message: 'No puedes cambiar tu propio rol de administrador'
+        message: t(req.locale, 'errors.cannot_change_own_admin_role')
       });
     }
 
@@ -154,15 +155,15 @@ export const updateUser = async (req, res) => {
       await User.update(req.params.id, { name: String(name).trim(), email: normalizedEmail, role });
     } catch (dbError) {
       if (dbError.code === 'ER_DUP_ENTRY') {
-        return res.status(400).json({ success: false, message: 'El email ya está en uso por otro usuario' });
+        return res.status(400).json({ success: false, message: t(req.locale, 'errors.email_in_use_by_other') });
       }
       throw dbError;
     }
 
-    res.json({ success: true, message: 'Usuario actualizado exitosamente' });
+    res.json({ success: true, message: t(req.locale, 'success.user_updated') });
   } catch (error) {
     console.error('Error al actualizar usuario:', error);
-    res.status(500).json({ success: false, message: 'Error al actualizar usuario' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.update_user_failed') });
   }
 };
 
@@ -178,24 +179,24 @@ export const toggleUserActive = async (req, res) => {
     if (req.session.user.id === parseInt(id)) {
       return res.status(400).json({
         success: false,
-        message: 'No puedes desactivarte a ti mismo'
+        message: t(req.locale, 'errors.cannot_deactivate_own_account')
       });
     }
 
     const user = await User.findById(id);
-    if (!user) return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    if (!user) return res.status(404).json({ success: false, message: t(req.locale, 'errors.user_not_found') });
 
     const newState = !user.is_active;
     await User.toggleActive(id, newState);
 
     res.json({
       success: true,
-      message: newState ? 'Usuario activado' : 'Usuario desactivado',
+      message: newState ? t(req.locale, 'success.user_activated') : t(req.locale, 'success.user_deactivated'),
       data: { is_active: newState }
     });
   } catch (error) {
     console.error('Error al cambiar estado del usuario:', error);
-    res.status(500).json({ success: false, message: 'Error al cambiar estado del usuario' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.toggle_user_active_failed') });
   }
 };
 
@@ -210,12 +211,12 @@ export const setUserAdminAccess = async (req, res) => {
     const { admin_access } = req.body;
 
     const user = await User.findById(id);
-    if (!user) return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    if (!user) return res.status(404).json({ success: false, message: t(req.locale, 'errors.user_not_found') });
 
     if (user.role !== 'teacher') {
       return res.status(400).json({
         success: false,
-        message: 'El acceso adicional de administrador solo aplica a profesores'
+        message: t(req.locale, 'errors.admin_access_teacher_only')
       });
     }
 
@@ -224,12 +225,12 @@ export const setUserAdminAccess = async (req, res) => {
 
     res.json({
       success: true,
-      message: newState ? 'Acceso de administrador otorgado' : 'Acceso de administrador retirado',
+      message: newState ? t(req.locale, 'success.admin_access_granted') : t(req.locale, 'success.admin_access_revoked'),
       data: { admin_access: newState }
     });
   } catch (error) {
     console.error('Error al cambiar el acceso de administrador:', error);
-    res.status(500).json({ success: false, message: 'Error al cambiar el acceso de administrador' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.update_admin_access_failed') });
   }
 };
 
@@ -244,14 +245,14 @@ export const setUserAdminAccess = async (req, res) => {
 export const bulkImportUsers = async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ success: false, message: 'El archivo CSV es requerido' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.csv_file_required') });
     }
 
     const courseId = req.body.course_id ? parseInt(req.body.course_id) : null;
     let course = null;
     if (courseId) {
       course = await Course.findById(courseId);
-      if (!course) return res.status(404).json({ success: false, message: 'Curso no encontrado' });
+      if (!course) return res.status(404).json({ success: false, message: t(req.locale, 'errors.course_not_found') });
     }
 
     const { headers, rows } = parseCsv(req.file.buffer.toString('utf8'));
@@ -261,16 +262,16 @@ export const bulkImportUsers = async (req, res) => {
     if (!nameKey || !emailKey) {
       return res.status(400).json({
         success: false,
-        message: 'El CSV debe tener una columna de nombre ("nombre"/"name") y otra de email ("email"/"correo")'
+        message: t(req.locale, 'errors.csv_missing_columns')
       });
     }
     if (rows.length === 0) {
-      return res.status(400).json({ success: false, message: 'El CSV no tiene filas de datos' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.csv_no_rows') });
     }
     if (rows.length > CSV_IMPORT_MAX_ROWS) {
       return res.status(400).json({
         success: false,
-        message: `Máximo ${CSV_IMPORT_MAX_ROWS} filas por importación`
+        message: t(req.locale, 'errors.csv_too_many_rows', { max: CSV_IMPORT_MAX_ROWS })
       });
     }
 
@@ -284,7 +285,7 @@ export const bulkImportUsers = async (req, res) => {
       const email = String(rows[i][emailKey] || '').trim().toLowerCase();
 
       if (!name || !email || !EMAIL_REGEX.test(email)) {
-        results.push({ row: rowNum, email: email || null, status: 'error', message: 'Nombre o email inválido' });
+        results.push({ row: rowNum, email: email || null, status: 'error', message: t(req.locale, 'errors.row_invalid_name_email') });
         continue;
       }
 
@@ -297,10 +298,10 @@ export const bulkImportUsers = async (req, res) => {
             row: rowNum,
             email,
             status: 'skipped_existing',
-            message: enrolled ? 'La cuenta ya existía — se matriculó en el curso' : 'La cuenta ya existía y ya estaba matriculada en el curso'
+            message: enrolled ? t(req.locale, 'success.row_existing_enrolled') : t(req.locale, 'success.row_existing_already_enrolled')
           });
         } else {
-          results.push({ row: rowNum, email, status: 'skipped_existing', message: 'Ya existe una cuenta con ese email' });
+          results.push({ row: rowNum, email, status: 'skipped_existing', message: t(req.locale, 'success.row_existing_account') });
         }
         continue;
       }
@@ -312,7 +313,7 @@ export const bulkImportUsers = async (req, res) => {
       try {
         userId = await User.create({ name, email, password: hashedPassword, role: 'student' });
       } catch (dbError) {
-        results.push({ row: rowNum, email, status: 'error', message: 'No se pudo crear la cuenta' });
+        results.push({ row: rowNum, email, status: 'error', message: t(req.locale, 'errors.row_create_failed') });
         continue;
       }
 
@@ -332,12 +333,12 @@ export const bulkImportUsers = async (req, res) => {
 
     res.json({
       success: true,
-      message: `${created} cuenta(s) creada(s), ${skipped} omitida(s) de ${rows.length} fila(s)`,
+      message: t(req.locale, 'success.bulk_import_summary', { created, skipped, total: rows.length }),
       data: { created, skipped, total: rows.length, results }
     });
   } catch (error) {
     console.error('Error al importar usuarios desde CSV:', error);
-    res.status(500).json({ success: false, message: 'Error al importar usuarios' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.bulk_import_failed') });
   }
 };
 
@@ -347,12 +348,12 @@ export const bulkImportUsers = async (req, res) => {
 export const deleteUser = async (req, res) => {
   try {
     if (req.session.user.id === parseInt(req.params.id)) {
-      return res.status(400).json({ success: false, message: 'No puedes eliminar tu propia cuenta' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.cannot_delete_own_account') });
     }
 
     const user = await User.findById(req.params.id);
     if (!user) {
-      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.user_not_found') });
     }
 
     // Recolectar archivos (avatar + entregas de tareas que subió) ANTES de
@@ -367,15 +368,15 @@ export const deleteUser = async (req, res) => {
 
     const deleted = await User.delete(req.params.id);
     if (!deleted) {
-      return res.status(400).json({ success: false, message: 'No se pudo eliminar el usuario' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.delete_user_no_rows') });
     }
 
     filesToDelete.forEach(deleteFile);
 
-    res.json({ success: true, message: 'Usuario eliminado exitosamente' });
+    res.json({ success: true, message: t(req.locale, 'success.user_deleted') });
   } catch (error) {
     console.error('Error al eliminar usuario:', error);
-    res.status(500).json({ success: false, message: 'Error al eliminar usuario' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.delete_user_failed') });
   }
 };
 
@@ -389,14 +390,14 @@ export const getUsersByRole = async (req, res) => {
     const { role } = req.params;
 
     if (!VALID_ROLES.includes(role)) {
-      return res.status(400).json({ success: false, message: 'Rol inválido' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.invalid_role') });
     }
 
     const users = await User.findByRole(role);
     res.json({ success: true, data: users });
   } catch (error) {
     console.error('Error al obtener usuarios por rol:', error);
-    res.status(500).json({ success: false, message: 'Error al obtener usuarios' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.get_users_failed') });
   }
 };
 
@@ -409,7 +410,7 @@ export const getUserStats = async (req, res) => {
     res.json({ success: true, data: stats });
   } catch (error) {
     console.error('Error al obtener estadísticas de usuarios:', error);
-    res.status(500).json({ success: false, message: 'Error al obtener estadísticas' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.get_stats_failed') });
   }
 };
 
@@ -424,7 +425,7 @@ export const getUserStats = async (req, res) => {
 export const updateMyAvatar = async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ success: false, message: 'La imagen es requerida' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.image_required') });
     }
 
     const userId = req.session.user.id;
@@ -435,7 +436,7 @@ export const updateMyAvatar = async (req, res) => {
 
     if (!updated) {
       deleteFile(avatarUrl);
-      return res.status(400).json({ success: false, message: 'No se pudo actualizar la foto de perfil' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.avatar_update_no_rows') });
     }
 
     if (previousAvatarUrl) {
@@ -444,13 +445,13 @@ export const updateMyAvatar = async (req, res) => {
 
     req.session.user.avatar_url = avatarUrl;
 
-    res.json({ success: true, message: 'Foto de perfil actualizada exitosamente', data: { avatar_url: avatarUrl } });
+    res.json({ success: true, message: t(req.locale, 'success.avatar_updated'), data: { avatar_url: avatarUrl } });
   } catch (error) {
     console.error('Error al actualizar la foto de perfil:', error);
     if (req.file) {
       deleteFile(`/uploads/avatars/${req.file.filename}`);
     }
-    res.status(500).json({ success: false, message: 'Error al actualizar la foto de perfil' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.avatar_update_failed') });
   }
 };
 
@@ -464,16 +465,16 @@ export const removeMyAvatar = async (req, res) => {
     const previousAvatarUrl = req.session.user.avatar_url;
 
     if (!previousAvatarUrl) {
-      return res.status(400).json({ success: false, message: 'No tenés una foto de perfil para quitar' });
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.no_avatar_to_remove') });
     }
 
     await User.updateAvatar(userId, null);
     deleteFile(previousAvatarUrl);
     req.session.user.avatar_url = null;
 
-    res.json({ success: true, message: 'Foto de perfil eliminada exitosamente' });
+    res.json({ success: true, message: t(req.locale, 'success.avatar_removed') });
   } catch (error) {
     console.error('Error al quitar la foto de perfil:', error);
-    res.status(500).json({ success: false, message: 'Error al quitar la foto de perfil' });
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.avatar_remove_failed') });
   }
 };

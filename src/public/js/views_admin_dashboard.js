@@ -30,44 +30,44 @@ window.renderAdminDashboard = async function(params) {
             ${renderAdminLayout(`
                 <h1 class="text-2xl font-bold text-gray-900 mb-6">
                     <i class="fas fa-tachometer-alt text-cenat-green mr-2"></i>
-                    Panel de Administración
+                    ${t('admin.dashboard.title')}
                 </h1>
 
                 <!-- Stats Cards -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    ${renderStatCard('fa-book', totalCourses, 'Cursos totales', 'bg-blue-500')}
-                    ${renderStatCard('fa-check-circle', activeCourses, 'Cursos activos', 'bg-green-500')}
-                    ${renderStatCard('fa-file-video', totalContents, 'Contenidos', 'bg-purple-500')}
-                    ${renderStatCard('fa-user-graduate', totalStudents, 'Estudiantes', 'bg-orange-500')}
+                    ${renderStatCard('fa-book', totalCourses, t('admin.dashboard.stat_total_courses'), 'bg-blue-500')}
+                    ${renderStatCard('fa-check-circle', activeCourses, t('admin.dashboard.stat_active_courses'), 'bg-green-500')}
+                    ${renderStatCard('fa-file-video', totalContents, t('admin.dashboard.stat_contents'), 'bg-purple-500')}
+                    ${renderStatCard('fa-user-graduate', totalStudents, t('admin.dashboard.stat_students'), 'bg-orange-500')}
                 </div>
 
                 <!-- Quick Actions -->
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
-                    <h2 class="text-lg font-bold text-gray-900 mb-4">Acciones rápidas</h2>
+                    <h2 class="text-lg font-bold text-gray-900 mb-4">${t('admin.dashboard.quick_actions')}</h2>
                     <div class="flex flex-wrap gap-4">
                         <a href="#/admin/courses/create" class="btn-cenat">
-                            <i class="fas fa-plus mr-2"></i> Crear nuevo curso
+                            <i class="fas fa-plus mr-2"></i> ${t('admin.dashboard.create_course')}
                         </a>
                         <a href="#/admin/courses" class="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition">
-                            <i class="fas fa-cog mr-2"></i> Gestionar cursos
+                            <i class="fas fa-cog mr-2"></i> ${t('admin.dashboard.manage_courses')}
                         </a>
                         <a href="#/admin/users" class="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition">
-                            <i class="fas fa-users mr-2"></i> Gestionar usuarios
+                            <i class="fas fa-users mr-2"></i> ${t('admin.dashboard.manage_users')}
                         </a>
                     </div>
                 </div>
 
                 <!-- Cursos recientes -->
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h2 class="text-lg font-bold text-gray-900 mb-4">Cursos recientes</h2>
+                    <h2 class="text-lg font-bold text-gray-900 mb-4">${t('admin.dashboard.recent_courses')}</h2>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="border-b text-left text-gray-500">
-                                    <th class="py-2 pr-4">Título</th>
-                                    <th class="py-2 pr-4">Estado</th>
-                                    <th class="py-2 pr-4">Contenidos</th>
-                                    <th class="py-2 pr-4">Inscritos</th>
+                                    <th class="py-2 pr-4">${t('admin.dashboard.col_title')}</th>
+                                    <th class="py-2 pr-4">${t('admin.dashboard.col_status')}</th>
+                                    <th class="py-2 pr-4">${t('admin.dashboard.col_contents')}</th>
+                                    <th class="py-2 pr-4">${t('admin.dashboard.col_enrolled')}</th>
                                     <th class="py-2"></th>
                                 </tr>
                             </thead>
@@ -77,14 +77,14 @@ window.renderAdminDashboard = async function(params) {
                                         <td class="py-3 pr-4 font-medium text-gray-900">${escapeHtml(course.title)}</td>
                                         <td class="py-3 pr-4">
                                             <span class="badge ${course.is_active ? 'badge-active' : 'badge-inactive'}">
-                                                ${course.is_active ? 'Activo' : 'Inactivo'}
+                                                ${course.is_active ? t('admin.status_active') : t('admin.status_inactive')}
                                             </span>
                                         </td>
                                         <td class="py-3 pr-4">${course.content_count || 0}</td>
                                         <td class="py-3 pr-4">${course.enrolled_count || 0}</td>
                                         <td class="py-3">
                                             <a href="#/admin/courses/${course.id}/edit" class="text-cenat-green hover:underline">
-                                                Editar
+                                                ${t('admin.dashboard.edit')}
                                             </a>
                                         </td>
                                     </tr>
@@ -98,7 +98,7 @@ window.renderAdminDashboard = async function(params) {
 
     } catch (error) {
         console.error('Error loading dashboard:', error);
-        showToast('Error al cargar el panel administrativo', 'error');
+        showToast(t('admin.dashboard.load_failed'), 'error');
     }
 };
 
@@ -121,10 +121,10 @@ function renderStatCard(icon, value, label, colorClass) {
  */
 function renderAdminLayout(content, activeSection) {
     const menuItems = [
-        { id: 'dashboard', icon: 'fa-tachometer-alt', label: 'Dashboard', path: '/admin' },
-        { id: 'courses', icon: 'fa-book', label: 'Cursos', path: '/admin/courses' },
-        { id: 'users', icon: 'fa-users', label: 'Usuarios', path: '/admin/users' },
-        { id: 'settings', icon: 'fa-paint-brush', label: 'Apariencia del sitio', path: '/admin/settings' }
+        { id: 'dashboard', icon: 'fa-tachometer-alt', label: t('admin.nav.dashboard'), path: '/admin' },
+        { id: 'courses', icon: 'fa-book', label: t('admin.nav.courses'), path: '/admin/courses' },
+        { id: 'users', icon: 'fa-users', label: t('admin.nav.users'), path: '/admin/users' },
+        { id: 'settings', icon: 'fa-paint-brush', label: t('admin.nav.settings'), path: '/admin/settings' }
     ];
 
     return `
@@ -133,7 +133,7 @@ function renderAdminLayout(content, activeSection) {
             <aside class="w-64 bg-white border-r border-gray-200 hidden md:block">
                 <div class="p-6">
                     <h2 class="text-lg font-bold text-cenat-green mb-6">
-                        <i class="fas fa-shield-alt mr-2"></i>Administración
+                        <i class="fas fa-shield-alt mr-2"></i>${t('nav.admin')}
                     </h2>
                     <nav class="space-y-1">
                         ${menuItems.map(item => `
