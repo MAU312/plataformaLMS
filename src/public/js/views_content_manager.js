@@ -289,7 +289,15 @@ function showAddModuleCourseForm(courseId, moduleId) {
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.modules.thumbnail_label')}</label>
-                <input type="file" id="module-course-thumbnail-${moduleId}" accept="image/*" class="w-full text-sm">
+                <div class="file-drop-zone" id="module-course-thumbnail-drop-zone-${moduleId}">
+                    <i class="fas fa-image text-2xl text-gray-400 mb-1"></i>
+                    <p class="text-xs text-gray-500">${t('admin.createCourse.thumbnail_drop_hint')}</p>
+                    <p class="text-xs text-gray-400 mt-1">${t('admin.createCourse.thumbnail_formats_hint')}</p>
+                    <input type="file" id="module-course-thumbnail-${moduleId}" accept="image/*" class="hidden">
+                </div>
+                <div id="module-course-thumbnail-preview-${moduleId}" class="mt-2 hidden">
+                    <img id="module-course-thumbnail-preview-img-${moduleId}" class="h-20 rounded-lg object-cover">
+                </div>
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.modules.teacher_label')}</label>
@@ -309,6 +317,12 @@ function showAddModuleCourseForm(courseId, moduleId) {
     `;
 
     loadTeacherCheckboxes(teacherCheckboxesId);
+    setupThumbnailDropZone({
+        dropZoneId: `module-course-thumbnail-drop-zone-${moduleId}`,
+        inputId: `module-course-thumbnail-${moduleId}`,
+        previewContainerId: `module-course-thumbnail-preview-${moduleId}`,
+        previewImgId: `module-course-thumbnail-preview-img-${moduleId}`
+    });
 
     document.getElementById(`add-module-course-form-${moduleId}`).addEventListener('submit', async (e) => {
         e.preventDefault();

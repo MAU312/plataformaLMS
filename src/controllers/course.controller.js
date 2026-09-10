@@ -26,7 +26,7 @@ function slugifyFilename(text) {
 }
 
 /**
- * Obtener cursos paginados (?page, ?limit, ?search)
+ * Obtener cursos paginados (?page, ?limit, ?search, ?scope)
  */
 export const getAllCourses = async (req, res) => {
   try {
@@ -37,9 +37,15 @@ export const getAllCourses = async (req, res) => {
     // debería poder forzar al servidor a traer/enviar de más.
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 12));
     const search = String(req.query.search || '').trim();
+    // 'top'|'children' distingue cursos normales de cursos hijo de un
+    // módulo (tabla "Módulos" del panel admin) — cualquier otro valor se
+    // ignora en vez de fallar, igual que un scope ausente. Sin sentido
+    // fuera del panel admin: el catálogo público (findAll) ya fuerza
+    // top-level por su cuenta.
+    const scope = ['top', 'children'].includes(req.query.scope) ? req.query.scope : undefined;
 
     const { rows, total } = isAdmin
-      ? await Course.findAllForAdmin({ page, limit, search })
+      ? await Course.findAllForAdmin({ page, limit, search, scope })
       : await Course.findAll({ page, limit, search });
 
     res.json({

@@ -54,9 +54,15 @@ window.renderAdminEditCourse = async function(params) {
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">${t('admin.editCourse.thumbnail_label')}</label>
-                            ${course.thumbnail ? `<img src="${escapeAttr(course.thumbnail)}" class="h-24 rounded-lg object-cover mb-2">` : ''}
-                            <input type="file" id="thumbnail" name="thumbnail" accept="image/*"
-                                class="w-full text-sm text-gray-600">
+                            <div class="file-drop-zone" id="thumbnail-drop-zone">
+                                <i class="fas fa-image text-3xl text-gray-400 mb-2"></i>
+                                <p class="text-sm text-gray-500">${t('admin.createCourse.thumbnail_drop_hint')}</p>
+                                <p class="text-xs text-gray-400 mt-1">${t('admin.createCourse.thumbnail_formats_hint')}</p>
+                                <input type="file" id="thumbnail" name="thumbnail" accept="image/*" class="hidden">
+                            </div>
+                            <div id="thumbnail-preview" class="mt-3 ${course.thumbnail ? '' : 'hidden'}">
+                                <img id="thumbnail-preview-img" src="${course.thumbnail ? escapeAttr(course.thumbnail) : ''}" class="h-32 rounded-lg object-cover">
+                            </div>
                         </div>
 
                         <div class="flex items-center gap-2">
@@ -103,6 +109,7 @@ window.renderAdminEditCourse = async function(params) {
         `, 'courses');
 
         initCourseContentManager(() => renderAdminEditCourse({ id: course.id }), course);
+        setupThumbnailDropZone();
 
         // Form de edición de curso
         document.getElementById('edit-course-form').addEventListener('submit', async (e) => {

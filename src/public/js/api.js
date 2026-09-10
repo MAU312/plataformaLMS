@@ -99,9 +99,10 @@ const authAPI = {
 // =================================
 
 const coursesAPI = {
-    getAll: async ({ page = 1, limit = 12, search = '' } = {}) => {
+    getAll: async ({ page = 1, limit = 12, search = '', scope } = {}) => {
         const params = new URLSearchParams({ page, limit });
         if (search) params.set('search', search);
+        if (scope) params.set('scope', scope);
         return apiRequest(`/courses?${params}`);
     },
     getById: async (id) => apiRequest(`/courses/${id}`),

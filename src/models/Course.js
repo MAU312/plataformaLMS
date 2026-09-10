@@ -6,8 +6,13 @@ class Course {
    * real entre ambas es si se filtra por is_active, así que se arma acá
    * una sola vez en vez de mantener dos copias del mismo SELECT (con el
    * riesgo de que alguna quede desactualizada si se agrega una columna).
+   *
+   * `scope` (solo lo usa el admin, ver findAllForAdmin) distingue cursos
+   * top-level de cursos hijo de un módulo, para la tabla separada de
+   * "Módulos" en el panel admin: 'top' → solo padres, 'children' → solo
+   * hijos, undefined → sin filtrar (comportamiento de siempre).
    */
-  static async _findPaginated({ page, limit, search, activeOnly }) {
+  static async _findPaginated({ page, limit, search, activeOnly, scope }) {
     const offset = (page - 1) * limit;
     const conditions = [];
     const searchParams = [];
@@ -15,20 +20,30 @@ class Course {
     // Un curso hijo de un módulo (ver resolveEnrollmentRoot) no es
     // inscribible por su cuenta — no debe listarse suelto en el catálogo
     // público ni en "mis cursos". `findAllForAdmin` (activeOnly=false) sigue
-    // mostrando todo, para que el admin pueda gestionarlos directamente.
+    // mostrando todo por defecto, para que el admin pueda gestionarlos
+    // directamente — salvo que pida un `scope` puntual (ver arriba).
     if (activeOnly) conditions.push('c.parent_module_id IS NULL');
+    if (scope === 'top') conditions.push('c.parent_module_id IS NULL');
+    if (scope === 'children') conditions.push('c.parent_module_id IS NOT NULL');
     if (search) {
       conditions.push('(c.title LIKE ? OR c.description LIKE ?)');
       searchParams.push(`%${search}%`, `%${search}%`);
     }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
+    // Mismo LEFT JOIN que findById, para poder mostrar a qué curso padre/
+    // módulo pertenece un curso hijo (tabla "Módulos" del panel admin) sin
+    // pedirlo aparte por cada fila — para un curso top-level queda NULL,
+    // inofensivo.
     const [rows] = await pool.query(
       `SELECT c.*,
        (SELECT GROUP_CONCAT(u.name SEPARATOR ', ') FROM course_teachers ct INNER JOIN users u ON u.id = ct.user_id WHERE ct.course_id = c.id) as teacher_names,
        (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id) as enrolled_count,
-       (SELECT COUNT(*) FROM contents WHERE course_id = c.id) as content_count
+       (SELECT COUNT(*) FROM contents WHERE course_id = c.id) as content_count,
+       cm.title as module_title, pc.id as parent_course_id, pc.title as parent_course_title
        FROM courses c
+       LEFT JOIN course_modules cm ON cm.id = c.parent_module_id
+       LEFT JOIN courses pc ON pc.id = cm.course_id
        ${where}
        ORDER BY c.created_at DESC
        LIMIT ? OFFSET ?`,
@@ -55,9 +70,11 @@ class Course {
 
   /**
    * Igual que findAll, pero incluyendo cursos inactivos - solo para admin.
+   * `scope` ('top'|'children') filtra la tabla separada de "Módulos" del
+   * panel admin — ver _findPaginated.
    */
-  static async findAllForAdmin({ page = 1, limit = 12, search = '' } = {}) {
-    return Course._findPaginated({ page, limit, search, activeOnly: false });
+  static async findAllForAdmin({ page = 1, limit = 12, search = '', scope } = {}) {
+    return Course._findPaginated({ page, limit, search, activeOnly: false, scope });
   }
 
   /**
@@ -67,7 +84,7 @@ class Course {
     const [rows] = await pool.query(
       `SELECT c.*,
        (SELECT GROUP_CONCAT(u.name SEPARATOR ', ') FROM course_teachers ct INNER JOIN users u ON u.id = ct.user_id WHERE ct.course_id = c.id) as teacher_names,
-       (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id) as enrolled_count,
+       (SELECT COUNT(*) FROM enrollments WHERE course_id = COALESCE(pc.id, c.id)) as enrolled_count,
        pc.id as parent_course_id, pc.title as parent_course_title
        FROM courses c
        LEFT JOIN course_modules cm ON cm.id = c.parent_module_id

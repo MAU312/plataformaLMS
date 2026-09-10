@@ -149,11 +149,21 @@ window.renderCourseDetail = async function(params) {
 
         if (myNavToken !== getNavToken()) return;
 
+        // Si este curso es hijo de un módulo, "volver" debe ir al curso
+        // padre (de donde efectivamente se llegó, vía el selector de
+        // módulos) en vez del catálogo general — se pierde el contexto si
+        // no. `course.parent_course_id`/`parent_course_title` ya vienen
+        // poblados por el backend cuando aplica (ver Course.findById).
+        const backHref = course.parent_course_id ? `#/course/${course.parent_course_id}` : '#/';
+        const backLabel = course.parent_course_id
+            ? t('courseDetail.back_to_parent', { title: escapeHtml(course.parent_course_title) })
+            : t('courseDetail.back_to_catalog');
+
         app.innerHTML = `
             <div class="bg-white border-b">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                    <a href="#/" class="text-cenat-green hover:underline text-sm">
-                        <i class="fas fa-arrow-left mr-1"></i> ${t('courseDetail.back_to_catalog')}
+                    <a href="${backHref}" class="text-cenat-green hover:underline text-sm">
+                        <i class="fas fa-arrow-left mr-1"></i> ${backLabel}
                     </a>
                 </div>
             </div>
@@ -185,6 +195,12 @@ window.renderCourseDetail = async function(params) {
                             </div>
                         </div>
                     ` : ''}
+
+                    ${isLoggedIn && isEnrolled && displayProgressPercent === 100 ? `
+                        <button onclick="downloadCertificate(${enrollmentCourseId})" class="btn-cenat w-full mt-4 lg:hidden">
+                            <i class="fas fa-certificate mr-2"></i> ${t('courseDetail.download_certificate')}
+                        </button>
+                    ` : ''}
                 </div>
             </div>
 
@@ -195,12 +211,12 @@ window.renderCourseDetail = async function(params) {
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                     <!-- Columna principal: Videos -->
                     <div class="lg:col-span-2 space-y-6">
-                        <h2 id="videos-section" class="text-xl font-bold text-gray-900 flex items-center scroll-mt-4">
-                            <i class="fas fa-play-circle text-cenat-green mr-2"></i>
-                            ${t('courseDetail.videos_of_course')}
-                        </h2>
-
                         ${allVideos.length > 0 ? `
+                            <h2 id="videos-section" class="text-xl font-bold text-gray-900 flex items-center scroll-mt-4">
+                                <i class="fas fa-play-circle text-cenat-green mr-2"></i>
+                                ${t('courseDetail.videos_of_course')}
+                            </h2>
+
                             <div class="video-player-container mb-4" id="main-video-container">
                                 ${hasAccess ? `
                                 <video id="main-video" controls>
@@ -226,15 +242,10 @@ window.renderCourseDetail = async function(params) {
                             ` : `
                                 <p class="text-sm text-gray-400">${t('courseDetail.videos_grouped_notice')}</p>
                             `}
-                        ` : `
-                            <div class="empty-state bg-white rounded-xl border border-gray-100">
-                                <i class="fas fa-video-slash"></i>
-                                <p class="text-gray-600">${t('courseDetail.no_videos_yet')}</p>
-                            </div>
-                        `}
+                        ` : ''}
 
                         ${mixedItems.length > 0 ? `
-                            <h2 class="text-xl font-bold text-gray-900 flex items-center mt-8">
+                            <h2 class="text-xl font-bold text-gray-900 flex items-center ${allVideos.length > 0 ? 'mt-8' : ''}">
                                 <i class="fas fa-list text-cenat-green mr-2"></i>
                                 ${t('courseDetail.content_heading')}
                             </h2>
@@ -249,6 +260,13 @@ window.renderCourseDetail = async function(params) {
                                 `).join('')}
                             </div>
                         ` : ''}
+
+                        ${allVideos.length === 0 && mixedItems.length === 0 ? `
+                            <div class="empty-state bg-white rounded-xl border border-gray-100">
+                                <i class="fas fa-inbox"></i>
+                                <p class="text-gray-600">${t('courseDetail.no_content_yet')}</p>
+                            </div>
+                        ` : ''}
                     </div>
 
                     <!-- Columna lateral -->
@@ -260,8 +278,8 @@ window.renderCourseDetail = async function(params) {
                                 ${t('courseDetail.course_info_heading')}
                             </h3>
                             <ul class="text-sm text-gray-600 space-y-1">
-                                ${renderCourseInfoLink('fa-video', allVideosCount, t('courseDetail.info_videos'), 'videos-section')}
-                                ${renderCourseInfoLink('fa-file', allFilesCount, t('courseDetail.info_files'), anchorForType(contents, 'file'))}
+                                ${allVideosCount > 0 ? renderCourseInfoLink('fa-video', allVideosCount, t('courseDetail.info_videos'), 'videos-section') : ''}
+                                ${allFilesCount > 0 ? renderCourseInfoLink('fa-file', allFilesCount, t('courseDetail.info_files'), anchorForType(contents, 'file')) : ''}
                                 ${allImagesCount > 0 ? renderCourseInfoLink('fa-image', allImagesCount, t('courseDetail.info_images'), anchorForType(contents, 'image')) : ''}
                                 ${allUrlsCount > 0 ? renderCourseInfoLink('fa-link', allUrlsCount, t('courseDetail.info_external_videos'), anchorForType(contents, 'url')) : ''}
                                 ${allTextsCount > 0 ? renderCourseInfoLink('fa-align-left', allTextsCount, t('courseDetail.info_readings'), anchorForType(contents, 'text')) : ''}
@@ -275,7 +293,7 @@ window.renderCourseDetail = async function(params) {
                         </div>
 
                         ${isLoggedIn && isEnrolled && displayProgressPercent === 100 ? `
-                            <button onclick="downloadCertificate(${enrollmentCourseId})" class="btn-cenat w-full">
+                            <button onclick="downloadCertificate(${enrollmentCourseId})" class="btn-cenat w-full hidden lg:block">
                                 <i class="fas fa-certificate mr-2"></i> ${t('courseDetail.download_certificate')}
                             </button>
                         ` : ''}

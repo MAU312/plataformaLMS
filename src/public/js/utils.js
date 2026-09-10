@@ -94,6 +94,61 @@ function checkFileSize(file, maxBytes, label = 'El archivo') {
     return false;
 }
 
+/**
+ * Zona de drag&drop + preview en vivo (antes de subir) para un campo de
+ * imagen de portada — compartida por Crear Curso, Editar Curso, y crear un
+ * curso dentro de un módulo (ver showAddModuleCourseForm en
+ * views_content_manager.js). Los defaults son los IDs que ya usaba Crear
+ * Curso antes de generalizar esta función (así su llamada sin argumentos
+ * sigue funcionando igual); Editar Curso y el formulario de módulo pasan
+ * sus propios IDs (este último escopeados por moduleId, para no chocar si
+ * hubiera más de un formulario de este tipo en la misma página).
+ */
+function setupThumbnailDropZone({ dropZoneId = 'thumbnail-drop-zone', inputId = 'thumbnail', previewContainerId = 'thumbnail-preview', previewImgId = 'thumbnail-preview-img' } = {}) {
+    const dropZone = document.getElementById(dropZoneId);
+    const fileInput = document.getElementById(inputId);
+    const preview = document.getElementById(previewContainerId);
+    const previewImg = document.getElementById(previewImgId);
+
+    if (!dropZone || !fileInput) return;
+
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragging');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragging');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragging');
+        if (e.dataTransfer.files.length > 0) {
+            fileInput.files = e.dataTransfer.files;
+            showThumbnailPreview(e.dataTransfer.files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            showThumbnailPreview(e.target.files[0]);
+        }
+    });
+
+    function showThumbnailPreview(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            previewImg.src = e.target.result;
+            preview.classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+    }
+}
+window.setupThumbnailDropZone = setupThumbnailDropZone;
+
 function formatFileSize(bytes) {
     if (!bytes || bytes === 0) return '0 Bytes';
     const k = 1024;
