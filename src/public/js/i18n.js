@@ -22,7 +22,9 @@ const TRANSLATIONS = {
             copied: 'Copiado al portapapeles',
             showing_range: 'Mostrando {{start}}–{{end}} de {{total}}',
             show_password: 'Mostrar contraseña',
-            hide_password: 'Ocultar contraseña'
+            hide_password: 'Ocultar contraseña',
+            read_more: 'Leer más',
+            read_less: 'Leer menos'
         },
         nav: {
             home: 'Inicio',
@@ -799,7 +801,9 @@ const TRANSLATIONS = {
             copied: 'Copied to clipboard',
             showing_range: 'Showing {{start}}–{{end}} of {{total}}',
             show_password: 'Show password',
-            hide_password: 'Hide password'
+            hide_password: 'Hide password',
+            read_more: 'Read more',
+            read_less: 'Read less'
         },
         nav: {
             home: 'Home',

@@ -360,6 +360,11 @@ window.renderCourseDetail = async function(params) {
         // Reproductores de video externo (YouTube) con detección de error
         initYoutubeEmbeds();
 
+        // Toggle "Leer más" en descripciones largas (tarjetas de módulo,
+        // contenido tipo URL, temas de foro) — ver switchCourseModule para
+        // el caso de una tarjeta que arranca oculta en otro módulo.
+        setupExpandableText();
+
     } catch (error) {
         console.error('Error loading course:', error);
         app.innerHTML = `
@@ -465,7 +470,7 @@ function renderUrlContentRow(content, canTrackProgress, hasAccess) {
             <i class="fas ${hasAccess ? 'fa-link' : 'fa-lock'} text-xl ${hasAccess ? 'text-cenat-green' : 'text-gray-400'}"></i>
             <div class="flex-1 min-w-0">
                 <p class="font-medium text-gray-900 truncate ${completed ? 'line-through text-gray-400' : ''}">${escapeHtml(content.title)}</p>
-                ${content.description ? `<p class="text-xs text-gray-500 truncate">${escapeHtml(content.description)}</p>` : ''}
+                ${content.description ? `<p class="expandable-text text-xs text-gray-500 line-clamp-2">${escapeHtml(content.description)}</p>` : ''}
             </div>
             ${hasAccess ? `
                 <a href="${escapeAttr(content.url)}" target="_blank" rel="noopener noreferrer" class="text-cenat-green hover:text-cenat-green-hover" title="${escapeAttr(t('courseDetail.open_external_video'))}">
@@ -572,7 +577,7 @@ function renderForumCard(forum, hasAccess) {
                 <i class="fas fa-comments text-xl text-cenat-green mt-1"></i>
                 <div class="flex-1 min-w-0">
                     <p class="font-medium text-gray-900">${escapeHtml(forum.title)}</p>
-                    <p class="text-sm text-gray-600 mt-1 line-clamp-2 whitespace-pre-line">${escapeHtml(forum.description || '')}</p>
+                    <p class="expandable-text text-sm text-gray-600 mt-1 line-clamp-2 whitespace-pre-line">${escapeHtml(forum.description || '')}</p>
                     ${hasParticipated ? `
                         <p class="text-sm text-green-700 font-medium mt-2"><i class="fas fa-check-circle mr-1"></i> ${t('courseDetail.already_participated_forum')}</p>
                     ` : ''}
@@ -1027,6 +1032,10 @@ function switchCourseModule(moduleId) {
     document.querySelectorAll('[id^="module-course-grid-"]').forEach((el) => {
         el.classList.toggle('hidden', el.id !== `module-course-grid-${moduleId}`);
     });
+    // Las tarjetas del módulo recién mostrado no se pudieron medir la
+    // primera vez (estaban en display:none, ver setupExpandableText) —
+    // reintentar ahora que ya son visibles.
+    setupExpandableText();
 }
 window.switchCourseModule = switchCourseModule;
 

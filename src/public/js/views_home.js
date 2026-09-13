@@ -80,6 +80,7 @@ async function loadHomeCourses(page) {
 
         const { totalPages, total } = response.pagination || { totalPages: 1, total: courses.length };
         pagination.innerHTML = renderPagination(page, totalPages, total, HOME_COURSES_PER_PAGE, 'goToHomeCoursePage');
+        setupExpandableText(grid);
     } catch (error) {
         if (token !== homeRequestToken) return;
         console.error('Error loading courses:', error);
@@ -114,7 +115,7 @@ function renderCourseCard(course) {
                 <i class="fas fa-user-tie mr-1"></i>${escapeHtml(course.teacher_names)}
             </p>
         ` : ''}
-        <p class="text-gray-600 text-base mb-4 line-clamp-2">
+        <p class="expandable-text text-gray-600 text-base mb-4 line-clamp-2">
             ${escapeHtml(course.description || t('home.no_description'))}
         </p>
         <div class="flex items-center justify-between text-sm text-gray-500 border-t pt-3">

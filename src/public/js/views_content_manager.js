@@ -37,6 +37,7 @@ function initCourseContentManager(rerenderFn, course) {
     if (course && !course.parent_module_id) {
         loadCourseModulesList(course.id);
     }
+    setupExpandableText();
 }
 
 function scopeId(base, folderId) {
@@ -777,7 +778,7 @@ function renderForumItem(content) {
             <i class="fas fa-comments text-xl text-cenat-green"></i>
             <div class="flex-1 min-w-0">
                 <p class="font-medium text-gray-900 truncate">${escapeHtml(content.title)}</p>
-                <p class="text-xs text-gray-500 truncate">${escapeHtml(content.description || '')}</p>
+                <p class="expandable-text text-xs text-gray-500 line-clamp-2">${escapeHtml(content.description || '')}</p>
             </div>
             <a href="#/forum/${content.id}" class="text-cenat-green hover:text-cenat-green-hover text-sm whitespace-nowrap" title="${t('contentManager.forum.view')}">
                 <i class="fas fa-comment-dots mr-1"></i> ${t('contentManager.forum.view')}

@@ -206,6 +206,68 @@ function scrollToElement(elementId) {
     if (element) element.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+const EXPANDABLE_TEXT_CLAMP_CLASSES = ['truncate', 'line-clamp-1', 'line-clamp-2', 'line-clamp-3', 'line-clamp-4'];
+
+/**
+ * Agrega un toggle "Leer más"/"Leer menos" a cada `.expandable-text` que el
+ * navegador esté recortando de verdad (line-clamp-N o `truncate`) — si el
+ * texto entra completo, no agrega nada (evita un link muerto). Se llama una
+ * vez después de pintar cualquier lista de descripciones (ver
+ * views_home.js/views_course_detail.js/views_content_manager.js).
+ *
+ * Un elemento oculto en el momento de llamar (ej. la tarjeta de un curso
+ * dentro de un módulo que todavía no está seleccionado en el dropdown, ver
+ * switchCourseModule) mide scrollHeight/clientHeight en 0 y no se puede
+ * evaluar todavía — se deja SIN marcar como listo para que una llamada
+ * posterior (cuando ya esté visible) lo vuelva a intentar.
+ */
+function setupExpandableText(root = document) {
+    root.querySelectorAll('.expandable-text').forEach((el) => {
+        if (el.dataset.expandableReady) return;
+        if (el.offsetParent === null) return;
+        el.dataset.expandableReady = 'true';
+
+        const clampClass = EXPANDABLE_TEXT_CLAMP_CLASSES.find((c) => el.classList.contains(c));
+        if (!clampClass) return;
+
+        const evaluateOverflow = () => {
+            const isOverflowing = clampClass === 'truncate'
+                ? el.scrollWidth > el.clientWidth
+                : el.scrollHeight > el.clientHeight;
+            if (!isOverflowing) return;
+
+            const toggle = document.createElement('button');
+            toggle.type = 'button';
+            toggle.className = 'expandable-text-toggle text-cenat-green text-xs font-medium hover:underline mt-1 block';
+            toggle.textContent = t('common.read_more');
+            toggle.addEventListener('click', (e) => {
+                // El texto suele vivir dentro de una tarjeta clickeable
+                // entera (ver renderCourseCardShell) — sin esto, el click
+                // en el botón también navegaría al curso antes de que se
+                // alcance a ver el texto expandido.
+                e.stopPropagation();
+                const stillClamped = el.classList.toggle(clampClass);
+                toggle.textContent = stillClamped ? t('common.read_more') : t('common.read_less');
+            });
+            el.insertAdjacentElement('afterend', toggle);
+        };
+
+        // Con la pestaña oculta (ej. se abrió en segundo plano) el navegador
+        // no corre requestAnimationFrame — y una medición tomada igual en
+        // ese estado puede dar un ancho/alto transitorio incorrecto. Se
+        // espera a que la pestaña esté visible antes de medir nada.
+        if (document.hidden) {
+            document.addEventListener('visibilitychange', function onVisible() {
+                if (document.hidden) return;
+                document.removeEventListener('visibilitychange', onVisible);
+                requestAnimationFrame(evaluateOverflow);
+            });
+        } else {
+            requestAnimationFrame(evaluateOverflow);
+        }
+    });
+}
+
 function escapeHtml(text) {
     if (text === null || text === undefined) return '';
     const div = document.createElement('div');
@@ -748,6 +810,7 @@ window.isValidEmail = isValidEmail;
 window.validateForm = validateForm;
 window.createElementFromHTML = createElementFromHTML;
 window.scrollToElement = scrollToElement;
+window.setupExpandableText = setupExpandableText;
 window.escapeHtml = escapeHtml;
 window.toggleDropdown = toggleDropdown;
 window.updateProgressBar = updateProgressBar;
