@@ -345,6 +345,28 @@ test('submitAnswers: el puntaje pondera por los puntos de cada pregunta, no por 
   assert.equal(res.body.data.total_questions, 2);
 });
 
+test('submitAnswers: reenvía enrollment_course_id de recalculateCourseProgress para la celebración de curso completado', async (t) => {
+  t.mock.method(ContentAnswer, 'hasAnswered', async () => false);
+  t.mock.method(ContentQuestion, 'findByContent', async () => ([
+    { id: 1, points: 1, question_type: 'multiple_choice', options: [{ id: 10, is_correct: true }, { id: 11, is_correct: false }] }
+  ]));
+  t.mock.method(ContentAnswer, 'submitAnswers', async () => true);
+  t.mock.method(Content, 'markCompleted', async () => true);
+  t.mock.method(Content, 'recalculateCourseProgress', async () => ({ progress: 100, total: 4, completed: 4, enrollment_course_id: 1 }));
+
+  const req = mockReq({
+    body: { answers: [{ question_id: 1, option_id: 10 }] },
+    session: { user: { id: 7 } }
+  });
+  req.quizContent = { id: 100, course_id: 10, type: 'quiz' };
+  const res = mockRes();
+
+  await quizController.submitAnswers(req, res);
+
+  assert.equal(res.body.data.progress, 100);
+  assert.equal(res.body.data.enrollment_course_id, 1, 'debe ser el curso raíz devuelto por el modelo, no el course_id crudo del quiz');
+});
+
 test('submitAnswers: todas correctas suma el total de puntos posibles', async (t) => {
   t.mock.method(ContentAnswer, 'hasAnswered', async () => false);
   t.mock.method(ContentQuestion, 'findByContent', async () => ([

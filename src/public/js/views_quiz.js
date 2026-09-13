@@ -127,6 +127,17 @@ async function submitQuizAnswers(content, questions) {
         }
 
         navigateTo(`/course/${content.course_id}`);
+
+        // Igual que al tildar un checkbox o entregar una tarea en la propia
+        // página del curso (ver toggleContentCompleted/setupTaskSubmitForms
+        // en views_course_detail.js): si responder esto era lo último que
+        // faltaba para el 100%, debe salir la misma celebración. El modal
+        // se agrega directo a document.body (no a #app), así que mostrarlo
+        // acá funciona aunque la navegación de arriba todavía no haya
+        // terminado de renderizar la página del curso.
+        if (response.data.progress === 100) {
+            showCourseCompletionModal(response.data.enrollment_course_id);
+        }
     } catch (error) {
         showToast(error.message || t('quiz.submit_failed'), 'error');
         submitBtn.disabled = false;

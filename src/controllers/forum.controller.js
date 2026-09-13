@@ -116,14 +116,23 @@ export const createPost = async (req, res) => {
     // Participar en el foro cuenta para el progreso del curso (igual que
     // entregar una tarea o responder un cuestionario) — pero solo para un
     // estudiante inscrito, no para un profesor/admin respondiendo dudas en
-    // un curso que no cursa.
+    // un curso que no cursa. El resultado se manda en la respuesta (antes
+    // se descartaba) para que el frontend, que se queda en la propia
+    // página del foro tras postear, sepa si esto completó el curso y deba
+    // mostrar la misma celebración que al tildar un checkbox o entregar
+    // una tarea (ver views_forum.js).
     const isEnrolled = await Course.isUserEnrolled(content.course_id, req.session.user.id);
+    let progressData = null;
     if (isEnrolled) {
       await Content.markCompleted(content.id, req.session.user.id);
-      await Content.recalculateCourseProgress(content.course_id, req.session.user.id);
+      progressData = await Content.recalculateCourseProgress(content.course_id, req.session.user.id);
     }
 
-    res.status(201).json({ success: true, message: t(req.locale, 'success.reply_published'), data: { id: postId } });
+    res.status(201).json({
+      success: true,
+      message: t(req.locale, 'success.reply_published'),
+      data: { id: postId, ...progressData }
+    });
   } catch (error) {
     console.error('Error al publicar en el foro:', error);
     res.status(500).json({ success: false, message: t(req.locale, 'errors.publish_reply_failed') });

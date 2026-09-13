@@ -246,15 +246,17 @@ class Content {
    * calculateGroupProgress (combinado, solo lectura) y
    * calculateProgressForSingleCourse (un curso puntual, solo lectura)
    * compartan la misma query en vez de triplicarla. Una carpeta queda fuera
-   * (es solo un agrupador, no contenido en sí) y una imagen también (es
-   * solo decoración/ilustración, no algo que tenga sentido "completar") —
-   * contarlas dejaría a los estudiantes sin poder llegar nunca al 100% ni
-   * sacar certificado. Un foro SÍ cuenta (participar con al menos un post
-   * lo marca completado, ver forum.controller.js createPost).
+   * (es solo un agrupador, no contenido en sí), una imagen también (es
+   * solo decoración/ilustración, no algo que tenga sentido "completar"), y
+   * un texto también (es material de lectura opcional, no una actividad
+   * que el profesor quiera exigir para avanzar) — contarlas dejaría a los
+   * estudiantes sin poder llegar nunca al 100% ni sacar certificado. Un
+   * foro SÍ cuenta (participar con al menos un post lo marca completado,
+   * ver forum.controller.js createPost).
    */
   static async _computeProgress(courseIds, userId) {
     const [totalRows] = await pool.query(
-      "SELECT COUNT(*) as total FROM contents WHERE course_id IN (?) AND type NOT IN ('folder', 'image')",
+      "SELECT COUNT(*) as total FROM contents WHERE course_id IN (?) AND type NOT IN ('folder', 'image', 'text')",
       [courseIds]
     );
     const total = totalRows[0].total;
@@ -263,7 +265,7 @@ class Content {
       `SELECT COUNT(*) as completed
        FROM content_progress cp
        INNER JOIN contents co ON co.id = cp.content_id
-       WHERE co.course_id IN (?) AND cp.user_id = ? AND co.type NOT IN ('folder', 'image')`,
+       WHERE co.course_id IN (?) AND cp.user_id = ? AND co.type NOT IN ('folder', 'image', 'text')`,
       [courseIds, userId]
     );
     const completed = completedRows[0].completed;
@@ -302,7 +304,13 @@ class Content {
       [result.progress, result.progress, rootId, userId]
     );
 
-    return result;
+    // `enrollment_course_id` (el curso raíz, no necesariamente el
+    // `courseId` recibido) se expone para que un caller que NO esté en la
+    // página de detalle del curso (quiz, encuesta, foro — ver
+    // quiz.controller.js/forum.controller.js) pueda mostrar la celebración
+    // de curso completado con el id correcto para el certificado, sin
+    // tener que resolver el padre por su cuenta.
+    return { ...result, enrollment_course_id: rootId };
   }
 
   /**

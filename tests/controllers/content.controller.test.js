@@ -430,6 +430,26 @@ test('markContentIncomplete: 400 si el contenido es una imagen', async (t) => {
   assert.equal(markCall.mock.calls.length, 0);
 });
 
+test('markContentCompleted: 400 si el contenido es un texto (material de lectura opcional, no cuenta para el progreso)', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 9, course_id: 1, type: 'text' }));
+  const markCall = t.mock.method(Content, 'markCompleted', async () => 10);
+  const req = mockReq({ params: { id: 9 }, session: { user: { id: 1, role: 'student' } } });
+  const res = mockRes();
+  await contentController.markContentCompleted(req, res);
+  assert.equal(res.statusCode, 400);
+  assert.equal(markCall.mock.calls.length, 0);
+});
+
+test('markContentIncomplete: 400 si el contenido es un texto', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 9, course_id: 1, type: 'text' }));
+  const markCall = t.mock.method(Content, 'markIncomplete', async () => true);
+  const req = mockReq({ params: { id: 9 }, session: { user: { id: 1, role: 'student' } } });
+  const res = mockRes();
+  await contentController.markContentIncomplete(req, res);
+  assert.equal(res.statusCode, 400);
+  assert.equal(markCall.mock.calls.length, 0);
+});
+
 test('markContentIncomplete: éxito recalcula y devuelve el progreso', async (t) => {
   t.mock.method(Content, 'findById', async () => ({ id: 1, course_id: 1, type: 'video' }));
   t.mock.method(Course, 'isUserEnrolled', async () => true);

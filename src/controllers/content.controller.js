@@ -34,8 +34,9 @@ function uploadedFileUrl(contentType, filename) {
  * completado/pendiente manualmente, o null si sí se puede. Una tarea/
  * cuestionario/encuesta se marca automáticamente al entregar/responder; un
  * foro, una carpeta, y una imagen no tienen un estado "completado" real
- * (discusión abierta / agrupador / decoración), así que ninguno de estos
- * debe contar para el progreso del curso.
+ * (discusión abierta / agrupador / decoración); un texto es material de
+ * lectura opcional, no una actividad que deba exigirse para avanzar — así
+ * que tampoco cuenta para el progreso del curso (ver Content._computeProgress).
  */
 function uncompletableReason(type, locale) {
   if (type === 'task') return t(locale, 'errors.task_progress_auto');
@@ -43,6 +44,7 @@ function uncompletableReason(type, locale) {
   if (type === 'forum') return t(locale, 'errors.forum_progress_auto');
   if (type === 'folder') return t(locale, 'errors.folder_no_progress');
   if (type === 'image') return t(locale, 'errors.image_no_progress');
+  if (type === 'text') return t(locale, 'errors.text_no_progress');
   return null;
 }
 

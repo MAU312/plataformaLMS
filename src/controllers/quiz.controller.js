@@ -425,9 +425,9 @@ export const submitAnswers = async (req, res) => {
     }
 
     await Content.markCompleted(content.id, userId);
-    const { progress, total, completed } = await Content.recalculateCourseProgress(content.course_id, userId);
+    const { progress, total, completed, enrollment_course_id } = await Content.recalculateCourseProgress(content.course_id, userId);
 
-    const data = { progress, total, completed };
+    const data = { progress, total, completed, enrollment_course_id };
     if (isQuiz) {
       // El puntaje pondera por los puntos de cada pregunta (ver
       // ContentQuestion.points), no por cantidad de preguntas correctas —

@@ -52,7 +52,7 @@ test('recalculateCourseProgress: progreso es 0 si el curso no tiene contenidos (
   assert.equal(result.progress, 0);
 });
 
-test('recalculateCourseProgress: excluye los contenidos type=folder y type=image (pero NO type=forum) del total y de los completados', async (t) => {
+test('recalculateCourseProgress: excluye los contenidos type=folder, type=image y type=text (pero NO type=forum) del total y de los completados', async (t) => {
   const queryCall = t.mock.method(pool, 'query', async (sql) => {
     if (sql.includes('as parent_id')) return [[]];
     if (sql.includes('SELECT c.id')) return [[]];
@@ -66,10 +66,24 @@ test('recalculateCourseProgress: excluye los contenidos type=folder y type=image
   const totalCall = queryCall.mock.calls.find(c => c.arguments[0].includes('COUNT(*) as total'));
   const completedCall = queryCall.mock.calls.find(c => c.arguments[0].includes('COUNT(*) as completed'));
 
-  assert.match(totalCall.arguments[0], /type NOT IN \('folder', 'image'\)/);
-  assert.match(completedCall.arguments[0], /co\.type NOT IN \('folder', 'image'\)/);
+  assert.match(totalCall.arguments[0], /type NOT IN \('folder', 'image', 'text'\)/);
+  assert.match(completedCall.arguments[0], /co\.type NOT IN \('folder', 'image', 'text'\)/);
   assert.doesNotMatch(totalCall.arguments[0], /forum/);
   assert.doesNotMatch(completedCall.arguments[0], /forum/);
+});
+
+test('recalculateCourseProgress: expone enrollment_course_id (el curso raíz) en el resultado', async (t) => {
+  t.mock.method(pool, 'query', async (sql) => {
+    // Curso 10 es hijo del módulo cuyo curso padre es el 1.
+    if (sql.includes('as parent_id')) return [[{ parent_id: 1 }]];
+    if (sql.includes('SELECT c.id')) return [[{ id: 10 }, { id: 11 }]];
+    if (sql.includes('COUNT(*) as total')) return [[{ total: 6 }]];
+    if (sql.includes('COUNT(*) as completed')) return [[{ completed: 3 }]];
+    return [{ affectedRows: 1 }];
+  });
+
+  const result = await Content.recalculateCourseProgress(10, 20);
+  assert.equal(result.enrollment_course_id, 1, 'debe ser el padre, no el curso 10 recién tocado');
 });
 
 test('recalculateCourseProgress: si el curso tocado es hijo de un módulo, combina el total/completado de TODO el grupo (padre + hermanos) y escribe en la fila del padre', async (t) => {

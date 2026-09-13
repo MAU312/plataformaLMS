@@ -214,9 +214,20 @@ async function submitForumReply(topicId, parentId, body, submitBtn) {
 
     try {
         if (submitBtn) submitBtn.disabled = true;
-        await contentsAPI.postForumReply(topicId, { body: trimmed, parent_id: parentId || undefined });
+        const response = await contentsAPI.postForumReply(topicId, { body: trimmed, parent_id: parentId || undefined });
         showToast(t('forum.reply_published'), 'success');
         renderForumThread({ id: topicId });
+
+        // Igual que al tildar un checkbox, entregar una tarea, o responder
+        // un quiz/encuesta (ver views_course_detail.js/views_quiz.js): si
+        // participar en el foro era lo último que faltaba para el 100%,
+        // debe salir la misma celebración. El backend solo manda progress/
+        // enrollment_course_id cuando el autor está inscrito (ver
+        // forum.controller.js createPost) — un profesor/admin respondiendo
+        // dudas nunca dispara esto.
+        if (response.data.progress === 100) {
+            showCourseCompletionModal(response.data.enrollment_course_id);
+        }
     } catch (error) {
         showToast(error.message || t('forum.publish_failed'), 'error');
         if (submitBtn) submitBtn.disabled = false;

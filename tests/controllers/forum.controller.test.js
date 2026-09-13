@@ -134,7 +134,7 @@ test('createPost: si el autor está inscrito en el curso, marca el foro como com
   t.mock.method(Course, 'isUserEnrolled', async () => true);
   t.mock.method(ForumPost, 'create', async () => 20);
   const markCompletedCall = t.mock.method(Content, 'markCompleted', async () => true);
-  const recalcCall = t.mock.method(Content, 'recalculateCourseProgress', async () => ({ progress: 50, total: 4, completed: 2 }));
+  const recalcCall = t.mock.method(Content, 'recalculateCourseProgress', async () => ({ progress: 50, total: 4, completed: 2, enrollment_course_id: 5 }));
 
   const req = mockReq({ params: { id: 1 }, body: { body: 'Hola' }, session: { user: { id: 2, role: 'student' } } });
   const res = mockRes();
@@ -143,6 +143,11 @@ test('createPost: si el autor está inscrito en el curso, marca el foro como com
   assert.equal(res.statusCode, 201);
   assert.deepEqual(markCompletedCall.mock.calls[0].arguments, [1, 2]);
   assert.deepEqual(recalcCall.mock.calls[0].arguments, [5, 2]);
+  // El resultado ya no se descarta: el frontend lo necesita para mostrar
+  // la celebración de curso completado si esto fue lo último que faltaba
+  // (ver views_forum.js) — antes createPost lo ignoraba por completo.
+  assert.equal(res.body.data.progress, 50);
+  assert.equal(res.body.data.enrollment_course_id, 5);
 });
 
 test('createPost: si el autor NO está inscrito (ej. el profesor respondiendo dudas), no toca el progreso', async (t) => {
@@ -160,6 +165,7 @@ test('createPost: si el autor NO está inscrito (ej. el profesor respondiendo du
   assert.equal(res.statusCode, 201);
   assert.equal(markCompletedCall.mock.calls.length, 0);
   assert.equal(recalcCall.mock.calls.length, 0);
+  assert.deepEqual(res.body.data, { id: 20 }, 'sin progreso que reportar, data no debe traer progress/enrollment_course_id');
 });
 
 test('createPost: 404 si el parent_id apunta a un post de OTRO tema de foro', async (t) => {
