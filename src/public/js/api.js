@@ -14,9 +14,19 @@ const API_URL = '/api';
  * enseguida con su mensaje genérico, así que el usuario terminaba viendo
  * "Error al ..." y de repente lo mandaban a login sin ninguna explicación.
  */
+// Evita programar el toast + redirect varias veces si dos o más fetch en
+// paralelo vuelven con 401 a la vez (común: una vista que dispara 2-3
+// llamadas juntas) — sin esto, el usuario veía el toast duplicado
+// parpadeando antes del reload. Se resetea solo al recargar la página
+// (window.location.reload(), más abajo), que es lo que efectivamente
+// "cierra" este ciclo.
+let sessionExpiredHandled = false;
+
 function handleSessionExpired() {
     const currentHash = window.location.hash;
     if (currentHash === '#/login' || currentHash === '#/register') return;
+    if (sessionExpiredHandled) return;
+    sessionExpiredHandled = true;
     setTimeout(() => {
         showToast(t('errors.session_expired_toast'), 'warning');
     }, 0);
@@ -26,6 +36,33 @@ function handleSessionExpired() {
     }, 1500);
 }
 
+/**
+ * `response.json()` asume que el body es JSON válido — si el backend (o un
+ * proxy delante) devuelve HTML de error de un 502/504, o un body vacío, el
+ * SyntaxError crudo se escapaba sin traducir hasta el toast. Acá se
+ * atrapa aparte y se trata como "sin datos", dejando que el caller decida
+ * el mensaje genérico de siempre.
+ */
+async function parseJsonResponse(response) {
+    try {
+        return await response.json();
+    } catch {
+        return null;
+    }
+}
+
+async function handleApiResponse(response) {
+    const data = await parseJsonResponse(response);
+
+    if (response.status === 401) {
+        handleSessionExpired();
+        throw new Error((data && data.message) || t('errors.session_expired'));
+    }
+
+    if (!response.ok || data === null) throw new Error((data && data.message) || t('errors.generic'));
+    return data;
+}
+
 async function apiRequest(endpoint, options = {}) {
     try {
         const response = await fetch(`${API_URL}${endpoint}`, {
@@ -33,18 +70,13 @@ async function apiRequest(endpoint, options = {}) {
             credentials: 'include',
             ...options
         });
-
-        const data = await response.json();
-
-        if (response.status === 401) {
-            handleSessionExpired();
-            throw new Error(data.message || t('errors.session_expired'));
-        }
-
-        if (!response.ok) throw new Error(data.message || t('errors.generic'));
-        return data;
+        return await handleApiResponse(response);
     } catch (error) {
         console.error('API Error:', error);
+        // El propio fetch() falló (sin conexión, DNS, CORS) — no hay
+        // response que parsear, y error.message es un string crudo del
+        // navegador ("Failed to fetch") que nunca pasó por i18n.
+        if (error instanceof TypeError) throw new Error(t('errors.network'));
         throw error;
     }
 }
@@ -65,18 +97,10 @@ async function apiRequestFormData(endpoint, formData, { method = 'POST' } = {}) 
             body: formData,
             credentials: 'include'
         });
-
-        const data = await response.json();
-
-        if (response.status === 401) {
-            handleSessionExpired();
-            throw new Error(data.message || t('errors.session_expired'));
-        }
-
-        if (!response.ok) throw new Error(data.message || t('errors.generic'));
-        return data;
+        return await handleApiResponse(response);
     } catch (error) {
         console.error('API Error:', error);
+        if (error instanceof TypeError) throw new Error(t('errors.network'));
         throw error;
     }
 }
@@ -109,6 +133,7 @@ const coursesAPI = {
     getEnrolled: async ({ page = 1, limit = 12 } = {}) => apiRequest(`/courses/enrolled?${new URLSearchParams({ page, limit })}`),
     create: async (formData) => apiRequestFormData('/courses', formData),
     update: async (id, formData) => apiRequestFormData(`/courses/${id}`, formData, { method: 'PUT' }),
+    delete: async (id) => apiRequest(`/courses/${id}`, { method: 'DELETE' }),
     enroll: async (id) => apiRequest(`/courses/${id}/enroll`, { method: 'POST' }),
     unenroll: async (id) => apiRequest(`/courses/${id}/enroll`, { method: 'DELETE' }),
     getGlobalStats: async () => apiRequest('/courses/stats/summary'),

@@ -5,16 +5,16 @@
  * scope='top') y "Módulos" (cursos hijo de un módulo de otro curso,
  * scope='children') — antes vivían mezclados en una sola tabla sin forma
  * de distinguirlos. Cada sección tiene su propio estado (búsqueda, página,
- * token de request) para que una búsqueda lenta en una no pueda pisar el
- * resultado de la otra (mismo motivo que homeRequestToken/adminUsersRequestToken
- * en el resto de la app). Los cursos hijo no tienen botón "Nuevo Curso" acá
- * — se crean desde dentro de un módulo, en views_content_manager.js.
+ * guardián de respuestas obsoletas — ver createStaleResponseGuard en
+ * utils.js) para que una búsqueda lenta en una no pueda pisar el resultado
+ * de la otra. Los cursos hijo no tienen botón "Nuevo Curso" acá — se crean
+ * desde dentro de un módulo, en views_content_manager.js.
  */
 
 const COURSES_PER_PAGE = 8;
 
 function createCoursesSectionState() {
-    return { page: 1, search: '', courses: [], pagination: { total: 0, totalPages: 1 }, requestToken: 0 };
+    return { page: 1, search: '', courses: [], pagination: { total: 0, totalPages: 1 }, requestGuard: createStaleResponseGuard() };
 }
 
 const coursesSections = {
@@ -83,18 +83,18 @@ async function loadAdminCoursesSection(scope, page) {
     const container = document.getElementById(`courses-table-container-${scope}`);
     if (!container) return;
 
-    const token = ++section.requestToken;
+    const isStale = section.requestGuard.start();
 
     try {
         const response = await coursesAPI.getAll({ page, limit: COURSES_PER_PAGE, search: section.search, scope });
-        if (token !== section.requestToken) return;
+        if (isStale()) return;
 
         section.page = page;
         section.courses = response.data || [];
         section.pagination = response.pagination || { total: section.courses.length, totalPages: 1 };
         renderCoursesTable(scope);
     } catch (error) {
-        if (token !== section.requestToken) return;
+        if (isStale()) return;
         console.error('Error loading courses:', error);
         showToast(t('admin.courses.load_failed'), 'error');
     }
@@ -164,19 +164,26 @@ function renderCoursesTable(scope) {
                             <td class="py-3 px-4 text-gray-600 dark:text-slate-300">${course.enrolled_count || 0}</td>
                             <td class="py-3 px-4 text-gray-500 dark:text-slate-400">${formatDate(course.created_at)}</td>
                             <td class="py-3 px-4 text-right space-x-3 whitespace-nowrap">
-                                <a href="#/course/${course.id}" class="text-gray-500 hover:text-cenat-green" title="${t('admin.courses.view_course')}">
+                                <a href="#/course/${course.id}" class="text-gray-500 hover:text-cenat-green" title="${t('admin.courses.view_course')}" aria-label="${t('admin.courses.view_course')}">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <a href="#/admin/courses/${course.id}/edit" class="text-cenat-green hover:text-cenat-green-hover" title="${t('admin.courses.edit')}">
+                                <a href="#/admin/courses/${course.id}/edit" class="text-cenat-green hover:text-cenat-green-hover" title="${t('admin.courses.edit')}" aria-label="${t('admin.courses.edit')}">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <a href="#/admin/courses/${course.id}/students" class="text-gray-500 hover:text-cenat-green" title="${t('admin.courses.view_students')}">
+                                <a href="#/admin/courses/${course.id}/students" class="text-gray-500 hover:text-cenat-green" title="${t('admin.courses.view_students')}" aria-label="${t('admin.courses.view_students')}">
                                     <i class="fas fa-user-graduate"></i>
                                 </a>
                                 <button onclick="toggleCourseActive(${course.id})"
                                     title="${isActive ? t('admin.courses.deactivate') : t('admin.courses.activate')}"
+                                    aria-label="${isActive ? t('admin.courses.deactivate') : t('admin.courses.activate')}"
                                     class="hover:opacity-80 transition">
                                     <i class="fas ${isActive ? 'fa-eye-slash text-yellow-500' : 'fa-eye text-green-500'} text-lg"></i>
+                                </button>
+                                <button onclick="deleteCourseHandler(${course.id}, '${scope}')"
+                                    title="${t('admin.courses.delete')}"
+                                    aria-label="${t('admin.courses.delete')}"
+                                    class="text-red-500 hover:text-red-700 transition">
+                                    <i class="fas fa-trash"></i>
                                 </button>
                             </td>
                         </tr>`;
@@ -224,3 +231,32 @@ async function toggleCourseActive(id) {
 }
 
 window.toggleCourseActive = toggleCourseActive;
+
+async function deleteCourseHandler(id, scope) {
+    const course = coursesSections[scope].courses.find(c => c.id === id);
+    if (!course) return;
+
+    const confirmed = await confirmAction(t('admin.courses.delete_confirm', { title: course.title }));
+    if (!confirmed) return;
+
+    try {
+        await coursesAPI.delete(id);
+        showToast(t('admin.courses.deleted'), 'success');
+        // Recarga la sección completa en vez de solo sacar la fila local:
+        // si era el último resultado de la página actual, hay que traer
+        // la página anterior (o la nueva última) en vez de dejar una tabla
+        // vacía con paginación desactualizada.
+        const targetPage = coursesSections[scope].courses.length === 1 && coursesSections[scope].page > 1
+            ? coursesSections[scope].page - 1
+            : coursesSections[scope].page;
+        await loadAdminCoursesSection(scope, targetPage);
+        // Un curso padre con módulos borra también a sus cursos hijo en
+        // cascada — si se borró desde "Cursos", la tabla "Módulos" puede
+        // haber perdido filas también.
+        if (scope === 'top') await loadAdminCoursesSection('children', coursesSections.children.page);
+    } catch (error) {
+        showToast(error.message || t('admin.courses.delete_failed'), 'error');
+    }
+}
+
+window.deleteCourseHandler = deleteCourseHandler;
