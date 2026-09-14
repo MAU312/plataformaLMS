@@ -89,7 +89,19 @@ window.renderTeacherCourse = async function(params) {
 
     } catch (error) {
         console.error('Error loading course:', error);
-        showToast(t('courseDetail.load_failed'), 'error');
+        // Antes solo mostraba un toast, dejando el spinner de showLoading()
+        // girando para siempre — ver el mismo fix en renderAdminDashboard.
+        app.innerHTML = `
+            <div class="min-h-screen flex items-center justify-center">
+                <div class="text-center">
+                    <i class="fas fa-exclamation-triangle text-5xl text-red-500 mb-4"></i>
+                    <p class="text-xl text-gray-600">${t('courseDetail.load_failed')}</p>
+                    <button onclick="window.location.reload()" class="btn-cenat mt-4">
+                        <i class="fas fa-redo mr-2"></i> ${t('home.retry')}
+                    </button>
+                </div>
+            </div>
+        `;
     }
 };
 
@@ -164,6 +176,11 @@ async function setupModuleChildCourseEditForm(course) {
         loadTeacherCheckboxes('module-child-teacher-checkboxes', assignedTeacherIds);
     } catch (error) {
         console.error('Error al cargar los profesores del curso hijo:', error);
+        // Antes no dejaba ningún rastro visible — el panel quedaba en
+        // "Cargando profesores..." para siempre, sin toast ni otra pista
+        // de que algo salió mal.
+        const container = document.getElementById('module-child-teacher-checkboxes');
+        if (container) container.innerHTML = `<p class="text-sm text-red-500">${t('admin.editCourse.teachers_load_failed')}</p>`;
     }
 }
 
@@ -242,7 +259,19 @@ window.renderTeacherCourseStudents = async function(params) {
 
     } catch (error) {
         console.error('Error loading course students:', error);
-        showToast(t('studentsTable.load_failed'), 'error');
+        // Antes solo mostraba un toast, dejando el spinner de showLoading()
+        // girando para siempre — ver el mismo fix en renderAdminDashboard.
+        app.innerHTML = `
+            <div class="min-h-screen flex items-center justify-center">
+                <div class="text-center">
+                    <i class="fas fa-exclamation-triangle text-5xl text-red-500 mb-4"></i>
+                    <p class="text-xl text-gray-600">${t('studentsTable.load_failed')}</p>
+                    <button onclick="window.location.reload()" class="btn-cenat mt-4">
+                        <i class="fas fa-redo mr-2"></i> ${t('home.retry')}
+                    </button>
+                </div>
+            </div>
+        `;
     }
 };
 

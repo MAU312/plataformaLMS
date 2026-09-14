@@ -98,7 +98,19 @@ window.renderAdminDashboard = async function(params) {
 
     } catch (error) {
         console.error('Error loading dashboard:', error);
-        showToast(t('admin.dashboard.load_failed'), 'error');
+        // Antes solo mostraba un toast (desaparece a los 3s) sin nunca
+        // reemplazar el spinner de showLoading() — el usuario quedaba
+        // mirándolo girar indefinidamente, sin forma de reintentar salvo
+        // navegar a otra sección a mano.
+        app.innerHTML = renderAdminLayout(`
+            <div class="text-center py-16">
+                <i class="fas fa-exclamation-triangle text-5xl text-red-500 mb-4"></i>
+                <p class="text-xl text-gray-600">${t('admin.dashboard.load_failed')}</p>
+                <button onclick="window.location.reload()" class="btn-cenat mt-4">
+                    <i class="fas fa-redo mr-2"></i> ${t('home.retry')}
+                </button>
+            </div>
+        `, 'dashboard');
     }
 };
 

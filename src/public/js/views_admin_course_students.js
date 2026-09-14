@@ -43,7 +43,17 @@ window.renderAdminCourseStudents = async function(params) {
 
     } catch (error) {
         console.error('Error loading course students:', error);
-        showToast(t('studentsTable.load_failed'), 'error');
+        // Antes solo mostraba un toast, dejando el spinner de showLoading()
+        // girando para siempre — ver el mismo fix en renderAdminDashboard.
+        app.innerHTML = renderAdminLayout(`
+            <div class="text-center py-16">
+                <i class="fas fa-exclamation-triangle text-5xl text-red-500 mb-4"></i>
+                <p class="text-xl text-gray-600">${t('studentsTable.load_failed')}</p>
+                <button onclick="window.location.reload()" class="btn-cenat mt-4">
+                    <i class="fas fa-redo mr-2"></i> ${t('home.retry')}
+                </button>
+            </div>
+        `, 'courses');
     }
 };
 
@@ -133,7 +143,7 @@ function renderStudentsTableHTML(students, courseId) {
                                     : `<span class="badge badge-inactive">${t('studentsTable.in_progress_badge')}</span>`}
                             </td>
                             <td class="py-3 px-4 text-right">
-                                <button onclick="coursesAPI.downloadStudentGrades(${courseId}, ${student.id})" class="text-cenat-green hover:text-cenat-green-hover" title="${escapeAttr(t('studentsTable.download_grade_detail_title', { name: student.name }))}">
+                                <button onclick="coursesAPI.downloadStudentGrades(${courseId}, ${student.id})" class="text-cenat-green hover:text-cenat-green-hover" title="${escapeAttr(t('studentsTable.download_grade_detail_title', { name: student.name }))}" aria-label="${escapeAttr(t('studentsTable.download_grade_detail_title', { name: student.name }))}">
                                     <i class="fas fa-download"></i>
                                 </button>
                             </td>
