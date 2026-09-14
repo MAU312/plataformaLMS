@@ -65,7 +65,15 @@ export function parseCsv(text) {
  */
 export function toCsv(headers, rows) {
   const escapeField = (value) => {
-    const str = value === null || value === undefined ? '' : String(value);
+    let str = value === null || value === undefined ? '' : String(value);
+    // Inyección de fórmulas CSV (CWE-1236): un valor que empieza con
+    // =, +, -, @ (o tab/CR) puede interpretarse como fórmula al abrir el
+    // CSV en Excel/Sheets — le antepone un apóstrofe para forzarlo a texto
+    // plano, igual que recomienda OWASP. `name` en el registro de
+    // usuarios no restringe su formato, así que este es el único punto
+    // real de defensa antes de exportar notas a un archivo que alguien
+    // abre en una planilla.
+    if (/^[=+\-@\t\r]/.test(str)) str = `'${str}`;
     if (/[",\r\n]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
     return str;
   };

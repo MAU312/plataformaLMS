@@ -54,3 +54,23 @@ test('toCsv: null/undefined se escriben como campo vacío, no como el texto "nul
   const csv = toCsv(['A', 'B'], [[null, undefined]]);
   assert.equal(csv, 'A,B\r\n,');
 });
+
+test('toCsv: antepone un apóstrofe a un campo que empieza con =, +, -, @ (inyección de fórmulas CSV)', () => {
+  const csv = toCsv(['Nombre'], [
+    ['=1+1'],
+    ['+1+1'],
+    ['-1+1'],
+    ['@SUM(A1)']
+  ]);
+  assert.equal(csv, "Nombre\r\n'=1+1\r\n'+1+1\r\n'-1+1\r\n'@SUM(A1)");
+});
+
+test('toCsv: un campo peligroso que además tiene una coma queda apostrofado Y entre comillas', () => {
+  const csv = toCsv(['Nombre'], [['=HYPERLINK(1,2)']]);
+  assert.equal(csv, 'Nombre\r\n"\'=HYPERLINK(1,2)"');
+});
+
+test('toCsv: un valor que NO empieza con =+-@ no se toca (ej. un nombre real con guion)', () => {
+  const csv = toCsv(['Nombre'], [['Ana-María']]);
+  assert.equal(csv, 'Nombre\r\nAna-María');
+});

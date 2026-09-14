@@ -18,6 +18,21 @@ if (!emailConfigured) {
 }
 
 /**
+ * `name`/`courseTitle` (ver sendWelcomeEmail) se interpolan directo en el
+ * HTML del correo — ninguno de los dos tiene restricción de formato en su
+ * origen (el nombre del registro público, el título de un curso), así que
+ * sin esto un valor con `<`/`>` podría alterar el markup del correo.
+ */
+function escapeHtml(text) {
+  return String(text)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+/**
  * Envía el correo de recuperación de contraseña. Si no hay credenciales de
  * correo configuradas (desarrollo/demo), imprime el enlace en la consola
  * del servidor en vez de fallar — así la funcionalidad se puede probar de
@@ -76,8 +91,8 @@ async function sendWelcomeEmail({ toEmail, name, tempPassword, courseTitle }) {
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
         <h2 style="color: #007031;">LMS LANBA - CeNAT</h2>
-        <p>Hola ${name},</p>
-        <p>Se creó una cuenta para vos en la plataforma${courseTitle ? ` y quedaste matriculado/a en el curso <strong>${courseTitle}</strong>` : ''}.</p>
+        <p>Hola ${escapeHtml(name)},</p>
+        <p>Se creó una cuenta para vos en la plataforma${courseTitle ? ` y quedaste matriculado/a en el curso <strong>${escapeHtml(courseTitle)}</strong>` : ''}.</p>
         <p>Podés ingresar con:</p>
         <p>
           Correo: <strong>${toEmail}</strong><br>
