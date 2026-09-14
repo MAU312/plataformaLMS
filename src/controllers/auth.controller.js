@@ -3,13 +3,7 @@ import crypto from 'crypto';
 import User from '../models/User.js';
 import mailer from '../config/mailer.js';
 import { t } from '../utils/i18n.js';
-
-// Regex simple pero suficiente para validar formato de email en el backend
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-// Username: 3-50 caracteres, letras/números/punto/guion/guion bajo. Nada de
-// espacios ni '@' — así nunca se puede confundir con un email al hacer login.
-const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{3,50}$/;
+import { EMAIL_REGEX, USERNAME_REGEX } from '../utils/validators.js';
 
 export const register = async (req, res) => {
   try {

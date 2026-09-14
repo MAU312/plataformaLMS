@@ -143,14 +143,27 @@ export const getCourseById = async (req, res) => {
 export async function resolveValidTeacherIds(raw) {
   if (!raw) return [];
 
+  // JSON malformado o que no es un array NO se trata igual que "lista
+  // vacía" — devolver [] acá terminaría en un `assignTeachers(id, [])`
+  // que desasigna EN SILENCIO a todos los profesores de un curso ya en
+  // uso si el caller no distingue "vacío a propósito" de "dato inválido".
+  // Se señala con un error propio para que cada caller decida qué hacer
+  // (updateCourse lo convierte en 400; createCourse ya envuelve esta
+  // llamada en su propio try/catch con rollback).
   let ids;
   try {
     ids = JSON.parse(raw);
   } catch {
-    return [];
+    const err = new Error('invalid_teacher_ids');
+    err.isValidationError = true;
+    throw err;
   }
 
-  if (!Array.isArray(ids)) return [];
+  if (!Array.isArray(ids)) {
+    const err = new Error('invalid_teacher_ids');
+    err.isValidationError = true;
+    throw err;
+  }
 
   const numericIds = ids.map((id) => parseInt(id, 10)).filter((id) => Number.isInteger(id));
   if (numericIds.length === 0) return [];
@@ -220,7 +233,7 @@ export const createCourse = async (req, res) => {
     }
 
     if (certificate_style !== undefined && certificate_style !== '' && !isValidCertificateStyle(certificate_style)) {
-      if (req.file) deleteFile(`/uploads/thumbnails/${req.file.filename}`);
+      if (req.file) await deleteFile(`/uploads/thumbnails/${req.file.filename}`);
       return res.status(400).json({ success: false, message: t(req.locale, 'errors.invalid_certificate_style') });
     }
 
@@ -259,7 +272,7 @@ export const createCourse = async (req, res) => {
   } catch (error) {
     console.error('Error al crear curso:', error);
     if (req.file) {
-      deleteFile(`/uploads/thumbnails/${req.file.filename}`);
+      await deleteFile(`/uploads/thumbnails/${req.file.filename}`);
     }
     res.status(500).json({
       success: false,
@@ -302,7 +315,7 @@ export const updateCourse = async (req, res) => {
 
     const isAdminUser = req.session.user.role === 'admin' || Boolean(req.session.user.admin_access);
     if (!isAdminUser && !course.parent_module_id) {
-      if (req.file) deleteFile(`/uploads/thumbnails/${req.file.filename}`);
+      if (req.file) await deleteFile(`/uploads/thumbnails/${req.file.filename}`);
       return res.status(403).json({
         success: false,
         message: t(req.locale, 'errors.teacher_edit_module_child_only')
@@ -310,8 +323,16 @@ export const updateCourse = async (req, res) => {
     }
 
     if (isAdminUser && certificate_style !== undefined && !isValidCertificateStyle(certificate_style)) {
-      if (req.file) deleteFile(`/uploads/thumbnails/${req.file.filename}`);
+      if (req.file) await deleteFile(`/uploads/thumbnails/${req.file.filename}`);
       return res.status(400).json({ success: false, message: t(req.locale, 'errors.invalid_certificate_style') });
+    }
+
+    // createCourse ya rechaza un título vacío al crear — acá faltaba el
+    // mismo chequeo: `title !== undefined` solo confirma que el campo vino
+    // en el body, no que tenga contenido real.
+    if (title !== undefined && !String(title).trim()) {
+      if (req.file) await deleteFile(`/uploads/thumbnails/${req.file.filename}`);
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.title_required') });
     }
 
     // Preparar datos para actualizar
@@ -341,14 +362,20 @@ export const updateCourse = async (req, res) => {
     // confirmó en BD — si se borrara antes y el UPDATE fallara, la BD
     // quedaría apuntando a una imagen que ya no existe en disco.
     if (req.file && course.thumbnail) {
-      deleteFile(course.thumbnail);
+      await deleteFile(course.thumbnail);
     }
 
     // Reemplazo total de profesores asignados, igual que al crear el curso.
     // Solo se toca si el body trae `teacher_ids` (evita borrar la
     // asignación existente en un PUT que no la incluya por accidente).
     if (teacher_ids !== undefined) {
-      const teacherIds = await resolveValidTeacherIds(teacher_ids);
+      let teacherIds;
+      try {
+        teacherIds = await resolveValidTeacherIds(teacher_ids);
+      } catch (validationError) {
+        if (!validationError.isValidationError) throw validationError;
+        return res.status(400).json({ success: false, message: t(req.locale, 'errors.invalid_teacher_ids') });
+      }
       await Course.assignTeachers(id, teacherIds);
 
       // Escopeo por módulo: solo tiene sentido junto con teacher_ids (un
@@ -422,7 +449,7 @@ export const deleteCourse = async (req, res) => {
     // borraran antes y el DELETE fallara, el curso completo (contenidos,
     // inscripciones, entregas) quedaría en BD apuntando a archivos que ya
     // no existen en disco, sin forma de recuperarlos.
-    let filesToDelete = await collectCourseFilesToDelete(course);
+    const filesToDelete = await collectCourseFilesToDelete(course);
 
     // Un curso con módulos tiene cursos hijo colgando de ellos
     // (courses.parent_module_id → course_modules.id, SIN cascade a
@@ -431,13 +458,18 @@ export const deleteCourse = async (req, res) => {
     // al intentar arrastrar en cascada sus course_modules (course_id →
     // courses.id ON DELETE CASCADE) mientras un curso hijo todavía les
     // apunta. Cada hijo se borra con la MISMA lógica de limpieza de
-    // archivos que el curso principal, para no dejar huérfanos en disco.
+    // archivos que el curso principal — y sus archivos se borran de disco
+    // apenas SU PROPIO delete confirma en BD (no acumulados para el final):
+    // si un hijo o el padre fallaran más adelante en el mismo loop/request,
+    // los archivos de los hijos que ya se borraron con éxito no quedan
+    // huérfanos sin ninguna fila en BD que los referencie para limpiarlos
+    // después.
     const modules = await CourseModule.findByCourse(id);
     for (const module of modules) {
       for (const childCourse of module.courses) {
         const childFiles = await collectCourseFilesToDelete(childCourse);
         const childDeleted = await Course.delete(childCourse.id);
-        if (childDeleted) filesToDelete = filesToDelete.concat(childFiles);
+        if (childDeleted) await Promise.all(childFiles.map(deleteFile));
       }
     }
 
@@ -450,7 +482,7 @@ export const deleteCourse = async (req, res) => {
       });
     }
 
-    filesToDelete.forEach(deleteFile);
+    await Promise.all(filesToDelete.map(deleteFile));
 
     res.json({
       success: true,
@@ -605,9 +637,8 @@ export const getCertificate = async (req, res) => {
       });
     }
 
-    const safeTitle = course.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="certificado-${safeTitle}.pdf"`);
+    res.setHeader('Content-Disposition', `attachment; filename="certificado-${slugifyFilename(course.title)}.pdf"`);
 
     certificateGenerator.generateCertificate({
       studentName: req.session.user.name,
@@ -687,7 +718,16 @@ export const exportCourseGrades = async (req, res) => {
     }
 
     const { rows: students } = await Course.getEnrolledStudents(id, { page: 1, limit: 10000 });
-    const grades = await Promise.all(students.map((s) => Content.calculateCourseGrade(id, s.id)));
+    // En lotes de 25 en vez de un solo Promise.all sobre todo el roster:
+    // con un curso de miles de inscritos, disparar una query por
+    // estudiante toda de una vez puede agotar el pool de conexiones de
+    // MySQL y afectar a otras requests concurrentes.
+    const GRADE_EXPORT_BATCH_SIZE = 25;
+    const grades = [];
+    for (let i = 0; i < students.length; i += GRADE_EXPORT_BATCH_SIZE) {
+      const batch = students.slice(i, i + GRADE_EXPORT_BATCH_SIZE);
+      grades.push(...await Promise.all(batch.map((s) => Content.calculateCourseGrade(id, s.id))));
+    }
 
     const csv = toCsv(
       [

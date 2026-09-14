@@ -215,8 +215,7 @@ test('updateMyAvatar: 400 si no se sube ningún archivo', async (t) => {
 
 test('updateMyAvatar: borra la foto anterior SOLO después de confirmar el UPDATE en BD', async (t) => {
   t.mock.method(User, 'updateAvatar', async () => true);
-  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
-  t.mock.method(fs, 'existsSync', () => true);
+  const unlinkCall = t.mock.method(fs.promises, 'unlink', async () => {});
   const req = mockReq({
     session: { user: { id: 5, avatar_url: '/uploads/avatars/viejo.jpg' } },
     file: { filename: 'nuevo.jpg' }
@@ -233,8 +232,7 @@ test('updateMyAvatar: borra la foto anterior SOLO después de confirmar el UPDAT
 
 test('updateMyAvatar: si el UPDATE no afecta ninguna fila, borra la foto RECIÉN subida (no la anterior)', async (t) => {
   t.mock.method(User, 'updateAvatar', async () => false);
-  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
-  t.mock.method(fs, 'existsSync', () => true);
+  const unlinkCall = t.mock.method(fs.promises, 'unlink', async () => {});
   const req = mockReq({
     session: { user: { id: 5, avatar_url: '/uploads/avatars/viejo.jpg' } },
     file: { filename: 'nuevo.jpg' }
@@ -260,8 +258,7 @@ test('removeMyAvatar: 400 si el usuario no tiene foto de perfil puesta', async (
 
 test('removeMyAvatar: borra el archivo, limpia avatar_url en BD y en la sesión', async (t) => {
   const updateCall = t.mock.method(User, 'updateAvatar', async () => true);
-  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
-  t.mock.method(fs, 'existsSync', () => true);
+  const unlinkCall = t.mock.method(fs.promises, 'unlink', async () => {});
   const req = mockReq({ session: { user: { id: 5, avatar_url: '/uploads/avatars/viejo.jpg' } } });
   const res = mockRes();
 

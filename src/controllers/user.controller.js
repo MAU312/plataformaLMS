@@ -7,12 +7,9 @@ import { parseCsv } from '../utils/csv.js';
 import { generateTempPassword } from '../utils/password.js';
 import mailer from '../config/mailer.js';
 import { t } from '../utils/i18n.js';
+import { EMAIL_REGEX, USERNAME_REGEX } from '../utils/validators.js';
 
 const VALID_ROLES = ['admin', 'student', 'teacher'];
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-// Misma regla que en el registro público (auth.controller.js): 3-50
-// caracteres, letras/números/punto/guion/guion bajo, nada de espacios ni '@'.
-const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{3,50}$/;
 // Tope conservador: cada fila potencialmente manda un correo real por Gmail
 // SMTP (ver mailer.js), y una cuenta gratuita de Gmail tiene un límite de
 // ~500 envíos/día compartido con los correos de recuperación de contraseña
@@ -143,8 +140,17 @@ export const updateUser = async (req, res) => {
 
     // Evita que un admin se quite su propio rol por accidente (por ejemplo
     // desde el selector de rol en la tabla de usuarios) y quede bloqueado
-    // del panel sin que nadie más pueda revertirlo desde la interfaz.
-    if (req.session.user.id === parseInt(req.params.id) && role !== 'admin') {
+    // del panel sin que nadie más pueda revertirlo desde la interfaz. Solo
+    // aplica si quien edita YA es admin de verdad (req.session.user.role) —
+    // si no, un profesor con admin_access (role='teacher') editando su
+    // propio nombre/email quedaba bloqueado siempre, aunque no tocara el
+    // rol: `role` acá es el nuevo valor propuesto, que para esa persona
+    // siempre es 'teacher' (su único rol real).
+    if (
+      req.session.user.id === parseInt(req.params.id) &&
+      req.session.user.role === 'admin' &&
+      role !== 'admin'
+    ) {
       return res.status(400).json({
         success: false,
         message: t(req.locale, 'errors.cannot_change_own_admin_role')
@@ -210,6 +216,18 @@ export const setUserAdminAccess = async (req, res) => {
     const { id } = req.params;
     const { admin_access } = req.body;
 
+    // Mismo guard que toggleUserActive/deleteUser: sin esto, un profesor
+    // con admin_access podía quitárselo a sí mismo con un clic (sin
+    // confirmación ni chequeo de "sos el último admin"), y si era el
+    // único con privilegios de admin activos quedaba sin forma de
+    // revertirlo desde la interfaz.
+    if (req.session.user.id === parseInt(id)) {
+      return res.status(400).json({
+        success: false,
+        message: t(req.locale, 'errors.cannot_change_own_admin_role')
+      });
+    }
+
     const user = await User.findById(id);
     if (!user) return res.status(404).json({ success: false, message: t(req.locale, 'errors.user_not_found') });
 
@@ -253,6 +271,18 @@ export const bulkImportUsers = async (req, res) => {
     if (courseId) {
       course = await Course.findById(courseId);
       if (!course) return res.status(404).json({ success: false, message: t(req.locale, 'errors.course_not_found') });
+      // Mismo guard que enrollCourse: un curso hijo de módulo no es
+      // inscribible por su cuenta (la inscripción real vive en el padre) —
+      // sin esto, cada fila del CSV crearía una inscripción fantasma que
+      // nunca recibe progreso real.
+      if (course.parent_module_id) {
+        return res.status(400).json({
+          success: false,
+          message: course.parent_course_title
+            ? t(req.locale, 'errors.enroll_in_parent_required_titled', { title: course.parent_course_title })
+            : t(req.locale, 'errors.enroll_in_parent_required')
+        });
+      }
     }
 
     const { headers, rows } = parseCsv(req.file.buffer.toString('utf8'));
@@ -371,7 +401,7 @@ export const deleteUser = async (req, res) => {
       return res.status(400).json({ success: false, message: t(req.locale, 'errors.delete_user_no_rows') });
     }
 
-    filesToDelete.forEach(deleteFile);
+    await Promise.all(filesToDelete.map(deleteFile));
 
     res.json({ success: true, message: t(req.locale, 'success.user_deleted') });
   } catch (error) {
@@ -435,12 +465,12 @@ export const updateMyAvatar = async (req, res) => {
     const updated = await User.updateAvatar(userId, avatarUrl);
 
     if (!updated) {
-      deleteFile(avatarUrl);
+      await deleteFile(avatarUrl);
       return res.status(400).json({ success: false, message: t(req.locale, 'errors.avatar_update_no_rows') });
     }
 
     if (previousAvatarUrl) {
-      deleteFile(previousAvatarUrl);
+      await deleteFile(previousAvatarUrl);
     }
 
     req.session.user.avatar_url = avatarUrl;
@@ -449,7 +479,7 @@ export const updateMyAvatar = async (req, res) => {
   } catch (error) {
     console.error('Error al actualizar la foto de perfil:', error);
     if (req.file) {
-      deleteFile(`/uploads/avatars/${req.file.filename}`);
+      await deleteFile(`/uploads/avatars/${req.file.filename}`);
     }
     res.status(500).json({ success: false, message: t(req.locale, 'errors.avatar_update_failed') });
   }
@@ -469,7 +499,7 @@ export const removeMyAvatar = async (req, res) => {
     }
 
     await User.updateAvatar(userId, null);
-    deleteFile(previousAvatarUrl);
+    await deleteFile(previousAvatarUrl);
     req.session.user.avatar_url = null;
 
     res.json({ success: true, message: t(req.locale, 'success.avatar_removed') });

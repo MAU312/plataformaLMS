@@ -234,9 +234,9 @@ export const getQuestionsForManage = async (req, res) => {
  */
 export const updateQuestions = async (req, res) => {
   const { id } = req.params;
-  const content = await Content.findById(id);
 
   try {
+    const content = await Content.findById(id);
     if (!content) {
       return res.status(404).json({ success: false, message: t(req.locale, 'errors.content_not_found') });
     }

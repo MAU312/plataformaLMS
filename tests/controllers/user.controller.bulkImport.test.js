@@ -125,6 +125,22 @@ test('bulkImportUsers: si el email ya existe, no crea cuenta ni manda correo (qu
   assert.equal(mailCall.mock.calls.length, 0);
 });
 
+test('bulkImportUsers: 400 si course_id es un curso hijo de módulo (evita inscripciones fantasma)', async (t) => {
+  t.mock.method(Course, 'findById', async () => ({ id: 20, title: 'Curso Hijo', parent_module_id: 3, parent_course_title: 'Curso Padre' }));
+  const enrollCall = t.mock.method(Course, 'enrollUser', async () => 10);
+
+  const req = mockReq({
+    body: { course_id: '20' },
+    file: csvFile('nombre,email\nAna Rojas,ana@test.com'),
+    session: { user: { id: 1, role: 'admin' } }
+  });
+  const res = mockRes();
+  await userController.bulkImportUsers(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(enrollCall.mock.calls.length, 0, 'no debe procesar ninguna fila del CSV');
+});
+
 test('bulkImportUsers: si el email ya existe PERO viene con course_id, igual lo matricula en el curso', async (t) => {
   t.mock.method(Course, 'findById', async () => ({ id: 3, title: 'Biotecnología' }));
   t.mock.method(User, 'findByEmail', async () => ({ id: 7, email: 'ana@test.com' }));
