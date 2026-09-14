@@ -7,9 +7,30 @@ let currentUserPage = 1;
 let currentUserSearch = '';
 let currentPageUsers = [];
 let currentUsersPagination = { total: 0, totalPages: 1 };
-// Descarta respuestas obsoletas si el usuario escribe más rápido de lo
-// que tardan en volver las peticiones de búsqueda.
-let adminUsersRequestToken = 0;
+const adminUsersRequestGuard = createStaleResponseGuard();
+// Listener de Escape del modal actualmente abierto (crear usuario o
+// import CSV, nunca los dos a la vez) — se guarda acá para poder
+// quitarlo desde la función de cierre correspondiente sin duplicar la
+// lógica de foco/Escape en cada modal.
+let activeModalEscapeListener = null;
+
+function setupModalA11y(modal, closeFn) {
+    const firstField = modal.querySelector('input, select, textarea');
+    if (firstField) firstField.focus();
+
+    if (activeModalEscapeListener) document.removeEventListener('keydown', activeModalEscapeListener);
+    activeModalEscapeListener = (e) => {
+        if (e.key === 'Escape') closeFn();
+    };
+    document.addEventListener('keydown', activeModalEscapeListener);
+}
+
+function teardownModalA11y() {
+    if (activeModalEscapeListener) {
+        document.removeEventListener('keydown', activeModalEscapeListener);
+        activeModalEscapeListener = null;
+    }
+}
 
 window.renderAdminUsers = async function(params) {
     const app = document.getElementById('app');
@@ -61,9 +82,9 @@ function openCreateUserModal() {
     modal.className = 'fixed inset-0 z-50 flex items-center justify-center px-4';
     modal.innerHTML = `
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeCreateUserModal()"></div>
-        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-w-md w-full fade-in">
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-w-md w-full fade-in" role="dialog" aria-modal="true" aria-labelledby="create-user-modal-title">
             <div class="flex items-center justify-between mb-4">
-                <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+                <h2 id="create-user-modal-title" class="text-xl font-bold text-gray-900 dark:text-white">
                     <i class="fas fa-user-plus text-cenat-green mr-2"></i> ${t('admin.users.createModal.title')}
                 </h2>
                 <button onclick="closeCreateUserModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-slate-200">
@@ -73,29 +94,29 @@ function openCreateUserModal() {
 
             <form id="create-user-form" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.createModal.name_label')}</label>
+                    <label for="new-user-name" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.createModal.name_label')}</label>
                     <input type="text" id="new-user-name" required
                         class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.createModal.email_label')}</label>
+                    <label for="new-user-email" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.createModal.email_label')}</label>
                     <input type="email" id="new-user-email" required
                         class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.createModal.username_label')}</label>
+                    <label for="new-user-username" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.createModal.username_label')}</label>
                     <input type="text" id="new-user-username" minlength="3" maxlength="50"
                         placeholder="${t('admin.users.createModal.username_placeholder')}"
                         class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.createModal.password_label')}</label>
+                    <label for="new-user-password" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.createModal.password_label')}</label>
                     <input type="password" id="new-user-password" required minlength="6"
                         placeholder="${t('auth.register.password_hint')}"
                         class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.createModal.role_label')}</label>
+                    <label for="new-user-role" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.createModal.role_label')}</label>
                     <select id="new-user-role"
                         class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
                         <option value="student" selected>${t('admin.users.role_student')}</option>
@@ -114,6 +135,7 @@ function openCreateUserModal() {
         </div>
     `;
     document.body.appendChild(modal);
+    setupModalA11y(modal, closeCreateUserModal);
 
     document.getElementById('create-user-form').addEventListener('submit', handleCreateUserSubmit);
 }
@@ -121,6 +143,7 @@ function openCreateUserModal() {
 function closeCreateUserModal() {
     const modal = document.getElementById('create-user-modal');
     if (modal) modal.remove();
+    teardownModalA11y();
 }
 
 async function handleCreateUserSubmit(e) {
@@ -166,9 +189,9 @@ async function openBulkImportModal() {
     modal.className = 'fixed inset-0 z-50 flex items-center justify-center px-4';
     modal.innerHTML = `
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeBulkImportModal()"></div>
-        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-w-md w-full fade-in">
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-w-md w-full fade-in" role="dialog" aria-modal="true" aria-labelledby="bulk-import-modal-title">
             <div class="flex items-center justify-between mb-4">
-                <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+                <h2 id="bulk-import-modal-title" class="text-xl font-bold text-gray-900 dark:text-white">
                     <i class="fas fa-file-csv text-cenat-green mr-2"></i> ${t('admin.users.bulkImport.title')}
                 </h2>
                 <button onclick="closeBulkImportModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-slate-200">
@@ -182,16 +205,17 @@ async function openBulkImportModal() {
                         ${t('admin.users.bulkImport.description')}
                     </p>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.bulkImport.file_label')}</label>
+                        <label for="bulk-import-file" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.bulkImport.file_label')}</label>
                         <input type="file" id="bulk-import-file" accept=".csv" required
                             class="w-full text-sm text-gray-700 dark:text-slate-300">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.bulkImport.course_label')}</label>
+                        <label for="bulk-import-course" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.bulkImport.course_label')}</label>
                         <select id="bulk-import-course"
                             class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
                             <option value="">${t('admin.users.bulkImport.no_course_option')}</option>
                         </select>
+                        <p id="bulk-import-course-truncated-note" class="hidden text-xs text-yellow-600 dark:text-yellow-400 mt-1"></p>
                     </div>
 
                     <div class="flex items-center gap-3 pt-2">
@@ -205,13 +229,19 @@ async function openBulkImportModal() {
         </div>
     `;
     document.body.appendChild(modal);
+    setupModalA11y(modal, closeBulkImportModal);
 
     document.getElementById('bulk-import-form').addEventListener('submit', handleBulkImportSubmit);
 
     // Poblar el selector de cursos en paralelo — si falla, se deja usable
     // igual (solo queda sin la opción de matricular).
     try {
-        const response = await coursesAPI.getAll({ limit: 100 });
+        // scope: 'top' — un curso hijo de módulo no es inscribible por su
+        // cuenta (la inscripción real vive en el padre), así que no tiene
+        // sentido ofrecerlo acá. limit:50 porque el backend igual lo
+        // capea ahí (ver Math.min(50, ...) en getAllCourses) — pedir 100
+        // sugería un tope que en realidad nunca se aplicaba.
+        const response = await coursesAPI.getAll({ limit: 50, scope: 'top' });
         const select = document.getElementById('bulk-import-course');
         if (select) {
             (response.data || []).forEach(course => {
@@ -221,6 +251,16 @@ async function openBulkImportModal() {
                 select.appendChild(option);
             });
         }
+        // Si hay más cursos de los que trajo esta página, decirlo — antes
+        // los que quedaban fuera del límite simplemente no aparecían, sin
+        // ningún aviso de que la lista estaba incompleta.
+        const total = response.pagination?.total ?? 0;
+        const shown = (response.data || []).length;
+        const truncatedNote = document.getElementById('bulk-import-course-truncated-note');
+        if (truncatedNote && total > shown) {
+            truncatedNote.textContent = t('admin.users.bulkImport.course_list_truncated', { shown, total });
+            truncatedNote.classList.remove('hidden');
+        }
     } catch (error) {
         console.error('Error al cargar los cursos para importar:', error);
     }
@@ -229,6 +269,7 @@ async function openBulkImportModal() {
 function closeBulkImportModal() {
     const modal = document.getElementById('bulk-import-modal');
     if (modal) modal.remove();
+    teardownModalA11y();
 }
 
 async function handleBulkImportSubmit(e) {
@@ -298,19 +339,19 @@ async function loadAdminUsers(page) {
     const pagination = document.getElementById('users-pagination');
     if (!container) return;
 
-    const token = ++adminUsersRequestToken;
+    const isStale = adminUsersRequestGuard.start();
     const currentUserId = getCurrentUser().id;
 
     try {
         const response = await usersAPI.getAll({ page, limit: USERS_PER_PAGE, search: currentUserSearch });
-        if (token !== adminUsersRequestToken) return;
+        if (isStale()) return;
 
         currentUserPage = page;
         currentPageUsers = response.data || [];
         currentUsersPagination = response.pagination || { total: currentPageUsers.length, totalPages: 1 };
         renderUsersTable(currentPageUsers, page, currentUserId, currentUsersPagination);
     } catch (error) {
-        if (token !== adminUsersRequestToken) return;
+        if (isStale()) return;
         console.error('Error loading users:', error);
         showToast(t('admin.users.load_failed'), 'error');
     }
@@ -368,7 +409,9 @@ function renderUsersTable(users, page, currentUserId, pagination) {
                                 ${user.role === 'teacher' ? `
                                     <button onclick="toggleUserAdminAccess(${user.id})"
                                         title="${user.admin_access ? t('admin.users.remove_admin_access_title') : t('admin.users.grant_admin_access_title')}"
-                                        class="ml-1 ${user.admin_access ? 'text-cenat-green' : 'text-gray-300 dark:text-slate-500'} hover:opacity-80 transition">
+                                        aria-label="${user.admin_access ? t('admin.users.remove_admin_access_title') : t('admin.users.grant_admin_access_title')}"
+                                        class="ml-1 ${user.admin_access ? 'text-cenat-green' : 'text-gray-300 dark:text-slate-500'} ${isMe ? 'opacity-30 cursor-not-allowed' : 'hover:opacity-80'} transition"
+                                        ${isMe ? 'disabled' : ''}>
                                         <i class="fas fa-user-shield"></i>
                                     </button>
                                 ` : ''}
@@ -384,6 +427,7 @@ function renderUsersTable(users, page, currentUserId, pagination) {
                                 <button
                                     onclick="toggleUserActive(${user.id})"
                                     title="${isActive ? t('admin.users.deactivate_user_title') : t('admin.users.activate_user_title')}"
+                                    aria-label="${isActive ? t('admin.users.deactivate_user_title') : t('admin.users.activate_user_title')}"
                                     class="${isMe ? 'opacity-30 cursor-not-allowed' : 'hover:opacity-80'} transition"
                                     ${isMe ? 'disabled' : ''}>
                                     <i class="fas ${isActive ? 'fa-user-slash text-yellow-500' : 'fa-user-check text-green-500'} text-lg"></i>

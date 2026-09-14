@@ -5,10 +5,7 @@
 const HOME_COURSES_PER_PAGE = 12;
 let homeCurrentPage = 1;
 let homeSearchTerm = '';
-// Se incrementa en cada fetch; si llega una respuesta que ya no es la más
-// reciente (petición anterior que tardó más que una posterior, por typing
-// rápido en la búsqueda), se descarta en vez de pisar el resultado nuevo.
-let homeRequestToken = 0;
+const homeRequestGuard = createStaleResponseGuard();
 
 window.renderHome = async function(params) {
     const app = document.getElementById('app');
@@ -30,17 +27,17 @@ window.renderHome = async function(params) {
 
         <div class="courses-bg">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <div class="flex items-center justify-between mb-8">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-8">
                     <h2 class="text-2xl font-bold text-gray-900">
                         <i class="fas fa-th-large mr-2 text-cenat-green"></i>
                         ${t('home.available_courses')}
                     </h2>
-                    <div class="relative">
+                    <div class="relative w-full sm:w-64">
                         <input
                             type="text"
                             id="search-courses"
                             placeholder="${escapeAttr(t('home.search_placeholder'))}"
-                            class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition w-64"
+                            class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition w-full"
                         >
                         <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                     </div>
@@ -65,11 +62,11 @@ async function loadHomeCourses(page) {
     const pagination = document.getElementById('courses-pagination');
     if (!grid) return;
 
-    const token = ++homeRequestToken;
+    const isStale = homeRequestGuard.start();
 
     try {
         const response = await coursesAPI.getAll({ page, limit: HOME_COURSES_PER_PAGE, search: homeSearchTerm });
-        if (token !== homeRequestToken) return; // llegó una respuesta obsoleta
+        if (isStale()) return;
 
         const courses = response.data || [];
         homeCurrentPage = page;
@@ -82,7 +79,7 @@ async function loadHomeCourses(page) {
         pagination.innerHTML = renderPagination(page, totalPages, total, HOME_COURSES_PER_PAGE, 'goToHomeCoursePage');
         setupExpandableText(grid);
     } catch (error) {
-        if (token !== homeRequestToken) return;
+        if (isStale()) return;
         console.error('Error loading courses:', error);
         grid.innerHTML = `
             <div class="col-span-full text-center py-12">

@@ -6,6 +6,11 @@
 // Toast Notifications
 // =================================
 
+// Si dos toasts se muestran en menos de 3s (frecuente: un error de red
+// seguido de un segundo error), sin esto el setTimeout del primero ocultaba
+// el del segundo antes de que cumpliera sus propios 3 segundos.
+let toastHideTimer = null;
+
 function showToast(message, type = 'info') {
     const toast = document.getElementById('toast');
     const toastIcon = document.getElementById('toast-icon');
@@ -27,7 +32,8 @@ function showToast(message, type = 'info') {
     toast.classList.remove('hidden');
     toast.classList.add('fade-in');
 
-    setTimeout(() => { hideToast(); }, 3000);
+    if (toastHideTimer) clearTimeout(toastHideTimer);
+    toastHideTimer = setTimeout(() => { hideToast(); }, 3000);
 }
 
 function hideToast() {
@@ -388,12 +394,12 @@ function confirmAction(message, { confirmLabel = t('common.confirm'), cancelLabe
         modal.className = 'fixed inset-0 z-50 flex items-center justify-center px-4';
         modal.innerHTML = `
             <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" data-confirm-backdrop></div>
-            <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-w-sm w-full fade-in">
+            <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-w-sm w-full fade-in" role="alertdialog" aria-modal="true" aria-labelledby="confirm-modal-message">
                 <div class="flex items-start gap-3">
                     <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${danger ? 'bg-red-100 dark:bg-red-900/40 text-red-500' : 'bg-green-100 dark:bg-green-900/40 text-cenat-green'}">
                         <i class="fas ${danger ? 'fa-exclamation-triangle' : 'fa-question-circle'}"></i>
                     </div>
-                    <p class="text-gray-700 dark:text-slate-200 mt-1.5 leading-snug">${escapeHtml(message)}</p>
+                    <p id="confirm-modal-message" class="text-gray-700 dark:text-slate-200 mt-1.5 leading-snug">${escapeHtml(message)}</p>
                 </div>
                 <div class="flex gap-3 justify-end mt-6">
                     <button type="button" data-confirm-cancel class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition">${escapeHtml(cancelLabel)}</button>
@@ -402,7 +408,15 @@ function confirmAction(message, { confirmLabel = t('common.confirm'), cancelLabe
             </div>
         `;
 
+        // Único mecanismo de confirmación de acciones destructivas de toda
+        // la app — sin esto, un usuario de teclado que lo abría quedaba con
+        // el foco en el botón que lo disparó, y Escape no hacía nada.
+        const onKeydown = (e) => {
+            if (e.key === 'Escape') close(false);
+        };
+
         const close = (result) => {
+            document.removeEventListener('keydown', onKeydown);
             modal.remove();
             resolve(result);
         };
@@ -410,8 +424,12 @@ function confirmAction(message, { confirmLabel = t('common.confirm'), cancelLabe
         modal.querySelector('[data-confirm-cancel]').addEventListener('click', () => close(false));
         modal.querySelector('[data-confirm-ok]').addEventListener('click', () => close(true));
         modal.querySelector('[data-confirm-backdrop]').addEventListener('click', () => close(false));
+        document.addEventListener('keydown', onKeydown);
 
         document.body.appendChild(modal);
+        // Foco inicial en "Cancelar" — el default más seguro para una
+        // confirmación (Enter/Space sin querer no dispara la acción).
+        modal.querySelector('[data-confirm-cancel]').focus();
     });
 }
 
@@ -428,6 +446,42 @@ function debounce(func, wait) {
         };
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
+    };
+}
+
+// =================================
+// Guardián de respuestas obsoletas
+// =================================
+
+/**
+ * Si el usuario dispara varias peticiones seguidas (tipeando rápido en un
+ * buscador, cambiando de página rápido), una respuesta que llega tarde no
+ * debe pisar el resultado de una petición más nueva. Este mismo patrón de
+ * "requestToken" manual se repetía copiado en varias vistas con listas
+ * paginadas/buscables (home, mis cursos, admin de cursos, admin de
+ * usuarios) — queda acá en un solo lugar.
+ *
+ * Uso:
+ *   const guard = createStaleResponseGuard();
+ *   async function loadX(page) {
+ *       const isStale = guard.start();
+ *       try {
+ *           const response = await api.getAll(...);
+ *           if (isStale()) return;
+ *           ...
+ *       } catch (error) {
+ *           if (isStale()) return;
+ *           ...
+ *       }
+ *   }
+ */
+function createStaleResponseGuard() {
+    let currentToken = 0;
+    return {
+        start() {
+            const token = ++currentToken;
+            return () => token !== currentToken;
+        }
     };
 }
 
@@ -823,6 +877,7 @@ window.toggleDropdown = toggleDropdown;
 window.updateProgressBar = updateProgressBar;
 window.confirmAction = confirmAction;
 window.debounce = debounce;
+window.createStaleResponseGuard = createStaleResponseGuard;
 window.saveToLocalStorage = saveToLocalStorage;
 window.getFromLocalStorage = getFromLocalStorage;
 window.removeFromLocalStorage = removeFromLocalStorage;

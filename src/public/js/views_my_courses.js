@@ -4,6 +4,7 @@
 
 const MY_COURSES_PER_PAGE = 12;
 let currentMyCoursesPage = 1;
+const myCoursesRequestGuard = createStaleResponseGuard();
 
 window.renderMyCourses = async function(params) {
     const app = document.getElementById('app');
@@ -37,8 +38,11 @@ async function loadMyCourses(page) {
     const paginationContainer = document.getElementById('my-courses-pagination');
     if (!container) return;
 
+    const isStale = myCoursesRequestGuard.start();
+
     try {
         const response = await coursesAPI.getEnrolled({ page, limit: MY_COURSES_PER_PAGE });
+        if (isStale()) return;
         currentMyCoursesPage = page;
         const courses = response.data || [];
         const pagination = response.pagination || { total: courses.length, totalPages: 1 };
@@ -63,6 +67,7 @@ async function loadMyCourses(page) {
             : '';
 
     } catch (error) {
+        if (isStale()) return;
         console.error('Error loading enrolled courses:', error);
         showToast(t('myCourses.load_failed'), 'error');
     }

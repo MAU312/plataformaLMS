@@ -18,9 +18,15 @@ window.renderTaskSubmissions = async function(params) {
     const app = document.getElementById('app');
     showLoading();
     currentTaskContentId = params.id;
+    // Mismo guard que views_course_detail.js: si se navega rápido a otra
+    // tarea/página antes de que termine este fetch, no debe pisar la vista
+    // a la que el usuario ya navegó.
+    const myNavToken = getNavToken();
 
     try {
         const response = await contentsAPI.getSubmissions(params.id, { page: 1, limit: SUBMISSIONS_PER_PAGE });
+        if (myNavToken !== getNavToken()) return;
+
         const { content, submissions } = response.data;
         currentSubmissions = submissions;
         currentSubmissionsPage = 1;
@@ -123,7 +129,7 @@ function renderSubmissionRow(s) {
                 <span class="badge ${reviewed ? 'badge-active' : 'badge-inactive'}">${reviewed ? t('taskSubmissions.status_reviewed') : t('quiz.status_pending')}</span>
             </td>
             ${currentTaskWeightPercent ? `
-                <td class="py-3 px-4 text-gray-600">${hasScore ? `${s.score_earned}/${currentTaskWeightPercent}` : '—'}</td>
+                <td class="py-3 px-4 text-gray-600">${hasScore ? `${Number(s.score_earned)}/${Number(currentTaskWeightPercent)}` : '—'}</td>
             ` : ''}
             <td class="py-3 px-4 text-gray-600 max-w-xs whitespace-normal break-words">${s.feedback ? escapeHtml(s.feedback) : '—'}</td>
             <td class="py-3 px-4 text-right whitespace-nowrap">
@@ -171,8 +177,25 @@ async function submitReview(id) {
     const scoreInput = document.getElementById(`score-${id}`);
     const scoreValue = scoreInput ? scoreInput.value.trim() : '';
 
+    // El input tiene min/max, pero al no estar dentro de un <form> (este
+    // botón llama a submitReview() por onclick directo) esa validación
+    // nativa del navegador nunca se dispara — se repite acá a mano.
+    if (scoreValue !== '') {
+        const score = Number(scoreValue);
+        const max = Number(currentTaskWeightPercent);
+        if (!Number.isFinite(score) || score < 0 || score > max) {
+            showToast(t('taskSubmissions.grade_out_of_range', { max }), 'error');
+            return;
+        }
+    }
+
     const payload = { feedback };
-    if (scoreValue !== '') payload.score_earned = Number(scoreValue);
+    // Si el campo de nota EXISTE (la tarea tiene weight_percent), siempre
+    // se manda — vaciarlo antes de guardar es una acción deliberada (el
+    // campo arranca precargado con la nota actual, nunca vacío por
+    // accidente), y el backend ya soporta mandar null para borrarla. Sin
+    // esto no había forma de volver una entrega calificada a "sin nota".
+    if (scoreInput) payload.score_earned = scoreValue === '' ? null : Number(scoreValue);
 
     try {
         await submissionsAPI.review(id, payload);
@@ -187,7 +210,7 @@ async function submitReview(id) {
         if (submission) {
             submission.feedback = feedback;
             submission.reviewed_at = new Date().toISOString();
-            if (scoreValue !== '') submission.score_earned = Number(scoreValue);
+            if (scoreInput) submission.score_earned = scoreValue === '' ? null : Number(scoreValue);
         }
         renderSubmissionsTable();
     } catch (error) {

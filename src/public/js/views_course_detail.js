@@ -41,8 +41,18 @@ window.renderCourseDetail = async function(params) {
         let contents = course.contents || [];
 
         if (isLoggedIn) {
-            const contentsResponse = await contentsAPI.getByCourse(course.id);
-            contents = contentsResponse.data || contents;
+            // Igual criterio que la carga de módulos más abajo: un error acá
+            // no debe tirar toda la página a la pantalla genérica de "no se
+            // pudo cargar el curso" cuando el curso ya se cargó bien — se
+            // degrada al `course.contents` que ya trajo la respuesta de
+            // arriba (sin el estado de completado/entrega por usuario, pero
+            // visible en vez de nada).
+            try {
+                const contentsResponse = await contentsAPI.getByCourse(course.id);
+                contents = contentsResponse.data || contents;
+            } catch (error) {
+                console.error('Error al cargar el contenido del curso:', error);
+            }
         }
 
         // Módulos de este curso (cursos hijo completos, con su propia
@@ -140,11 +150,22 @@ window.renderCourseDetail = async function(params) {
 
         // Igual que arriba con las tareas: si ya respondió, se necesita
         // saber para no mostrarle el formulario de nuevo (un solo intento).
+        // `hasAccess` (no `isEnrolled`) para que un profesor/admin
+        // previsualizando el curso sin estar inscrito también vea el
+        // estado real "ya respondido" en vez de siempre "Responder", igual
+        // que ya pasa con `submissionsByTask` arriba.
         const allQuizzes = contents.filter(c => c.type === 'quiz' || c.type === 'survey');
         let quizStatusById = {};
-        if (isLoggedIn && isEnrolled && allQuizzes.length > 0) {
-            const quizResponses = await Promise.all(allQuizzes.map(q => contentsAPI.getQuestions(q.id)));
-            allQuizzes.forEach((q, i) => { quizStatusById[q.id] = quizResponses[i].data; });
+        if (hasAccess && allQuizzes.length > 0) {
+            // Mismo criterio que la carga de contenido/módulos: un error acá
+            // no debe tirar toda la página, solo dejar el estado de
+            // quiz/encuesta sin resolver (vuelve a mostrar "Responder").
+            try {
+                const quizResponses = await Promise.all(allQuizzes.map(q => contentsAPI.getQuestions(q.id)));
+                allQuizzes.forEach((q, i) => { quizStatusById[q.id] = quizResponses[i].data; });
+            } catch (error) {
+                console.error('Error al cargar el estado de quizzes/encuestas:', error);
+            }
         }
 
         if (myNavToken !== getNavToken()) return;

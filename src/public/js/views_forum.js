@@ -8,9 +8,15 @@ window.renderForumThread = async function(params) {
     const app = document.getElementById('app');
     showLoading();
     currentForumTopicId = params.id;
+    // Mismo guard que views_course_detail.js: si se navega rápido a otro
+    // foro/página antes de que termine este fetch, no debe pisar la vista
+    // a la que el usuario ya navegó.
+    const myNavToken = getNavToken();
 
     try {
         const response = await contentsAPI.getForumThread(params.id);
+        if (myNavToken !== getNavToken()) return;
+
         const { topic, posts } = response.data;
         renderForumPage(topic, posts);
     } catch (error) {
@@ -124,8 +130,8 @@ function renderPostBody(post, currentUser, isReply = false) {
                 </div>
                 ${isOwner || canModerate ? `
                     <div class="flex items-center gap-2 flex-shrink-0">
-                        ${isOwner ? `<button onclick="toggleEditForm(${post.id})" class="text-xs text-gray-400 hover:text-cenat-green" title="${escapeAttr(t('forum.edit_title'))}"><i class="fas fa-pen"></i></button>` : ''}
-                        <button onclick="deleteForumPost(${post.id})" class="text-xs text-gray-400 hover:text-red-500" title="${escapeAttr(t('forum.delete_title'))}"><i class="fas fa-trash"></i></button>
+                        ${isOwner ? `<button onclick="toggleEditForm(${post.id})" class="text-xs text-gray-400 hover:text-cenat-green" title="${escapeAttr(t('forum.edit_title'))}" aria-label="${escapeAttr(t('forum.edit_title'))}"><i class="fas fa-pen"></i></button>` : ''}
+                        <button onclick="deleteForumPost(${post.id})" class="text-xs text-gray-400 hover:text-red-500" title="${escapeAttr(t('forum.delete_title'))}" aria-label="${escapeAttr(t('forum.delete_title'))}"><i class="fas fa-trash"></i></button>
                     </div>
                 ` : ''}
             </div>

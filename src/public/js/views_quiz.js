@@ -11,12 +11,18 @@ let currentQuizContentId = null;
 window.renderTakeQuiz = async function(params) {
     const app = document.getElementById('app');
     showLoading();
+    // Mismo guard que views_course_detail.js: si se navega rápido a otro
+    // quiz/página antes de que termine este fetch, no debe pisar la vista
+    // a la que el usuario ya navegó.
+    const myNavToken = getNavToken();
 
     try {
         const [contentResponse, questionsResponse] = await Promise.all([
             contentsAPI.getById(params.id),
             contentsAPI.getQuestions(params.id)
         ]);
+        if (myNavToken !== getNavToken()) return;
+
         const content = contentResponse.data;
         const { already_answered, questions } = questionsResponse.data;
         const isQuiz = content.type === 'quiz';
@@ -149,12 +155,15 @@ window.renderQuizResults = async function(params) {
     const app = document.getElementById('app');
     showLoading();
     currentQuizContentId = params.id;
+    const myNavToken = getNavToken();
 
     try {
         const [contentResponse, resultsResponse] = await Promise.all([
             contentsAPI.getById(params.id),
             contentsAPI.getResults(params.id)
         ]);
+        if (myNavToken !== getNavToken()) return;
+
         const content = contentResponse.data;
         const { type, total_respondents, questions } = resultsResponse.data;
         const isQuiz = type === 'quiz';
@@ -252,12 +261,12 @@ function renderShortAnswerRow(a, isQuiz) {
                 ${isQuiz ? `<span class="text-xs font-semibold ${statusClass}">${statusLabel}</span>` : ''}
             </div>
             <p class="text-sm text-gray-600 mt-1 whitespace-pre-line">${escapeHtml(a.answer_text || '')}</p>
-            ${isQuiz && a.is_correct == null ? `
+            ${isQuiz ? `
                 <div class="flex gap-2 mt-2">
-                    <button onclick="gradeAnswerHandler(${a.answer_id}, true, this)" class="text-xs bg-green-50 text-green-700 px-3 py-1 rounded-lg hover:bg-green-100">
+                    <button onclick="gradeAnswerHandler(${a.answer_id}, true, this)" class="text-xs px-3 py-1 rounded-lg transition ${a.is_correct == 1 ? 'bg-green-600 text-white' : 'bg-green-50 text-green-700 hover:bg-green-100'}">
                         <i class="fas fa-check mr-1"></i> ${t('quiz.status_correct')}
                     </button>
-                    <button onclick="gradeAnswerHandler(${a.answer_id}, false, this)" class="text-xs bg-red-50 text-red-700 px-3 py-1 rounded-lg hover:bg-red-100">
+                    <button onclick="gradeAnswerHandler(${a.answer_id}, false, this)" class="text-xs px-3 py-1 rounded-lg transition ${a.is_correct == 0 ? 'bg-red-600 text-white' : 'bg-red-50 text-red-700 hover:bg-red-100'}">
                         <i class="fas fa-times mr-1"></i> ${t('quiz.status_incorrect')}
                     </button>
                 </div>
