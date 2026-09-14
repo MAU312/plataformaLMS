@@ -44,7 +44,7 @@ export const updateSettings = async (req, res) => {
       const value = req.body[key];
       if (value === undefined) continue;
       if (String(value).length > MAX_TEXT_LENGTH) {
-        uploadedFiles.forEach((f) => deleteFile(`/uploads/site/${f.filename}`));
+        await Promise.all(uploadedFiles.map((f) => deleteFile(`/uploads/site/${f.filename}`)));
         return res.status(400).json({
           success: false,
           message: t(req.locale, 'errors.settings_text_too_long', { max: MAX_TEXT_LENGTH })
@@ -67,18 +67,18 @@ export const updateSettings = async (req, res) => {
         const previous = await SiteSetting.get(key);
         await SiteSetting.set(key, `/uploads/site/${uploaded.filename}`);
         committed.add(uploaded);
-        if (previous) deleteFile(previous);
+        if (previous) await deleteFile(previous);
       } else if (shouldClear) {
         const previous = await SiteSetting.get(key);
         await SiteSetting.set(key, null);
-        if (previous) deleteFile(previous);
+        if (previous) await deleteFile(previous);
       }
     }
 
     res.json({ success: true, message: t(req.locale, 'success.settings_updated') });
   } catch (error) {
     console.error('Error al actualizar la configuración del sitio:', error);
-    uploadedFiles.filter((f) => !committed.has(f)).forEach((f) => deleteFile(`/uploads/site/${f.filename}`));
+    await Promise.all(uploadedFiles.filter((f) => !committed.has(f)).map((f) => deleteFile(`/uploads/site/${f.filename}`)));
     res.status(500).json({ success: false, message: t(req.locale, 'errors.update_settings_failed') });
   }
 };

@@ -148,17 +148,17 @@ export const createModuleCourse = async (req, res) => {
 
     const module = await CourseModule.findById(moduleId);
     if (!module) {
-      if (req.file) deleteFile(`/uploads/thumbnails/${req.file.filename}`);
+      if (req.file) await deleteFile(`/uploads/thumbnails/${req.file.filename}`);
       return res.status(404).json({ success: false, message: t(req.locale, 'errors.module_not_found') });
     }
 
     if (!title) {
-      if (req.file) deleteFile(`/uploads/thumbnails/${req.file.filename}`);
+      if (req.file) await deleteFile(`/uploads/thumbnails/${req.file.filename}`);
       return res.status(400).json({ success: false, message: t(req.locale, 'errors.title_required') });
     }
 
     if (certificate_style !== undefined && certificate_style !== '' && !isValidCertificateStyle(certificate_style)) {
-      if (req.file) deleteFile(`/uploads/thumbnails/${req.file.filename}`);
+      if (req.file) await deleteFile(`/uploads/thumbnails/${req.file.filename}`);
       return res.status(400).json({ success: false, message: t(req.locale, 'errors.invalid_certificate_style') });
     }
 
@@ -195,7 +195,7 @@ export const createModuleCourse = async (req, res) => {
   } catch (error) {
     console.error('Error al crear curso dentro del módulo:', error);
     if (req.file) {
-      deleteFile(`/uploads/thumbnails/${req.file.filename}`);
+      await deleteFile(`/uploads/thumbnails/${req.file.filename}`);
     }
     res.status(500).json({ success: false, message: t(req.locale, 'errors.create_module_course_failed') });
   }

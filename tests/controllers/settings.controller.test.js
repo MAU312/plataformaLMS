@@ -41,8 +41,7 @@ test('updateSettings: no toca las claves que no vienen en el body', async (t) =>
 
 test('updateSettings: 400 si el texto supera el máximo, y borra los archivos ya subidos por multer', async (t) => {
   const setCall = t.mock.method(SiteSetting, 'set', async () => {});
-  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
-  t.mock.method(fs, 'existsSync', () => true);
+  const unlinkCall = t.mock.method(fs.promises, 'unlink', async () => {});
   const req = mockReq({
     body: { catalog_title: 'x'.repeat(301) },
     files: { login_bg_image: [{ filename: 'nuevo.png' }] }
@@ -59,8 +58,7 @@ test('updateSettings: 400 si el texto supera el máximo, y borra los archivos ya
 test('updateSettings: al subir una imagen nueva, guarda su URL y borra la anterior', async (t) => {
   t.mock.method(SiteSetting, 'get', async () => '/uploads/site/vieja.png');
   const setCall = t.mock.method(SiteSetting, 'set', async () => {});
-  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
-  t.mock.method(fs, 'existsSync', () => true);
+  const unlinkCall = t.mock.method(fs.promises, 'unlink', async () => {});
   const req = mockReq({
     body: {},
     files: { login_bg_image: [{ filename: 'nueva-123.png' }] }
@@ -77,8 +75,7 @@ test('updateSettings: al subir una imagen nueva, guarda su URL y borra la anteri
 test('updateSettings: "_clear" restaura la imagen por defecto (guarda null y borra el archivo personalizado)', async (t) => {
   t.mock.method(SiteSetting, 'get', async () => '/uploads/site/personalizada.png');
   const setCall = t.mock.method(SiteSetting, 'set', async () => {});
-  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
-  t.mock.method(fs, 'existsSync', () => true);
+  const unlinkCall = t.mock.method(fs.promises, 'unlink', async () => {});
   const req = mockReq({ body: { courses_bg_image_clear: 'true' } });
   const res = mockRes();
 
@@ -92,8 +89,7 @@ test('updateSettings: "_clear" restaura la imagen por defecto (guarda null y bor
 test('updateSettings: si llega un archivo nuevo Y "_clear" para la misma clave, el archivo nuevo gana', async (t) => {
   t.mock.method(SiteSetting, 'get', async () => null);
   const setCall = t.mock.method(SiteSetting, 'set', async () => {});
-  t.mock.method(fs, 'unlinkSync', () => {});
-  t.mock.method(fs, 'existsSync', () => true);
+  t.mock.method(fs.promises, 'unlink', async () => {});
   const req = mockReq({
     body: { login_bg_image_clear: 'true' },
     files: { login_bg_image: [{ filename: 'nueva.png' }] }
@@ -114,8 +110,7 @@ test('updateSettings: si SiteSetting.set falla, borra los archivos que NO llegar
     // segundo (courses_bg_image) revienta.
     if (key === 'courses_bg_image') throw new Error('DB caída');
   });
-  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
-  t.mock.method(fs, 'existsSync', () => true);
+  const unlinkCall = t.mock.method(fs.promises, 'unlink', async () => {});
   const req = mockReq({
     body: {},
     files: {

@@ -2,6 +2,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { UPLOADS_ROOT } from '../config/uploads.js';
+import { t } from '../utils/i18n.js';
 
 // Crear directorios si no existen
 const uploadsDir = UPLOADS_ROOT;
@@ -36,7 +37,10 @@ const videoStorage = multer.diskStorage({
   }
 });
 
-// Filtro para videos
+// Filtro para videos. Exige extensión Y mimetype (a diferencia de
+// fileFilter/csvFilter más abajo): el mimetype de video que reporta el
+// navegador es confiable, así que ambos chequeos coinciden en la práctica
+// y exigir los dos suma una capa extra sin arriesgar falsos rechazos.
 const videoFilter = (req, file, cb) => {
   const allowedTypes = /mp4|avi|mov|wmv|flv|mkv|webm/;
   const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -45,14 +49,15 @@ const videoFilter = (req, file, cb) => {
   if (mimetype && extname) {
     return cb(null, true);
   } else {
-    const error = new Error('Solo se permiten archivos de video (mp4, avi, mov, wmv, flv, mkv, webm)');
+    const error = new Error(t(req.locale, 'errors.video_type_not_allowed'));
     error.status = 400;
     cb(error);
   }
 };
 
-// Exportada (no solo usada acá) para que server.js pueda referenciarla al
-// loguear el límite real, y para poder testearla sin duplicar el número.
+// Exportada (no solo usada acá) para poder testearla sin duplicar el
+// número, y por si algún día hace falta referenciarla al loguear el
+// límite real al arrancar la app (app.js).
 export const MAX_VIDEO_SIZE_BYTES = 2 * 1024 * 1024 * 1024; // 2GB
 
 export const uploadVideo = multer({
@@ -79,7 +84,12 @@ const fileStorage = multer.diskStorage({
   }
 });
 
-// Filtro para documentos
+// Filtro para documentos. Solo por extensión (a diferencia de
+// videoFilter/imageFilter): el mimetype que reportan Office/zip/rar varía
+// mucho entre navegador y sistema operativo, así que exigirlo además
+// rechazaría subidas legítimas. La validación real y confiable (firma
+// binaria del archivo, no solo su nombre) la hace verifyFileSignature
+// después de este filtro superficial.
 const fileFilter = (req, file, cb) => {
   const allowedTypes = /pdf|doc|docx|ppt|pptx|xls|xlsx|txt|zip|rar/;
   const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -87,7 +97,7 @@ const fileFilter = (req, file, cb) => {
   if (extname) {
     return cb(null, true);
   } else {
-    const error = new Error('Tipo de archivo no permitido. Se aceptan: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, TXT, ZIP, RAR');
+    const error = new Error(t(req.locale, 'errors.document_type_not_allowed'));
     error.status = 400;
     cb(error);
   }
@@ -151,7 +161,7 @@ const imageFilter = (req, file, cb) => {
   if (mimetype && extname) {
     return cb(null, true);
   } else {
-    const error = new Error('Solo se permiten imágenes (jpeg, jpg, png, gif, webp)');
+    const error = new Error(t(req.locale, 'errors.image_type_not_allowed'));
     error.status = 400;
     cb(error);
   }
@@ -249,6 +259,10 @@ export const uploadSiteImage = multer({
 // después).
 // =============================================
 
+// OR en vez de AND (a diferencia de video/imagen): el mimetype de un .csv
+// varía mucho entre Excel/Sheets/SO ("text/csv", "application/vnd.ms-excel",
+// "application/csv", etc.) — exigir los dos a la vez rechazaría CSVs
+// legítimos solo por una etiqueta de mimetype poco confiable.
 const csvFilter = (req, file, cb) => {
   const extname = path.extname(file.originalname).toLowerCase() === '.csv';
   const mimetype = /csv|text\/plain|excel/.test(file.mimetype);
@@ -256,7 +270,7 @@ const csvFilter = (req, file, cb) => {
   if (extname || mimetype) {
     return cb(null, true);
   } else {
-    const error = new Error('Solo se permiten archivos .csv');
+    const error = new Error(t(req.locale, 'errors.csv_type_not_allowed'));
     error.status = 400;
     cb(error);
   }
@@ -274,21 +288,27 @@ export const uploadCsv = multer({
 // Función auxiliar para eliminar archivos
 // =============================================
 
-export const deleteFile = (filePath) => {
+// Async (fs.promises), no fs.unlinkSync — el resto de middlewares del
+// proyecto ya son async-first (auth.middleware.js, fileSignature.middleware.js);
+// esta era la única I/O que bloqueaba el event loop en cada llamada. Todos
+// los callers (controllers, siempre async) ahora la esperan con `await`.
+export const deleteFile = async (filePath) => {
   // filePath viene como '/uploads/videos/x.mp4' (la URL pública guardada en
   // BD) — se le quita el prefijo 'uploads/' porque UPLOADS_ROOT ya apunta a
   // esa carpeta, dondequiera que esté configurada.
   const relativePath = filePath.replace(/^\/?uploads\//, '');
   const fullPath = path.join(UPLOADS_ROOT, relativePath);
-  
-  if (fs.existsSync(fullPath)) {
-    try {
-      fs.unlinkSync(fullPath);
-      return true;
-    } catch (error) {
+
+  try {
+    await fs.promises.unlink(fullPath);
+    return true;
+  } catch (error) {
+    // ENOENT ("no existe") no es un error real acá — el archivo ya no
+    // estaba, que es justo lo que existsSync() chequeaba antes de intentar
+    // borrar. Cualquier otro error (permisos, etc.) sí se loguea.
+    if (error.code !== 'ENOENT') {
       console.error('Error al eliminar archivo:', error);
-      return false;
     }
+    return false;
   }
-  return false;
 };
