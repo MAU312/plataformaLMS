@@ -14,6 +14,15 @@ test('findByCourseWithProgress: pasa por un LEFT JOIN contra task_submissions de
   assert.deepEqual(params, [5, 5, 7]);
 });
 
+test('findByCourseWithProgress: trae question_count, igual que findByCourse (antes solo lo traía la versión sin sesión)', async (t) => {
+  const queryCall = t.mock.method(pool, 'query', async () => ([[]]));
+
+  await Content.findByCourseWithProgress(7, 5);
+
+  const [sql] = queryCall.mock.calls[0].arguments;
+  assert.match(sql, /\(SELECT COUNT\(\*\) FROM content_questions cq WHERE cq\.content_id = co\.id\) AS question_count/);
+});
+
 test('findByCourseWithProgress: una tarea con entrega trae my_submission poblado (y sin los campos submission_* sueltos)', async (t) => {
   t.mock.method(pool, 'query', async () => ([[
     {

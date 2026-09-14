@@ -38,7 +38,7 @@ class Course {
     const [rows] = await pool.query(
       `SELECT c.*,
        (SELECT GROUP_CONCAT(u.name SEPARATOR ', ') FROM course_teachers ct INNER JOIN users u ON u.id = ct.user_id WHERE ct.course_id = c.id) as teacher_names,
-       (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id) as enrolled_count,
+       (SELECT COUNT(*) FROM enrollments WHERE course_id = COALESCE(pc.id, c.id)) as enrolled_count,
        (SELECT COUNT(*) FROM contents WHERE course_id = c.id) as content_count,
        cm.title as module_title, pc.id as parent_course_id, pc.title as parent_course_title
        FROM courses c
@@ -312,8 +312,11 @@ class Course {
    * módulos (ver courseModule.controller.js#createModule), así que la
    * jerarquía nunca pasa de un nivel.
    */
-  static async resolveEnrollmentRoot(courseId) {
-    const [rows] = await pool.query(
+  // `executor` (pool por defecto) permite pasar una connection ya abierta
+  // dentro de una transacción — ver ContentQuestion.create para el mismo
+  // criterio (usado por unenrollUser, que corre ambas dentro de la suya).
+  static async resolveEnrollmentRoot(courseId, executor = pool) {
+    const [rows] = await executor.query(
       `SELECT cm.course_id as parent_id
        FROM courses c
        INNER JOIN course_modules cm ON cm.id = c.parent_module_id
@@ -328,8 +331,8 @@ class Course {
    * de `rootCourseId` (que debe ser ya una raíz — ver resolveEnrollmentRoot):
    * el propio curso, más todos los cursos hijo de sus módulos.
    */
-  static async getProgressGroupIds(rootCourseId) {
-    const [rows] = await pool.query(
+  static async getProgressGroupIds(rootCourseId, executor = pool) {
+    const [rows] = await executor.query(
       `SELECT c.id
        FROM courses c
        INNER JOIN course_modules cm ON cm.id = c.parent_module_id
@@ -433,21 +436,31 @@ class Course {
     try {
       await connection.beginTransaction();
 
+      // Resuelve la raíz igual que isUserEnrolled/getEnrollment: la
+      // inscripción real vive siempre en el curso padre, nunca en un hijo.
+      // Corre dentro de la misma transacción/connection (no el `pool`
+      // suelto) para que todo el método siga siendo una sola unidad
+      // atómica.
+      const rootId = await Course.resolveEnrollmentRoot(courseId, connection);
+
       const [result] = await connection.query(
         'DELETE FROM enrollments WHERE course_id = ? AND user_id = ?',
-        [courseId, userId]
+        [rootId, userId]
       );
 
       if (result.affectedRows > 0) {
         // Limpia también el progreso de este usuario en los contenidos del
-        // curso. Sin esto, si vuelve a inscribirse más adelante, el detalle
-        // del curso seguía mostrando contenidos viejos ya tildados como
-        // completados aunque el progreso general mostrara 0%.
+        // curso — del grupo COMPLETO (padre + todos sus cursos hijo, ver
+        // getProgressGroupIds), no solo del padre. Sin esto, si vuelve a
+        // inscribirse más adelante, el detalle del curso seguía mostrando
+        // contenidos de un curso hijo ya tildados como completados aunque
+        // el progreso general mostrara 0%.
+        const groupIds = await Course.getProgressGroupIds(rootId, connection);
         await connection.query(
           `DELETE cp FROM content_progress cp
            INNER JOIN contents co ON co.id = cp.content_id
-           WHERE co.course_id = ? AND cp.user_id = ?`,
-          [courseId, userId]
+           WHERE co.course_id IN (?) AND cp.user_id = ?`,
+          [groupIds, userId]
         );
       }
 

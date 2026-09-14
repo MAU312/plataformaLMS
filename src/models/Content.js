@@ -61,6 +61,7 @@ class Content {
         ts.id as submission_id, ts.submitted_at as submission_submitted_at,
         ts.feedback as submission_feedback, ts.reviewed_at as submission_reviewed_at,
         ts.score_earned as submission_score_earned,
+        (SELECT COUNT(*) FROM content_questions cq WHERE cq.content_id = co.id) AS question_count,
         (SELECT u.name FROM course_teachers ct INNER JOIN users u ON u.id = ct.user_id WHERE ct.module_id = co.id LIMIT 1) AS module_teacher_name
        FROM contents co
        LEFT JOIN content_progress cp ON cp.content_id = co.id AND cp.user_id = ?
@@ -371,14 +372,28 @@ class Content {
       [courseId]
     );
 
-    for (const quiz of quizRows) {
-      const [answerRows] = await pool.query(
-        `SELECT ca.is_correct, cq.points
+    // Una sola query para las respuestas de TODOS los cuestionarios del
+    // curso (agrupadas en memoria por content_id), en vez de una query por
+    // cuestionario dentro del for — este método se llama una vez POR
+    // ESTUDIANTE (ver calculateCourseGrade/exportCourseGrades), así que el
+    // costo del for suelto se multiplicaba por (estudiantes × cuestionarios).
+    const answersByQuizId = new Map();
+    if (quizRows.length > 0) {
+      const [allAnswerRows] = await pool.query(
+        `SELECT ca.content_id, ca.is_correct, cq.points
          FROM content_answers ca
          INNER JOIN content_questions cq ON cq.id = ca.question_id
-         WHERE ca.content_id = ? AND ca.user_id = ?`,
-        [quiz.id, userId]
+         WHERE ca.content_id IN (?) AND ca.user_id = ?`,
+        [quizRows.map((q) => q.id), userId]
       );
+      for (const row of allAnswerRows) {
+        if (!answersByQuizId.has(row.content_id)) answersByQuizId.set(row.content_id, []);
+        answersByQuizId.get(row.content_id).push(row);
+      }
+    }
+
+    for (const quiz of quizRows) {
+      const answerRows = answersByQuizId.get(quiz.id) || [];
 
       if (answerRows.length === 0) continue;
       if (answerRows.some((a) => a.is_correct === null)) continue;
