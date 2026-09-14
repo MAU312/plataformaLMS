@@ -207,6 +207,13 @@ function scrollToElement(elementId) {
 }
 
 const EXPANDABLE_TEXT_CLAMP_CLASSES = ['truncate', 'line-clamp-1', 'line-clamp-2', 'line-clamp-3', 'line-clamp-4'];
+// Margen de tolerancia al comparar scrollHeight/clientHeight (o scrollWidth/
+// clientWidth) — con el tamaño de letra aumentado (ver darkmode.js, clases
+// text-boost-N del botón "A+" del navbar) el redondeo de line-height puede
+// dejar 1-3px de diferencia aunque el texto entre completo, mostrando un
+// "Leer más" que no revela nada nuevo al abrirlo. Un desborde real (una
+// línea de más) es mucho mayor que esto, así que no oculta casos genuinos.
+const EXPANDABLE_TEXT_OVERFLOW_TOLERANCE_PX = 4;
 
 /**
  * Agrega un toggle "Leer más"/"Leer menos" a cada `.expandable-text` que el
@@ -232,8 +239,8 @@ function setupExpandableText(root = document) {
 
         const evaluateOverflow = () => {
             const isOverflowing = clampClass === 'truncate'
-                ? el.scrollWidth > el.clientWidth
-                : el.scrollHeight > el.clientHeight;
+                ? el.scrollWidth > el.clientWidth + EXPANDABLE_TEXT_OVERFLOW_TOLERANCE_PX
+                : el.scrollHeight > el.clientHeight + EXPANDABLE_TEXT_OVERFLOW_TOLERANCE_PX;
             if (!isOverflowing) return;
 
             const toggle = document.createElement('button');
