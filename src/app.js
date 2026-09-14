@@ -41,7 +41,26 @@ const PORT = process.env.PORT || 3000;
 // comportamiento que ya había) y solo se activa si se declara
 // explícitamente en el .env de ese despliegue en particular.
 if (process.env.TRUST_PROXY) {
-  app.set('trust proxy', process.env.TRUST_PROXY);
+  const raw = process.env.TRUST_PROXY.trim();
+  // Mismo criterio de fail-fast que SESSION_SECRET más abajo: un valor mal
+  // tipeado acá cambia en silencio una configuración sensible a spoofing
+  // de IP (ver el comentario de arriba) — mejor frenar el arranque con un
+  // mensaje claro que dejarlo pasar sin que nadie lo note. Formas válidas
+  // para Express: boolean, número de hops, palabra clave reservada, o una
+  // IP/CIDR (o lista de ellas separadas por coma).
+  const TRUST_PROXY_KEYWORDS = ['loopback', 'linklocal', 'uniquelocal'];
+  const isValid =
+    raw === 'true' || raw === 'false' ||
+    /^\d+$/.test(raw) ||
+    TRUST_PROXY_KEYWORDS.includes(raw) ||
+    /^[0-9a-fA-F:.\/,\s-]+$/.test(raw);
+
+  if (!isValid) {
+    console.error(`❌ TRUST_PROXY="${raw}" no es un valor válido para Express (boolean, número de saltos, IP/CIDR, o una de ${TRUST_PROXY_KEYWORDS.join('/')}). Revisa tu archivo .env.`);
+    process.exit(1);
+  }
+
+  app.set('trust proxy', raw === 'true' ? true : raw === 'false' ? false : /^\d+$/.test(raw) ? Number(raw) : raw);
 }
 
 // =============================================
@@ -59,7 +78,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.tailwindcss.com', 'https://www.youtube.com'],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://www.youtube.com'],
       // Helmet desactiva esto por defecto (script-src-attr 'none'), pero
       // el frontend depende en TODAS partes de atributos onclick="..."
       // inline (no hay build step que los reemplace por addEventListener).
@@ -196,9 +215,18 @@ app.get('/*splat', (req, res) => {
 // realidad son errores del cliente (400): el archivo no cumple los límites.
 app.use((err, req, res, next) => {
   if (err && err.name === 'MulterError') {
+    // Los 7 códigos que define multer — antes solo se traducían los 2 que
+    // disparan las rutas actuales; el resto caía al err.message crudo de
+    // multer (en inglés, sin pasar por t()) si algún día se agrega un
+    // .fields() con maxCount en algún lado.
     const messages = {
       LIMIT_FILE_SIZE: t(req.locale, 'errors.multer_file_too_large'),
-      LIMIT_UNEXPECTED_FILE: t(req.locale, 'errors.multer_unexpected_field')
+      LIMIT_UNEXPECTED_FILE: t(req.locale, 'errors.multer_unexpected_field'),
+      LIMIT_FILE_COUNT: t(req.locale, 'errors.multer_too_many_files'),
+      LIMIT_PART_COUNT: t(req.locale, 'errors.multer_too_many_parts'),
+      LIMIT_FIELD_COUNT: t(req.locale, 'errors.multer_too_many_fields'),
+      LIMIT_FIELD_KEY: t(req.locale, 'errors.multer_field_name_too_long'),
+      LIMIT_FIELD_VALUE: t(req.locale, 'errors.multer_field_value_too_long')
     };
     return res.status(400).json({
       success: false,

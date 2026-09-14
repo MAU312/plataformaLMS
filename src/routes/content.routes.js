@@ -10,7 +10,7 @@ import ContentAnswer from '../models/ContentAnswer.js';
 import { isAuthenticated, requireCourseManager } from '../middlewares/auth.middleware.js';
 import { uploadVideo, uploadFile, uploadSubmission, uploadContentImage } from '../middlewares/upload.middleware.js';
 import { verifyFileSignature } from '../middlewares/fileSignature.middleware.js';
-import { submitTaskLimiter, forumPostLimiter } from '../middlewares/rateLimit.middleware.js';
+import { submitTaskLimiter, forumPostLimiter, contentCreateLimiter } from '../middlewares/rateLimit.middleware.js';
 import { t } from '../utils/i18n.js';
 
 const router = express.Router();
@@ -73,6 +73,7 @@ async function folderIdFromAnswerParam(req) {
  */
 const courseManagerFromBody = [
   isAuthenticated,
+  contentCreateLimiter,
   requireCourseManager((req) => req.body.course_id, (req) => req.body.folder_id || null)
 ];
 
@@ -106,6 +107,7 @@ router.put(
 router.post(
   '/video',
   isAuthenticated,
+  contentCreateLimiter,
   uploadVideo.single('video'),
   requireCourseManager((req) => req.body.course_id, (req) => req.body.folder_id || null),
   verifyFileSignature('video'),
@@ -120,6 +122,7 @@ router.post(
 router.post(
   '/file',
   isAuthenticated,
+  contentCreateLimiter,
   uploadFile.single('file'),
   requireCourseManager((req) => req.body.course_id, (req) => req.body.folder_id || null),
   verifyFileSignature('file'),
@@ -134,6 +137,7 @@ router.post(
 router.post(
   '/image',
   isAuthenticated,
+  contentCreateLimiter,
   uploadContentImage.single('image'),
   requireCourseManager((req) => req.body.course_id, (req) => req.body.folder_id || null),
   verifyFileSignature('image'),
@@ -192,6 +196,7 @@ router.put(
 router.post(
   '/task',
   isAuthenticated,
+  contentCreateLimiter,
   uploadFile.single('file'),
   requireCourseManager((req) => req.body.course_id, (req) => req.body.folder_id || null),
   (req, res, next) => {
@@ -311,6 +316,11 @@ router.get('/:id/questions', isAuthenticated, quizController.getQuestions);
 router.post(
   '/:id/answers',
   isAuthenticated,
+  // Mismo limiter que /submit (entregas de tarea) — antes era el único
+  // endpoint de escritura sin ninguno. No explotable como tal (el UNIQUE
+  // de content_answers ya evita respuestas duplicadas), pero rompía la
+  // simetría de protección con el resto de endpoints equivalentes.
+  submitTaskLimiter,
   async (req, res, next) => {
     try {
       const content = await Content.findById(req.params.id);

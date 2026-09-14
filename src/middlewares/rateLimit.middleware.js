@@ -146,6 +146,26 @@ export const forumPostLimiter = rateLimit({
 });
 
 /**
+ * Limita crear contenido de curso (video/archivo/imagen/texto/url/tarea/
+ * quiz/encuesta/foro/carpeta): 40 por hora por usuario. A diferencia del
+ * resto de endpoints de creación del sistema, estas rutas no tenían
+ * ningún límite — /video acepta hasta 2GB sin throttle, así que una
+ * cuenta de profesor/admin comprometida (o un script con bug) podía
+ * agotar el disco del servidor sin fricción.
+ */
+export const contentCreateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: byUser,
+  message: (req, res) => ({
+    success: false,
+    message: t(req.locale, 'errors.too_many_content_created')
+  })
+});
+
+/**
  * Limita entregas de tareas: 20 por hora por usuario. Cada tarea solo
  * admite una entrega de todos modos (UNIQUE en task_submissions), así que
  * esto es sobre todo para evitar reintentos en bucle de un script/bug del
