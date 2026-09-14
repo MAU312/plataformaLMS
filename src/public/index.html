@@ -7,46 +7,31 @@
     <title>LMS LANBA - CeNAT (Centro Nacional de Alta Tecnología)</title>
     <link rel="icon" type="image/png" href="/images/logo-lanba-icono.png">
 
-    <!-- Tailwind CSS CDN con soporte para dark mode -->
+    <!-- Aplicar dark mode/tamaño de letra guardados ANTES de pintar la
+         página, para no arrancar con el tema por defecto y saltar un
+         instante después. -->
     <script>
-        // Aplicar dark mode ANTES de que Tailwind cargue para evitar flash
         if (localStorage.getItem('darkMode') === 'true' ||
             (localStorage.getItem('darkMode') === null && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
         }
 
-        // Igual que el dark mode: aplicar el tamaño de letra guardado
-        // ANTES de pintar la página, para no arrancar chico y saltar de
-        // tamaño un instante después.
         const savedTextSizeLevel = parseInt(localStorage.getItem('textSizeLevel'), 10);
         if (savedTextSizeLevel > 0) {
             document.documentElement.classList.add(`text-boost-${Math.min(savedTextSizeLevel, 2)}`);
         }
     </script>
-    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Tailwind CSS compilado en build time (ver tailwind.config.js y
+         "npm run build:css"/"watch:css") — antes se cargaba desde el CDN
+         "Play" en tiempo de ejecución. -->
+    <link rel="stylesheet" href="/css/tailwind.css">
 
     <!-- Font Awesome para iconos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- CSS personalizado -->
     <link rel="stylesheet" href="/css/styles.css">
-
-    <!-- Tailwind config con dark mode -->
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        // Verde tomado directamente del logo de LANBA (#007031).
-                        'cenat-green': '#007031',
-                        'cenat-green-light': '#22c55e',
-                        'cenat-green-hover': '#005c28',
-                    }
-                }
-            }
-        }
-    </script>
 </head>
 
 <body class="bg-gray-100 dark:bg-slate-800 min-h-screen transition-colors duration-300">
@@ -56,15 +41,15 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <!-- Logo -->
-                <div class="flex items-center">
-                    <a href="#/" class="flex items-center space-x-2">
-                        <img src="/images/logo-lanba-icono.png" alt="LANBA" class="h-8 w-8 object-contain">
-                        <span class="font-bold text-lg md:text-xl text-cenat-green whitespace-nowrap">LMS LANBA - CeNAT</span>
+                <div class="flex items-center min-w-0">
+                    <a href="#/" class="flex items-center space-x-2 min-w-0">
+                        <img src="/images/logo-lanba-icono.png" alt="LANBA" class="h-8 w-8 object-contain flex-shrink-0">
+                        <span class="font-bold text-lg md:text-xl text-cenat-green truncate">LMS LANBA - CeNAT</span>
                     </a>
                 </div>
 
                 <!-- Menu Desktop -->
-                <div class="hidden md:flex items-center space-x-6">
+                <div class="hidden md:flex items-center space-x-6 flex-shrink-0">
                     <a href="#/"
                         class="text-gray-700 dark:text-slate-300 hover:text-cenat-green dark:hover:text-green-400 transition">
                         <i class="fas fa-home mr-1"></i> <span data-i18n="nav.home">Inicio</span>
@@ -74,18 +59,16 @@
                         <i class="fas fa-book mr-1"></i> <span data-i18n="nav.my_courses">Mis Cursos</span>
                     </a>
                     <a href="#/admin" id="admin-link"
-                        class="text-gray-700 dark:text-slate-300 hover:text-cenat-green dark:hover:text-green-400 transition"
-                        style="display:none;">
+                        class="hidden text-gray-700 dark:text-slate-300 hover:text-cenat-green dark:hover:text-green-400 transition">
                         <i class="fas fa-cog mr-1"></i> <span data-i18n="nav.admin">Administración</span>
                     </a>
                     <a href="#/teacher/courses" id="teacher-link"
-                        class="text-gray-700 dark:text-slate-300 hover:text-cenat-green dark:hover:text-green-400 transition"
-                        style="display:none;">
+                        class="hidden text-gray-700 dark:text-slate-300 hover:text-cenat-green dark:hover:text-green-400 transition">
                         <i class="fas fa-chalkboard-teacher mr-1"></i> <span data-i18n="nav.teacher_courses">Mis Cursos (Profesor)</span>
                     </a>
 
                     <!-- Acciones de invitado (sin sesión) -->
-                    <div id="guest-actions" class="items-center gap-3" style="display:none;">
+                    <div id="guest-actions" class="hidden flex items-center gap-3">
                         <a href="#/login" class="text-gray-700 dark:text-slate-300 hover:text-cenat-green dark:hover:text-green-400 transition">
                             <span data-i18n="nav.login">Iniciar sesión</span>
                         </a>
@@ -95,7 +78,7 @@
                     </div>
 
                     <!-- Idioma -->
-                    <select id="language-select" onchange="setLocale(this.value)" title="Idioma" data-i18n-title="nav.language" class="text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded px-1 py-0.5">
+                    <select id="language-select" onchange="setLocale(this.value)" title="Idioma" data-i18n-title="nav.language" aria-label="Idioma" data-i18n-aria-label="nav.language" class="text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded px-1 py-0.5">
                         <option value="es">ES</option>
                         <option value="en">EN</option>
                     </select>
@@ -107,7 +90,7 @@
                     </div>
 
                     <!-- Dark mode toggle -->
-                    <button id="dark-mode-toggle" onclick="toggleDarkMode()" title="Cambiar modo oscuro/claro" data-i18n-title="nav.toggle_dark_mode">
+                    <button id="dark-mode-toggle" onclick="toggleDarkMode()" title="Cambiar modo oscuro/claro" data-i18n-title="nav.toggle_dark_mode" aria-label="Cambiar modo oscuro/claro">
                         <i class="fas fa-moon text-gray-600 dark:text-yellow-400"></i>
                     </button>
 
@@ -136,8 +119,8 @@
                 </div>
 
                 <!-- Mobile menu button -->
-                <div class="md:hidden flex items-center gap-3">
-                    <select id="language-select-mobile" onchange="setLocale(this.value)" title="Idioma" data-i18n-title="nav.language" class="text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded px-1 py-0.5">
+                <div class="md:hidden flex items-center gap-3 flex-shrink-0">
+                    <select id="language-select-mobile" onchange="setLocale(this.value)" title="Idioma" data-i18n-title="nav.language" aria-label="Idioma" data-i18n-aria-label="nav.language" class="text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded px-1 py-0.5">
                         <option value="es">ES</option>
                         <option value="en">EN</option>
                     </select>
@@ -146,7 +129,7 @@
                         <button class="text-size-btn text-size-increase-btn" onclick="increaseTextSize()" title="Aumentar tamaño de letra" data-i18n-title="nav.increase_font" aria-label="Aumentar tamaño de letra" data-i18n-aria-label="nav.increase_font">A+</button>
                     </div>
                     <button id="dark-mode-toggle-mobile" onclick="toggleDarkMode()"
-                        class="text-gray-600 dark:text-yellow-400" title="Cambiar modo oscuro/claro" data-i18n-title="nav.toggle_dark_mode">
+                        class="text-gray-600 dark:text-yellow-400" title="Cambiar modo oscuro/claro" data-i18n-title="nav.toggle_dark_mode" aria-label="Cambiar modo oscuro/claro">
                         <i class="fas fa-moon"></i>
                     </button>
                     <button id="mobile-menu-btn" class="text-gray-700 dark:text-slate-300 hover:text-cenat-green">
@@ -165,13 +148,11 @@
                     <i class="fas fa-book mr-1"></i> <span data-i18n="nav.my_courses">Mis Cursos</span>
                 </a>
                 <a href="#/admin" id="admin-link-mobile"
-                    class="block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition"
-                    style="display:none;">
+                    class="hidden block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition">
                     <i class="fas fa-cog mr-1"></i> <span data-i18n="nav.admin">Administración</span>
                 </a>
                 <a href="#/teacher/courses" id="teacher-link-mobile"
-                    class="block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition"
-                    style="display:none;">
+                    class="hidden block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition">
                     <i class="fas fa-chalkboard-teacher mr-1"></i> <span data-i18n="nav.teacher_courses">Mis Cursos (Profesor)</span>
                 </a>
                 <div id="user-menu-container-mobile">
@@ -184,7 +165,7 @@
                         <i class="fas fa-sign-out-alt mr-1"></i> <span data-i18n="nav.logout">Cerrar Sesión</span>
                     </button>
                 </div>
-                <div id="guest-actions-mobile" style="display:none;">
+                <div id="guest-actions-mobile" class="hidden">
                     <a href="#/login" class="block py-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition">
                         <i class="fas fa-sign-in-alt mr-1"></i> <span data-i18n="nav.login">Iniciar sesión</span>
                     </a>

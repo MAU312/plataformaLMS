@@ -41,19 +41,19 @@ window.renderAdminEditCourse = async function(params) {
                 <div class="lg:col-span-1">
                     <form id="edit-course-form" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">${t('contentManager.edit.title_label')}</label>
+                            <label for="title" class="block text-sm font-medium text-gray-700 mb-1">${t('contentManager.edit.title_label')}</label>
                             <input type="text" id="title" name="title" required value="${escapeAttr(course.title)}"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition">
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">${t('admin.editCourse.description_label')}</label>
+                            <label for="description" class="block text-sm font-medium text-gray-700 mb-1">${t('admin.editCourse.description_label')}</label>
                             <textarea id="description" name="description" rows="4"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition">${escapeHtml(course.description || '')}</textarea>
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">${t('admin.editCourse.thumbnail_label')}</label>
+                            <label for="thumbnail" class="block text-sm font-medium text-gray-700 mb-1">${t('admin.editCourse.thumbnail_label')}</label>
                             <div class="file-drop-zone" id="thumbnail-drop-zone">
                                 <i class="fas fa-image text-3xl text-gray-400 mb-2"></i>
                                 <p class="text-sm text-gray-500">${t('admin.createCourse.thumbnail_drop_hint')}</p>
@@ -71,7 +71,7 @@ window.renderAdminEditCourse = async function(params) {
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">${t('admin.editCourse.certificate_style_label')}</label>
+                            <label for="certificate_style" class="block text-sm font-medium text-gray-700 mb-1">${t('admin.editCourse.certificate_style_label')}</label>
                             <select id="certificate_style"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition">
                                 ${renderCertificateStyleOptions(course.certificate_style || 'classic')}
@@ -117,16 +117,37 @@ window.renderAdminEditCourse = async function(params) {
             await handleUpdateCourse(course.id);
         });
 
-        const teachersResponse = await coursesAPI.getTeachers(course.id);
-        const assignedTeachers = teachersResponse.data?.teachers || [];
-        const assignedTeacherIds = assignedTeachers.map(t => t.id);
-        const moduleScopeByTeacherId = Object.fromEntries(assignedTeachers.map(t => [t.id, t.module_id]));
-        const modules = contents.filter(c => c.type === 'folder').map(c => ({ id: c.id, title: c.title }));
-        loadTeacherCheckboxes('teacher-checkboxes', assignedTeacherIds, modules, moduleScopeByTeacherId);
+        // Aparte del try principal: si esto falla, el curso YA se cargó y
+        // renderizó bien — no tiene sentido tirar toda la página al mensaje
+        // de "no se pudo cargar el curso" (lo que hacía antes, al caer en
+        // el catch de más abajo con un error que no le correspondía).
+        try {
+            const teachersResponse = await coursesAPI.getTeachers(course.id);
+            const assignedTeachers = teachersResponse.data?.teachers || [];
+            const assignedTeacherIds = assignedTeachers.map(t => t.id);
+            const moduleScopeByTeacherId = Object.fromEntries(assignedTeachers.map(t => [t.id, t.module_id]));
+            const modules = contents.filter(c => c.type === 'folder').map(c => ({ id: c.id, title: c.title }));
+            loadTeacherCheckboxes('teacher-checkboxes', assignedTeacherIds, modules, moduleScopeByTeacherId);
+        } catch (error) {
+            console.error('Error loading teachers:', error);
+            const container = document.getElementById('teacher-checkboxes');
+            if (container) container.innerHTML = `<p class="text-sm text-red-500">${t('admin.editCourse.teachers_load_failed')}</p>`;
+        }
 
     } catch (error) {
         console.error('Error loading course:', error);
-        showToast(t('courseDetail.load_failed'), 'error');
+        // Antes solo mostraba un toast, dejando el spinner de showLoading()
+        // girando para siempre si esto fallaba ANTES de pintar el curso —
+        // ver el mismo fix en renderAdminDashboard.
+        app.innerHTML = renderAdminLayout(`
+            <div class="text-center py-16">
+                <i class="fas fa-exclamation-triangle text-5xl text-red-500 mb-4"></i>
+                <p class="text-xl text-gray-600">${t('courseDetail.load_failed')}</p>
+                <button onclick="window.location.reload()" class="btn-cenat mt-4">
+                    <i class="fas fa-redo mr-2"></i> ${t('home.retry')}
+                </button>
+            </div>
+        `, 'courses');
     }
 };
 

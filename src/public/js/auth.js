@@ -172,10 +172,10 @@ function updateUIForAuthenticatedUser() {
     }
 
     // Con sesión: menú de usuario visible, acciones de invitado ocultas
-    if (userMenuContainer) userMenuContainer.style.display = '';
-    if (userMenuContainerMobile) userMenuContainerMobile.style.display = '';
-    if (guestActions) guestActions.style.display = 'none';
-    if (guestActionsMobile) guestActionsMobile.style.display = 'none';
+    if (userMenuContainer) userMenuContainer.classList.remove('hidden');
+    if (userMenuContainerMobile) userMenuContainerMobile.classList.remove('hidden');
+    if (guestActions) guestActions.classList.add('hidden');
+    if (guestActionsMobile) guestActionsMobile.classList.add('hidden');
 
     // Actualizar nombre de usuario
     if (userName && currentUser) {
@@ -191,28 +191,18 @@ function updateUIForAuthenticatedUser() {
     }
 
     // Mostrar link de admin si es administrador (o profesor con doble rol)
-    if (currentUser && (currentUser.role === 'admin' || currentUser.admin_access)) {
-        if (adminLink) adminLink.style.display = 'block';
-        if (adminLinkMobile) adminLinkMobile.style.display = 'block';
-    } else {
-        if (adminLink) adminLink.style.display = 'none';
-        if (adminLinkMobile) adminLinkMobile.style.display = 'none';
-    }
+    const isAdminUser = currentUser && (currentUser.role === 'admin' || currentUser.admin_access);
+    if (adminLink) adminLink.classList.toggle('hidden', !isAdminUser);
+    if (adminLinkMobile) adminLinkMobile.classList.toggle('hidden', !isAdminUser);
 
     // Mostrar link de "Mis Cursos (Profesor)" si es profesor — y en ese
     // caso ocultar "Mis Cursos" (esa es la vista de inscripciones como
     // estudiante, que a un profesor no le aplica).
-    if (currentUser && currentUser.role === 'teacher') {
-        if (teacherLink) teacherLink.style.display = 'block';
-        if (teacherLinkMobile) teacherLinkMobile.style.display = 'block';
-        if (myCoursesLink) myCoursesLink.style.display = 'none';
-        if (myCoursesLinkMobile) myCoursesLinkMobile.style.display = 'none';
-    } else {
-        if (teacherLink) teacherLink.style.display = 'none';
-        if (teacherLinkMobile) teacherLinkMobile.style.display = 'none';
-        if (myCoursesLink) myCoursesLink.style.display = '';
-        if (myCoursesLinkMobile) myCoursesLinkMobile.style.display = '';
-    }
+    const isTeacherUser = currentUser && currentUser.role === 'teacher';
+    if (teacherLink) teacherLink.classList.toggle('hidden', !isTeacherUser);
+    if (teacherLinkMobile) teacherLinkMobile.classList.toggle('hidden', !isTeacherUser);
+    if (myCoursesLink) myCoursesLink.classList.toggle('hidden', isTeacherUser);
+    if (myCoursesLinkMobile) myCoursesLinkMobile.classList.toggle('hidden', isTeacherUser);
 
     // Agregar event listeners para logout
     setupLogoutListeners();
@@ -240,16 +230,16 @@ function updateUIForUnauthenticatedUser() {
         navbar.classList.remove('hidden');
     }
 
-    if (myCoursesLink) myCoursesLink.style.display = 'none';
-    if (myCoursesLinkMobile) myCoursesLinkMobile.style.display = 'none';
-    if (adminLink) adminLink.style.display = 'none';
-    if (adminLinkMobile) adminLinkMobile.style.display = 'none';
-    if (teacherLink) teacherLink.style.display = 'none';
-    if (teacherLinkMobile) teacherLinkMobile.style.display = 'none';
-    if (userMenuContainer) userMenuContainer.style.display = 'none';
-    if (userMenuContainerMobile) userMenuContainerMobile.style.display = 'none';
-    if (guestActions) guestActions.style.display = 'flex';
-    if (guestActionsMobile) guestActionsMobile.style.display = 'block';
+    if (myCoursesLink) myCoursesLink.classList.add('hidden');
+    if (myCoursesLinkMobile) myCoursesLinkMobile.classList.add('hidden');
+    if (adminLink) adminLink.classList.add('hidden');
+    if (adminLinkMobile) adminLinkMobile.classList.add('hidden');
+    if (teacherLink) teacherLink.classList.add('hidden');
+    if (teacherLinkMobile) teacherLinkMobile.classList.add('hidden');
+    if (userMenuContainer) userMenuContainer.classList.add('hidden');
+    if (userMenuContainerMobile) userMenuContainerMobile.classList.add('hidden');
+    if (guestActions) guestActions.classList.remove('hidden');
+    if (guestActionsMobile) guestActionsMobile.classList.remove('hidden');
 }
 
 function setupLogoutListeners() {
