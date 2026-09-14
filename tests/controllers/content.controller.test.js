@@ -119,8 +119,7 @@ test('createTextContent: 400 si folder_id apunta a una carpeta de OTRO curso', a
 
 test('createVideoContent: folder_id inválido borra el video ya subido al disco (no queda huérfano)', async (t) => {
   t.mock.method(Content, 'findById', async () => undefined);
-  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
-  t.mock.method(fs, 'existsSync', () => true);
+  const unlinkCall = t.mock.method(fs.promises, 'unlink', async () => {});
   const createCall = t.mock.method(Content, 'create', async () => 72);
 
   const req = mockReq({
@@ -513,8 +512,7 @@ test('updateContent: en type=url, rechaza una url que no sea http/https', async 
 test('updateContent: con archivo nuevo, borra el archivo anterior SOLO después de que el UPDATE confirma en BD', async (t) => {
   t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'file', url: '/uploads/files/viejo.pdf' }));
   const updateCall = t.mock.method(Content, 'update', async () => true);
-  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
-  t.mock.method(fs, 'existsSync', () => true);
+  const unlinkCall = t.mock.method(fs.promises, 'unlink', async () => {});
   const req = mockReq({ params: { id: 1 }, body: {}, file: { filename: 'nuevo.pdf' } });
   const res = mockRes();
 
@@ -528,21 +526,24 @@ test('updateContent: con archivo nuevo, borra el archivo anterior SOLO después 
 test('updateContent: si el UPDATE no afecta ninguna fila, NO borra el archivo anterior (evita que la BD quede apuntando a un archivo borrado)', async (t) => {
   t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'file', url: '/uploads/files/viejo.pdf' }));
   t.mock.method(Content, 'update', async () => false);
-  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
+  const unlinkCall = t.mock.method(fs.promises, 'unlink', async () => {});
   const req = mockReq({ params: { id: 1 }, body: {}, file: { filename: 'nuevo.pdf' } });
   const res = mockRes();
 
   await contentController.updateContent(req, res);
 
   assert.equal(res.statusCode, 400);
-  assert.equal(unlinkCall.mock.calls.length, 0, 'no debe borrar el archivo viejo si el UPDATE no confirmó en BD (y el archivo nuevo tampoco existía de verdad en este test)');
+  // El archivo NUEVO (ya huérfano, ver el test siguiente) sí se borra en
+  // este camino — lo que este test verifica puntualmente es que el VIEJO
+  // nunca se toca, para no dejar la BD apuntando a un archivo borrado.
+  const deletedPaths = unlinkCall.mock.calls.map(c => c.arguments[0]);
+  assert.ok(!deletedPaths.some(p => p.includes('viejo.pdf')), 'no debe borrar el archivo viejo si el UPDATE no confirmó en BD');
 });
 
 test('updateContent: si el UPDATE no afecta ninguna fila, borra el archivo NUEVO recién subido (no lo deja huérfano)', async (t) => {
   t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'file', url: '/uploads/files/viejo.pdf' }));
   t.mock.method(Content, 'update', async () => false);
-  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
-  t.mock.method(fs, 'existsSync', () => true);
+  const unlinkCall = t.mock.method(fs.promises, 'unlink', async () => {});
   const req = mockReq({ params: { id: 1 }, body: {}, file: { filename: 'nuevo.pdf' } });
   const res = mockRes();
 
@@ -556,8 +557,7 @@ test('updateContent: si el UPDATE no afecta ninguna fila, borra el archivo NUEVO
 test('updateContent: si Content.update lanza una excepción, también borra el archivo nuevo recién subido', async (t) => {
   t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'file', url: '/uploads/files/viejo.pdf' }));
   t.mock.method(Content, 'update', async () => { throw new Error('conexión perdida'); });
-  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
-  t.mock.method(fs, 'existsSync', () => true);
+  const unlinkCall = t.mock.method(fs.promises, 'unlink', async () => {});
   const req = mockReq({ params: { id: 1 }, body: {}, file: { filename: 'nuevo.pdf' } });
   req.contentType = 'file';
   const res = mockRes();
@@ -569,10 +569,96 @@ test('updateContent: si Content.update lanza una excepción, también borra el a
   assert.match(unlinkCall.mock.calls[0].arguments[0], /nuevo\.pdf$/);
 });
 
+test('updateContent: weight_percent inválido con archivo nuevo adjunto no lo deja huérfano', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'task', url: '/uploads/files/viejo.pdf' }));
+  const unlinkCall = t.mock.method(fs.promises, 'unlink', async () => {});
+  const req = mockReq({ params: { id: 1 }, body: { weight_percent: '150' }, file: { filename: 'nuevo.pdf' } });
+  const res = mockRes();
+
+  await contentController.updateContent(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(unlinkCall.mock.calls.length, 1, 'el archivo de reemplazo ya escrito a disco no debe quedar huérfano');
+  assert.match(unlinkCall.mock.calls[0].arguments[0], /nuevo\.pdf$/);
+});
+
+test('updateContent: folder_id inválido con archivo nuevo adjunto no lo deja huérfano', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'file', course_id: 5, url: '/uploads/files/viejo.pdf' }));
+  const unlinkCall = t.mock.method(fs.promises, 'unlink', async () => {});
+  const req = mockReq({ params: { id: 1 }, body: { folder_id: '999' }, file: { filename: 'nuevo.pdf' } });
+  const res = mockRes();
+
+  await contentController.updateContent(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(unlinkCall.mock.calls.length, 1, 'el archivo de reemplazo ya escrito a disco no debe quedar huérfano');
+  assert.match(unlinkCall.mock.calls[0].arguments[0], /nuevo\.pdf$/);
+});
+
+test('updateContent: 400 si se intenta poner weight_percent a una encuesta (nunca se califica)', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'survey' }));
+  const updateCall = t.mock.method(Content, 'update', async () => true);
+  const req = mockReq({ params: { id: 1 }, body: { weight_percent: '10' } });
+  const res = mockRes();
+
+  await contentController.updateContent(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(updateCall.mock.calls.length, 0);
+});
+
+test('createVideoContent: sin título, borra el video ya subido (no lo deja huérfano)', async (t) => {
+  const unlinkCall = t.mock.method(fs.promises, 'unlink', async () => {});
+  const req = mockReq({ body: { course_id: 1 }, file: { filename: 'video-123.mp4' } });
+  const res = mockRes();
+
+  await contentController.createVideoContent(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(unlinkCall.mock.calls.length, 1);
+  assert.match(unlinkCall.mock.calls[0].arguments[0], /video-123\.mp4$/);
+});
+
+test('createFileContent: sin título, borra el archivo ya subido (no lo deja huérfano)', async (t) => {
+  const unlinkCall = t.mock.method(fs.promises, 'unlink', async () => {});
+  const req = mockReq({ body: { course_id: 1 }, file: { filename: 'archivo-123.pdf' } });
+  const res = mockRes();
+
+  await contentController.createFileContent(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(unlinkCall.mock.calls.length, 1);
+  assert.match(unlinkCall.mock.calls[0].arguments[0], /archivo-123\.pdf$/);
+});
+
+test('createImageContent: sin título, borra la imagen ya subida (no la deja huérfana)', async (t) => {
+  const unlinkCall = t.mock.method(fs.promises, 'unlink', async () => {});
+  const req = mockReq({ body: { course_id: 1 }, file: { filename: 'imagen-123.png' } });
+  const res = mockRes();
+
+  await contentController.createImageContent(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(unlinkCall.mock.calls.length, 1);
+  assert.match(unlinkCall.mock.calls[0].arguments[0], /imagen-123\.png$/);
+});
+
+test('createTaskContent: sin título, borra el archivo de instrucciones ya subido (no lo deja huérfano)', async (t) => {
+  const unlinkCall = t.mock.method(fs.promises, 'unlink', async () => {});
+  const req = mockReq({ body: { course_id: 1 }, file: { filename: 'instrucciones-123.pdf' } });
+  const res = mockRes();
+
+  await contentController.createTaskContent(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(unlinkCall.mock.calls.length, 1);
+  assert.match(unlinkCall.mock.calls[0].arguments[0], /instrucciones-123\.pdf$/);
+});
+
 test('deleteContent: en type=url no intenta borrar ningún archivo del disco (la "url" es un link externo)', async (t) => {
   t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'url', url: 'https://youtube.com/watch?v=x' }));
   t.mock.method(Content, 'delete', async () => true);
-  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
+  const unlinkCall = t.mock.method(fs.promises, 'unlink', async () => {});
   const req = mockReq({ params: { id: 1 } });
   const res = mockRes();
 
@@ -585,8 +671,7 @@ test('deleteContent: en type=url no intenta borrar ningún archivo del disco (la
 test('deleteContent: en type=file SÍ borra el archivo del disco', async (t) => {
   t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'file', url: '/uploads/files/x.pdf' }));
   t.mock.method(Content, 'delete', async () => true);
-  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
-  t.mock.method(fs, 'existsSync', () => true);
+  const unlinkCall = t.mock.method(fs.promises, 'unlink', async () => {});
   const req = mockReq({ params: { id: 1 } });
   const res = mockRes();
 
@@ -599,8 +684,7 @@ test('deleteContent: en type=file SÍ borra el archivo del disco', async (t) => 
 test('deleteContent: si Content.delete no confirma (0 filas), NO borra el archivo del disco', async (t) => {
   t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'file', url: '/uploads/files/x.pdf' }));
   t.mock.method(Content, 'delete', async () => false);
-  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
-  t.mock.method(fs, 'existsSync', () => true);
+  const unlinkCall = t.mock.method(fs.promises, 'unlink', async () => {});
   const req = mockReq({ params: { id: 1 } });
   const res = mockRes();
 
@@ -617,8 +701,7 @@ test('deleteContent: al borrar una tarea con entregas, también borra del disco 
     { id: 1, file_url: '/uploads/submissions/a.pdf' },
     { id: 2, file_url: '/uploads/submissions/b.docx' }
   ]));
-  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
-  t.mock.method(fs, 'existsSync', () => true);
+  const unlinkCall = t.mock.method(fs.promises, 'unlink', async () => {});
   const req = mockReq({ params: { id: 9 } });
   const res = mockRes();
 
@@ -633,7 +716,7 @@ test('deleteContent: una tarea sin entregas no intenta borrar ningún archivo de
   t.mock.method(Content, 'findById', async () => ({ id: 9, type: 'task', course_id: 1, url: null }));
   t.mock.method(Content, 'delete', async () => true);
   t.mock.method(TaskSubmission, 'findAllByContent', async () => ([]));
-  const unlinkCall = t.mock.method(fs, 'unlinkSync', () => {});
+  const unlinkCall = t.mock.method(fs.promises, 'unlink', async () => {});
   const req = mockReq({ params: { id: 9 } });
   const res = mockRes();
 
@@ -647,8 +730,7 @@ test('deleteContent: en un tipo que no es tarea, no consulta TaskSubmission.find
   t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'video', url: '/uploads/videos/x.mp4' }));
   t.mock.method(Content, 'delete', async () => true);
   const findSubmissionsCall = t.mock.method(TaskSubmission, 'findAllByContent', async () => ([]));
-  t.mock.method(fs, 'unlinkSync', () => {});
-  t.mock.method(fs, 'existsSync', () => true);
+  t.mock.method(fs.promises, 'unlink', async () => {});
   const req = mockReq({ params: { id: 1 } });
   const res = mockRes();
 

@@ -155,6 +155,10 @@ export const createVideoContent = async (req, res) => {
     const { course_id, title, description, folder_id } = req.body;
 
     if (!course_id || !title) {
+      // multer ya escribió el archivo en disco antes de llegar acá —
+      // sin esto, un título vacío junto con un video real subido dejaba
+      // el archivo huérfano (los demás checks de este método sí limpian).
+      if (req.file) await deleteFile(`/uploads/videos/${req.file.filename}`);
       return res.status(400).json({
         success: false,
         message: t(req.locale, 'errors.course_id_title_required')
@@ -170,7 +174,7 @@ export const createVideoContent = async (req, res) => {
 
     const folderCheck = await resolveFolderId(folder_id, course_id);
     if (!folderCheck.ok) {
-      deleteFile(`/uploads/videos/${req.file.filename}`);
+      await deleteFile(`/uploads/videos/${req.file.filename}`);
       return res.status(400).json({ success: false, message: t(req.locale, 'errors.folder_not_in_course') });
     }
 
@@ -196,7 +200,7 @@ export const createVideoContent = async (req, res) => {
     console.error('Error al crear contenido de video:', error);
     // Si hubo error, eliminar el archivo subido
     if (req.file) {
-      deleteFile(`/uploads/videos/${req.file.filename}`);
+      await deleteFile(`/uploads/videos/${req.file.filename}`);
     }
     res.status(500).json({
       success: false,
@@ -213,6 +217,9 @@ export const createFileContent = async (req, res) => {
     const { course_id, title, description, folder_id } = req.body;
 
     if (!course_id || !title) {
+      // multer ya escribió el archivo en disco antes de llegar acá — ver
+      // nota equivalente en createVideoContent.
+      if (req.file) await deleteFile(`/uploads/files/${req.file.filename}`);
       return res.status(400).json({
         success: false,
         message: t(req.locale, 'errors.course_id_title_required')
@@ -228,7 +235,7 @@ export const createFileContent = async (req, res) => {
 
     const folderCheck = await resolveFolderId(folder_id, course_id);
     if (!folderCheck.ok) {
-      deleteFile(`/uploads/files/${req.file.filename}`);
+      await deleteFile(`/uploads/files/${req.file.filename}`);
       return res.status(400).json({ success: false, message: t(req.locale, 'errors.folder_not_in_course') });
     }
 
@@ -254,7 +261,7 @@ export const createFileContent = async (req, res) => {
     console.error('Error al crear contenido de archivo:', error);
     // Si hubo error, eliminar el archivo subido
     if (req.file) {
-      deleteFile(`/uploads/files/${req.file.filename}`);
+      await deleteFile(`/uploads/files/${req.file.filename}`);
     }
     res.status(500).json({
       success: false,
@@ -273,6 +280,9 @@ export const createImageContent = async (req, res) => {
     const { course_id, title, description, folder_id } = req.body;
 
     if (!course_id || !title) {
+      // multer ya escribió el archivo en disco antes de llegar acá — ver
+      // nota equivalente en createVideoContent.
+      if (req.file) await deleteFile(`/uploads/content-images/${req.file.filename}`);
       return res.status(400).json({
         success: false,
         message: t(req.locale, 'errors.course_id_title_required')
@@ -288,7 +298,7 @@ export const createImageContent = async (req, res) => {
 
     const folderCheck = await resolveFolderId(folder_id, course_id);
     if (!folderCheck.ok) {
-      deleteFile(`/uploads/content-images/${req.file.filename}`);
+      await deleteFile(`/uploads/content-images/${req.file.filename}`);
       return res.status(400).json({ success: false, message: t(req.locale, 'errors.folder_not_in_course') });
     }
 
@@ -313,7 +323,7 @@ export const createImageContent = async (req, res) => {
   } catch (error) {
     console.error('Error al crear contenido de imagen:', error);
     if (req.file) {
-      deleteFile(`/uploads/content-images/${req.file.filename}`);
+      await deleteFile(`/uploads/content-images/${req.file.filename}`);
     }
     res.status(500).json({
       success: false,
@@ -433,6 +443,10 @@ export const createTaskContent = async (req, res) => {
     const { course_id, title, description, folder_id, weight_percent } = req.body;
 
     if (!course_id || !title) {
+      // El archivo de instrucciones es opcional, pero si vino, multer ya
+      // lo escribió en disco antes de llegar acá — ver nota equivalente en
+      // createVideoContent.
+      if (req.file) await deleteFile(`/uploads/files/${req.file.filename}`);
       return res.status(400).json({
         success: false,
         message: t(req.locale, 'errors.course_id_title_required')
@@ -441,13 +455,13 @@ export const createTaskContent = async (req, res) => {
 
     const weightCheck = parseWeightPercent(weight_percent, req.locale);
     if (!weightCheck.ok) {
-      if (req.file) deleteFile(`/uploads/files/${req.file.filename}`);
+      if (req.file) await deleteFile(`/uploads/files/${req.file.filename}`);
       return res.status(400).json({ success: false, message: weightCheck.message });
     }
 
     const folderCheck = await resolveFolderId(folder_id, course_id);
     if (!folderCheck.ok) {
-      if (req.file) deleteFile(`/uploads/files/${req.file.filename}`);
+      if (req.file) await deleteFile(`/uploads/files/${req.file.filename}`);
       return res.status(400).json({ success: false, message: t(req.locale, 'errors.folder_not_in_course') });
     }
 
@@ -477,7 +491,7 @@ export const createTaskContent = async (req, res) => {
   } catch (error) {
     console.error('Error al crear la tarea:', error);
     if (req.file) {
-      deleteFile(`/uploads/files/${req.file.filename}`);
+      await deleteFile(`/uploads/files/${req.file.filename}`);
     }
     res.status(500).json({
       success: false,
@@ -603,8 +617,17 @@ export const updateContent = async (req, res) => {
     // tiene sentido calificarla como % del curso — el resto de tipos ni
     // siquiera muestra este campo en el formulario, pero se revalida acá
     // por si acaso.
+    // Estos 4 `return` tempranos pueden dispararse con un archivo de
+    // reemplazo YA escrito en disco (multer corrió antes que este
+    // handler) — sin limpiarlo acá, quedaba huérfano (el resto del método
+    // sí lo hace, ver el UPDATE de más abajo y el catch general).
     if (weight_percent !== undefined) {
-      if (!['task', 'quiz', 'survey'].includes(content.type)) {
+      // 'survey' queda afuera a propósito: una encuesta nunca se califica
+      // (mismo criterio que ya fuerza quiz.controller.js al crearla) — por
+      // esta ruta genérica sí se le podía colar un weight_percent que
+      // getCourseGradeBreakdown ignora en silencio (solo mira type='quiz').
+      if (!['task', 'quiz'].includes(content.type)) {
+        if (req.file) await deleteFile(uploadedFileUrl(content.type, req.file.filename));
         return res.status(400).json({
           success: false,
           message: t(req.locale, 'errors.weight_percent_task_quiz_only')
@@ -612,6 +635,7 @@ export const updateContent = async (req, res) => {
       }
       const weightCheck = parseWeightPercent(weight_percent, req.locale);
       if (!weightCheck.ok) {
+        if (req.file) await deleteFile(uploadedFileUrl(content.type, req.file.filename));
         return res.status(400).json({ success: false, message: weightCheck.message });
       }
       updateData.weight_percent = weightCheck.value;
@@ -621,6 +645,7 @@ export const updateContent = async (req, res) => {
     // Una carpeta no puede meterse dentro de otra (un solo nivel).
     if (folder_id !== undefined) {
       if (content.type === 'folder') {
+        if (req.file) await deleteFile(uploadedFileUrl(content.type, req.file.filename));
         return res.status(400).json({
           success: false,
           message: t(req.locale, 'errors.folder_cannot_nest')
@@ -628,6 +653,7 @@ export const updateContent = async (req, res) => {
       }
       const folderCheck = await resolveFolderId(folder_id, content.course_id);
       if (!folderCheck.ok) {
+        if (req.file) await deleteFile(uploadedFileUrl(content.type, req.file.filename));
         return res.status(400).json({ success: false, message: t(req.locale, 'errors.folder_not_in_course') });
       }
       updateData.folder_id = folderCheck.folderId;
@@ -666,7 +692,7 @@ export const updateContent = async (req, res) => {
       // reemplazo ya se escribió a disco (multer corrió antes que este
       // handler) pero nada llegó a referenciarlo — se borra para no
       // dejarlo huérfano.
-      if (newFileUrl) deleteFile(newFileUrl);
+      if (newFileUrl) await deleteFile(newFileUrl);
       return res.status(400).json({
         success: false,
         message: t(req.locale, 'errors.content_update_no_rows')
@@ -674,7 +700,7 @@ export const updateContent = async (req, res) => {
     }
 
     if (previousUrl) {
-      deleteFile(previousUrl);
+      await deleteFile(previousUrl);
     }
 
     res.json({
@@ -687,7 +713,7 @@ export const updateContent = async (req, res) => {
       // Mismo criterio: el archivo ya está en disco pero el UPDATE nunca
       // llegó a confirmarse (o ni se intentó, si el error fue antes). req.contentType
       // lo fija la ruta antes de llegar acá (ver content.routes.js).
-      deleteFile(uploadedFileUrl(req.contentType, req.file.filename));
+      await deleteFile(uploadedFileUrl(req.contentType, req.file.filename));
     }
     res.status(500).json({
       success: false,
@@ -732,6 +758,16 @@ export const deleteContent = async (req, res) => {
     // DELETE en BD: si se borraran antes y el DELETE fallara, la BD
     // quedaría apuntando a archivos que ya no existen (type='url' no tiene
     // archivo local, es un link externo — no hay nada que borrar del disco).
+    // Riesgo residual aceptado, documentado a propósito: entre este
+    // findAllByContent y el DELETE de abajo hay una ventana angosta donde,
+    // si un estudiante entrega justo esta tarea, su fila se borra en
+    // cascada por la FK (task_submissions.content_id) sin que el archivo
+    // de esa entrega entre en filesToDelete, quedando huérfano en disco.
+    // Cerrarla del todo exigiría coordinar un lock con el INSERT de
+    // submitTask (submission.controller.js), que hoy no comparte ninguna
+    // transacción con este método — impacto bajo (ventana de milisegundos,
+    // requiere que ambas acciones coincidan casi exactamente), así que se
+    // deja así en vez de agregar esa complejidad para un caso tan puntual.
     const filesToDelete = [];
     if (content.url && content.type !== 'url') filesToDelete.push(content.url);
     if (content.type === 'task') {
@@ -742,7 +778,7 @@ export const deleteContent = async (req, res) => {
     const deleted = await Content.delete(id);
 
     if (deleted) {
-      filesToDelete.forEach(deleteFile);
+      await Promise.all(filesToDelete.map(deleteFile));
       res.json({
         success: true,
         message: t(req.locale, 'success.content_deleted')

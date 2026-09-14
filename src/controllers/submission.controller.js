@@ -31,7 +31,7 @@ export const submitTask = async (req, res) => {
     const submissionId = await TaskSubmission.create(content.id, req.session.user.id, fileUrl);
 
     if (submissionId === null) {
-      deleteFile(fileUrl);
+      await deleteFile(fileUrl);
       return res.status(400).json({
         success: false,
         message: t(req.locale, 'errors.already_submitted_task')
@@ -49,7 +49,7 @@ export const submitTask = async (req, res) => {
   } catch (error) {
     console.error('Error al entregar la tarea:', error);
     if (req.file) {
-      deleteFile(`/uploads/submissions/${req.file.filename}`);
+      await deleteFile(`/uploads/submissions/${req.file.filename}`);
     }
     res.status(500).json({ success: false, message: t(req.locale, 'errors.submit_task_failed') });
   }
@@ -161,26 +161,39 @@ export const reviewSubmission = async (req, res) => {
       return res.status(404).json({ success: false, message: t(req.locale, 'errors.submission_not_found') });
     }
 
-    let scoreToSave = null;
-    if (score_earned !== undefined && score_earned !== null && score_earned !== '') {
-      const content = await Content.findById(submission.content_id);
-      if (!content.weight_percent) {
-        return res.status(400).json({
-          success: false,
-          message: t(req.locale, 'errors.task_no_weight_percent')
-        });
+    // Un campo AUSENTE del body conserva el valor ya guardado — no se pisa
+    // con null. Sin esto, llamar este endpoint dos veces (una con
+    // feedback, otra solo con la nota) borraba en silencio el valor que no
+    // se reenvió la segunda vez. El formulario actual siempre manda ambos
+    // campos juntos, así que esto es sobre todo defensivo (por si se llama
+    // la API desde otro lado en el futuro), no un bug activo hoy.
+    const feedbackToSave = feedback !== undefined ? feedback : (submission.feedback ?? null);
+    let scoreToSave = submission.score_earned ?? null;
+    if (score_earned !== undefined) {
+      if (score_earned === null || score_earned === '') {
+        scoreToSave = null;
+      } else {
+        const content = await Content.findById(submission.content_id);
+        // === null (no !content.weight_percent): una tarea con 0% de peso
+        // es un valor explícitamente válido, no "sin peso asignado".
+        if (content.weight_percent === null) {
+          return res.status(400).json({
+            success: false,
+            message: t(req.locale, 'errors.task_no_weight_percent')
+          });
+        }
+        const score = Number(score_earned);
+        if (!Number.isFinite(score) || score < 0 || score > Number(content.weight_percent)) {
+          return res.status(400).json({
+            success: false,
+            message: t(req.locale, 'errors.score_out_of_range', { max: content.weight_percent })
+          });
+        }
+        scoreToSave = score;
       }
-      const score = Number(score_earned);
-      if (!Number.isFinite(score) || score < 0 || score > Number(content.weight_percent)) {
-        return res.status(400).json({
-          success: false,
-          message: t(req.locale, 'errors.score_out_of_range', { max: content.weight_percent })
-        });
-      }
-      scoreToSave = score;
     }
 
-    await TaskSubmission.markReviewed(id, feedback, scoreToSave);
+    await TaskSubmission.markReviewed(id, feedbackToSave, scoreToSave);
 
     res.json({ success: true, message: t(req.locale, 'success.submission_reviewed') });
   } catch (error) {
