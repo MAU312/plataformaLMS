@@ -13,8 +13,8 @@
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-≥18-339933?logo=node.js&logoColor=white">
   <img alt="Express" src="https://img.shields.io/badge/Express-5-000000?logo=express&logoColor=white">
   <img alt="MySQL" src="https://img.shields.io/badge/MySQL-8-4479A1?logo=mysql&logoColor=white">
-  <img alt="Tailwind CSS" src="https://img.shields.io/badge/Tailwind_CSS-CDN-38BDF8?logo=tailwindcss&logoColor=white">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-274%20passing-brightgreen">
+  <img alt="Tailwind CSS" src="https://img.shields.io/badge/Tailwind_CSS-3-38BDF8?logo=tailwindcss&logoColor=white">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-424%20passing-brightgreen">
   <img alt="Uso" src="https://img.shields.io/badge/uso-académico%20%2F%20institucional-lightgrey">
 </p>
 
@@ -74,19 +74,19 @@ Es una aplicación full-stack: backend en **Node.js/Express** con **MySQL**, y u
 
 ## Seguridad
 
-El proyecto pasó por tres rondas de revisión de seguridad (31 hallazgos identificados y corregidos en total — ver [`docs/Pruebas_Seguridad_LMS_CENAT.docx`](docs/Pruebas_Seguridad_LMS_CENAT.docx)). Entre las medidas implementadas:
+El proyecto pasó por cuatro rondas de revisión de seguridad (36 hallazgos identificados y corregidos en total — ver [`docs/Pruebas_Seguridad_LMS_CENAT.docx`](docs/Pruebas_Seguridad_LMS_CENAT.docx)). Entre las medidas implementadas:
 
 | Medida | Detalle |
 |---|---|
 | Cabeceras HTTP | [Helmet](https://helmetjs.github.io/) en todas las respuestas, con una política Content-Security-Policy real (no desactivada) |
-| Rate limiting | Límites por IP/usuario en login, registro, recuperación de contraseña, inscripción, creación de cursos y publicaciones del foro |
+| Rate limiting | Límites por IP/usuario en login, registro, recuperación de contraseña, inscripción, creación de cursos, creación de contenido y publicaciones del foro |
 | Sesiones | Almacenadas en MySQL (no `MemoryStore`), cookies `httpOnly`, `sameSite=lax`, `secure` en producción; se invalidan todas al restablecer la contraseña |
 | Secretos | La app no arranca si falta `SESSION_SECRET` en el entorno |
 | Contraseñas | Hasheadas con `bcrypt`, nunca en texto plano |
 | Archivos subidos | Validación por firma binaria real (`file-type`), no solo por extensión, incluyendo avatares |
 | Control de acceso | Descargas y contenido de curso siempre verifican sesión + inscripción (o rol de profesor asignado) en el backend |
 | Integridad transaccional | Operaciones de varios pasos (crear cuestionario, asignar profesores, desinscribir) usan transacciones de MySQL — todo o nada ante un fallo a mitad de camino |
-| Inyección | Sin XSS almacenado (escapado consistente en atributos HTML) ni SQL (parámetros preparados en todas las consultas) |
+| Inyección | Sin XSS almacenado (escapado consistente en atributos HTML y en el HTML de los correos salientes) ni SQL (parámetros preparados en todas las consultas); los CSV exportados escapan valores que empiezan con `=`/`+`/`-`/`@` para evitar inyección de fórmulas |
 | Manejo de errores | En producción, los errores 500 no filtran detalles internos (rutas, mensajes de MySQL, *stack traces*); manejo a nivel de proceso y apagado ordenado ante señales de terminación |
 | Dependencias | `npm audit` limpio |
 
@@ -99,7 +99,7 @@ El proyecto pasó por tres rondas de revisión de seguridad (31 hallazgos identi
 | Seguridad | `helmet`, `express-rate-limit` |
 | Correo | `nodemailer` (Gmail) |
 | Certificados | `pdfkit` |
-| Frontend | JavaScript vanilla (SPA con router propio en hash), Tailwind CSS (CDN), Font Awesome |
+| Frontend | JavaScript vanilla (SPA con router propio en hash), Tailwind CSS (compilado en build time con la CLI de Tailwind), Font Awesome |
 | Tests | `node:test` (test runner nativo de Node, sin dependencias externas) |
 
 ## Estructura del proyecto
@@ -179,13 +179,14 @@ Definidas en `.env` (ver [`.env.example`](.env.example)):
 
 | Comando | Descripción |
 |---|---|
-| `npm start` | Inicia el servidor (`node src/app.js`) |
-| `npm run dev` | Inicia el servidor con recarga automática (`nodemon`) |
+| `npm start` | Compila el CSS y luego inicia el servidor (`node src/app.js`) |
+| `npm run dev` | Compila el CSS y luego inicia el servidor con recarga automática (`nodemon`) + observa cambios de clases de Tailwind en paralelo |
+| `npm run build:css` | Compila `src/public/css/tailwind.css` a partir de `tailwind-input.css` (se corre solo, vía `predev`/`prestart`) |
 | `npm test` | Corre la suite de pruebas automatizadas |
 
 ## Pruebas automatizadas
 
-274 pruebas con el test runner nativo de Node (`node --test`), que mockean modelos y el pool de MySQL — **no requieren una base de datos real corriendo**:
+424 pruebas con el test runner nativo de Node (`node --test`), que mockean modelos y el pool de MySQL — **no requieren una base de datos real corriendo**:
 
 ```bash
 npm test
@@ -276,7 +277,7 @@ En [`docs/`](docs/):
 
 - **Manual técnico** — arquitectura, referencia completa de la API, modelo de datos y decisiones de diseño
 - **Manual de usuario** — guía de uso para estudiantes, profesores y administradores
-- **Pruebas de seguridad** — los 31 hallazgos identificados y su corrección
+- **Pruebas de seguridad** — los 36 hallazgos identificados y su corrección
 
 ## Contexto académico
 
