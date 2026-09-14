@@ -6,123 +6,128 @@
 // Routes Configuration
 // =================================
 
+// `titleKey` (no el texto ya traducido) — se resuelve con t() recién en
+// handleRoute(), en cada navegación, no una sola vez acá al cargar el
+// script. Si no, cambiar de idioma sin recargar (setLocale() solo vuelve a
+// llamar a handleRoute()) dejaba el título de pestaña congelado en el
+// idioma que tenía la página al cargar.
 const routes = {
     '/': {
-        title: 'Cursos Disponibles',
+        titleKey: 'routes.home',
         render: (params) => window.renderHome(params),
         requireAuth: false
     },
     '/login': {
-        title: 'Iniciar Sesión',
+        titleKey: 'routes.login',
         render: (params) => window.renderLogin(params),
         requireAuth: false
     },
     '/register': {
-        title: 'Registrarse',
+        titleKey: 'routes.register',
         render: (params) => window.renderRegister(params),
         requireAuth: false
     },
     '/forgot-password': {
-        title: 'Recuperar Contraseña',
+        titleKey: 'routes.forgot_password',
         render: (params) => window.renderForgotPassword(params),
         requireAuth: false
     },
     '/reset-password/:token': {
-        title: 'Restablecer Contraseña',
+        titleKey: 'routes.reset_password',
         render: (params) => window.renderResetPassword(params),
         requireAuth: false
     },
     '/my-courses': {
-        title: 'Mis Cursos',
+        titleKey: 'routes.my_courses',
         render: (params) => window.renderMyCourses(params),
         requireAuth: true
     },
     '/course/:id': {
-        title: 'Detalle del Curso',
+        titleKey: 'routes.course_detail',
         render: (params) => window.renderCourseDetail(params),
         // Un invitado solo puede explorar el catálogo (/) — para ver el
         // detalle de un curso se le pide iniciar sesión o registrarse.
         requireAuth: true
     },
     '/admin': {
-        title: 'Panel Administrativo',
+        titleKey: 'routes.admin_dashboard',
         render: (params) => window.renderAdminDashboard(params),
         requireAuth: true,
         requireAdmin: true
     },
     '/admin/courses': {
-        title: 'Administrar Cursos',
+        titleKey: 'routes.admin_courses',
         render: (params) => window.renderAdminCourses(params),
         requireAuth: true,
         requireAdmin: true
     },
     '/admin/courses/create': {
-        title: 'Crear Curso',
+        titleKey: 'routes.admin_create_course',
         render: (params) => window.renderAdminCreateCourse(params),
         requireAuth: true,
         requireAdmin: true
     },
     '/admin/courses/:id/edit': {
-        title: 'Editar Curso',
+        titleKey: 'routes.admin_edit_course',
         render: (params) => window.renderAdminEditCourse(params),
         requireAuth: true,
         requireAdmin: true
     },
     '/admin/courses/:id/students': {
-        title: 'Estudiantes del Curso',
+        titleKey: 'routes.admin_course_students',
         render: (params) => window.renderAdminCourseStudents(params),
         requireAuth: true,
         requireAdmin: true
     },
     '/admin/users': {
-        title: 'Administrar Usuarios',
+        titleKey: 'routes.admin_users',
         render: (params) => window.renderAdminUsers(params),
         requireAuth: true,
         requireAdmin: true
     },
     '/admin/settings': {
-        title: 'Apariencia del Sitio',
+        titleKey: 'routes.admin_settings',
         render: (params) => window.renderAdminSettings(params),
         requireAuth: true,
         requireAdmin: true
     },
     '/profile': {
-        title: 'Mi Perfil',
+        titleKey: 'routes.profile',
         render: (params) => window.renderProfile(params),
         requireAuth: true
     },
     '/teacher/courses': {
-        title: 'Mis Cursos (Profesor)',
+        titleKey: 'routes.teacher_courses',
         render: (params) => window.renderTeacherCourses(params),
         requireAuth: true
     },
     '/teacher/courses/:id/edit': {
-        title: 'Editar Curso Asignado',
+        titleKey: 'routes.teacher_course_edit',
         render: (params) => window.renderTeacherCourse(params),
         requireAuth: true
     },
     '/teacher/courses/:id/students': {
-        title: 'Estudiantes del Curso',
+        titleKey: 'routes.admin_course_students',
         render: (params) => window.renderTeacherCourseStudents(params),
         requireAuth: true
     },
     '/contents/:id/submissions': {
-        title: 'Entregas de la Tarea',
+        titleKey: 'routes.task_submissions',
         render: (params) => window.renderTaskSubmissions(params),
         requireAuth: true
     },
     '/contents/:id/take': {
-        title: 'Responder',
+        titleKey: 'routes.quiz_take',
         render: (params) => window.renderTakeQuiz(params),
         requireAuth: true
     },
     '/contents/:id/results': {
-        title: 'Resultados',
+        titleKey: 'routes.quiz_results',
         render: (params) => window.renderQuizResults(params),
         requireAuth: true
     },
     '/forum/:id': {
-        title: 'Foro',
+        titleKey: 'routes.forum',
         render: (params) => window.renderForumThread(params),
         requireAuth: true
     }
@@ -178,6 +183,7 @@ async function handleRoute() {
     const routeData = parseRoute(currentRoute);
     
     if (!routeData) {
+        document.title = `${t('routes.not_found')} - LMS LANBA - CeNAT`;
         render404();
         window.scrollTo(0, 0);
         return;
@@ -198,7 +204,7 @@ async function handleRoute() {
     }
     
     // Update page title
-    document.title = `${route.title} - LMS LANBA - CeNAT`;
+    document.title = `${t(route.titleKey)} - LMS LANBA - CeNAT`;
     
     // Render the route
     try {
@@ -228,19 +234,19 @@ function render404() {
                 </div>
 
                 <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-                    ¡Oops! Página no encontrada
+                    ${t('notFound.heading')}
                 </h2>
                 <p class="text-gray-500 dark:text-slate-400 mb-8">
-                    La página que buscas no existe o fue movida. No te preocupes, puedes volver al inicio.
+                    ${t('notFound.description')}
                 </p>
 
                 <div class="flex flex-col sm:flex-row gap-3 justify-center">
                     <a href="#/" class="btn-cenat">
-                        <i class="fas fa-home mr-2"></i> Volver al inicio
+                        <i class="fas fa-home mr-2"></i> ${t('notFound.back_home')}
                     </a>
                     <button onclick="history.back()"
                         class="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 transition">
-                        <i class="fas fa-arrow-left mr-2"></i> Página anterior
+                        <i class="fas fa-arrow-left mr-2"></i> ${t('notFound.previous_page')}
                     </button>
                 </div>
             </div>

@@ -26,6 +26,39 @@ const TRANSLATIONS = {
             read_more: 'Leer más',
             read_less: 'Leer menos'
         },
+        // Título de pestaña por ruta (ver router.js) — se llama a t() en
+        // cada handleRoute(), no una sola vez al cargar el script, para que
+        // un cambio de idioma sin recargar (setLocale()) también lo alcance.
+        routes: {
+            home: 'Cursos Disponibles',
+            login: 'Iniciar Sesión',
+            register: 'Registrarse',
+            forgot_password: 'Recuperar Contraseña',
+            reset_password: 'Restablecer Contraseña',
+            my_courses: 'Mis Cursos',
+            course_detail: 'Detalle del Curso',
+            admin_dashboard: 'Panel Administrativo',
+            admin_courses: 'Administrar Cursos',
+            admin_create_course: 'Crear Curso',
+            admin_edit_course: 'Editar Curso',
+            admin_course_students: 'Estudiantes del Curso',
+            admin_users: 'Administrar Usuarios',
+            admin_settings: 'Apariencia del Sitio',
+            profile: 'Mi Perfil',
+            teacher_courses: 'Mis Cursos (Profesor)',
+            teacher_course_edit: 'Editar Curso Asignado',
+            task_submissions: 'Entregas de la Tarea',
+            quiz_take: 'Responder',
+            quiz_results: 'Resultados',
+            forum: 'Foro',
+            not_found: 'Página no encontrada'
+        },
+        notFound: {
+            heading: '¡Oops! Página no encontrada',
+            description: 'La página que buscas no existe o fue movida. No te preocupes, puedes volver al inicio.',
+            back_home: 'Volver al inicio',
+            previous_page: 'Página anterior'
+        },
         nav: {
             home: 'Inicio',
             my_courses: 'Mis Cursos',
@@ -49,6 +82,7 @@ const TRANSLATIONS = {
         },
         errors: {
             generic: 'Error en la petición',
+            network: 'No se pudo conectar con el servidor. Verifica tu conexión e intenta de nuevo.',
             session_expired: 'Sesión expirada',
             session_expired_toast: 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
             passwords_dont_match: 'Las contraseñas no coinciden',
@@ -335,6 +369,7 @@ const TRANSLATIONS = {
             mark_reviewed: 'Marcar revisada',
             grade_label: 'Calificación (de 0 a {{max}})',
             grade_placeholder: 'Ej: 7',
+            grade_out_of_range: 'La calificación debe estar entre 0 y {{max}}',
             comment_optional: 'Comentario (opcional)',
             review_saved: 'Entrega marcada como revisada',
             save_review_failed: 'Error al guardar la revisión'
@@ -342,6 +377,7 @@ const TRANSLATIONS = {
         contentManager: {
             cancel: 'Cancelar',
             edit_title: 'Editar',
+            delete_title: 'Borrar',
             saving: 'Guardando...',
             creating: 'Creando...',
             uploading: 'Subiendo...',
@@ -657,6 +693,10 @@ const TRANSLATIONS = {
                 view_students: 'Ver estudiantes inscritos',
                 deactivate: 'Desactivar curso',
                 activate: 'Activar curso',
+                delete: 'Eliminar curso',
+                delete_confirm: '¿Eliminar «{{title}}»? Se borrarán su contenido, inscripciones, progreso de estudiantes y certificados. Si tiene módulos con cursos anidados, también se eliminarán. Esta acción no se puede deshacer.',
+                deleted: 'Curso eliminado',
+                delete_failed: 'Error al eliminar el curso',
                 load_failed: 'Error al cargar los cursos',
                 activated: 'Curso activado',
                 deactivated: 'Curso desactivado',
@@ -689,6 +729,7 @@ const TRANSLATIONS = {
                 active_checkbox_label: 'Curso activo (visible para estudiantes)',
                 certificate_style_label: 'Estilo de certificado',
                 teachers_label: 'Profesores asignados',
+                teachers_load_failed: 'No se pudo cargar la lista de profesores',
                 stats_heading: 'Estadísticas',
                 stat_enrolled: 'Inscritos:',
                 stat_videos: 'Videos:',
@@ -743,6 +784,7 @@ const TRANSLATIONS = {
                     file_label: 'Archivo CSV *',
                     course_label: 'Matricular en un curso (opcional)',
                     no_course_option: 'Solo crear las cuentas, sin matricular',
+                    course_list_truncated: 'Mostrando {{shown}} de {{total}} cursos — usa Gestión de Cursos para buscar uno que no aparezca acá.',
                     submit: 'Importar',
                     importing: 'Importando...',
                     import_failed: 'Error al importar el CSV',
@@ -805,6 +847,36 @@ const TRANSLATIONS = {
             read_more: 'Read more',
             read_less: 'Read less'
         },
+        routes: {
+            home: 'Available Courses',
+            login: 'Log In',
+            register: 'Sign Up',
+            forgot_password: 'Forgot Password',
+            reset_password: 'Reset Password',
+            my_courses: 'My Courses',
+            course_detail: 'Course Detail',
+            admin_dashboard: 'Admin Panel',
+            admin_courses: 'Manage Courses',
+            admin_create_course: 'Create Course',
+            admin_edit_course: 'Edit Course',
+            admin_course_students: 'Course Students',
+            admin_users: 'Manage Users',
+            admin_settings: 'Site Appearance',
+            profile: 'My Profile',
+            teacher_courses: 'My Courses (Teacher)',
+            teacher_course_edit: 'Edit Assigned Course',
+            task_submissions: 'Task Submissions',
+            quiz_take: 'Answer',
+            quiz_results: 'Results',
+            forum: 'Forum',
+            not_found: 'Page not found'
+        },
+        notFound: {
+            heading: 'Oops! Page not found',
+            description: "The page you're looking for doesn't exist or was moved. Don't worry, you can head back home.",
+            back_home: 'Back to home',
+            previous_page: 'Previous page'
+        },
         nav: {
             home: 'Home',
             my_courses: 'My Courses',
@@ -828,6 +900,7 @@ const TRANSLATIONS = {
         },
         errors: {
             generic: 'Request error',
+            network: "Couldn't connect to the server. Check your connection and try again.",
             session_expired: 'Session expired',
             session_expired_toast: 'Your session has expired. Please log in again.',
             passwords_dont_match: 'Passwords do not match',
@@ -1114,6 +1187,7 @@ const TRANSLATIONS = {
             mark_reviewed: 'Mark as reviewed',
             grade_label: 'Grade (0 to {{max}})',
             grade_placeholder: 'E.g.: 7',
+            grade_out_of_range: 'The grade must be between 0 and {{max}}',
             comment_optional: 'Comment (optional)',
             review_saved: 'Submission marked as reviewed',
             save_review_failed: 'Error saving the review'
@@ -1121,6 +1195,7 @@ const TRANSLATIONS = {
         contentManager: {
             cancel: 'Cancel',
             edit_title: 'Edit',
+            delete_title: 'Delete',
             saving: 'Saving...',
             creating: 'Creating...',
             uploading: 'Uploading...',
@@ -1436,6 +1511,10 @@ const TRANSLATIONS = {
                 view_students: 'View enrolled students',
                 deactivate: 'Deactivate course',
                 activate: 'Activate course',
+                delete: 'Delete course',
+                delete_confirm: 'Delete "{{title}}"? Its content, enrollments, student progress and certificates will be deleted. If it has modules with nested courses, those will be deleted too. This action cannot be undone.',
+                deleted: 'Course deleted',
+                delete_failed: 'Error deleting the course',
                 load_failed: 'Error loading the courses',
                 activated: 'Course activated',
                 deactivated: 'Course deactivated',
@@ -1468,6 +1547,7 @@ const TRANSLATIONS = {
                 active_checkbox_label: 'Active course (visible to students)',
                 certificate_style_label: 'Certificate style',
                 teachers_label: 'Assigned teachers',
+                teachers_load_failed: "Couldn't load the teacher list",
                 stats_heading: 'Statistics',
                 stat_enrolled: 'Enrolled:',
                 stat_videos: 'Videos:',
@@ -1522,6 +1602,7 @@ const TRANSLATIONS = {
                     file_label: 'CSV file *',
                     course_label: 'Enroll in a course (optional)',
                     no_course_option: 'Only create the accounts, without enrolling',
+                    course_list_truncated: 'Showing {{shown}} of {{total}} courses — use Manage Courses to search for one that isn\'t listed here.',
                     submit: 'Import',
                     importing: 'Importing...',
                     import_failed: 'Error importing the CSV',
