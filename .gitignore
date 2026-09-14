@@ -4,3 +4,8 @@ uploads/
 *.log
 .DS_Store
 .claude/
+
+# Generado por `npm run build:css` (predev/prestart) a partir de
+# tailwind-input.css + tailwind.config.js — no se versiona, igual que
+# cualquier otro artefacto de build.
+src/public/css/tailwind.css
