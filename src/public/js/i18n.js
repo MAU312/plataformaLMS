@@ -439,6 +439,9 @@ const TRANSLATIONS = {
                 no_courses_yet: 'Este módulo todavía no tiene cursos.',
                 no_teacher_assigned: 'Sin profesor asignado',
                 manage_content_title: 'Gestionar contenido de este curso',
+                edit_teachers_title: 'Editar profesores de este curso',
+                teachers_updated: 'Profesores actualizados',
+                teachers_update_failed: 'Error al actualizar los profesores',
                 unlink_title: 'Desvincular del módulo (no borra el curso)',
                 name_label: 'Nombre del módulo *',
                 name_placeholder: 'Ej: Módulo 1 - Ciencia abierta',
@@ -643,8 +646,6 @@ const TRANSLATIONS = {
             certificate_minimal: 'Minimalista',
             certificate_hint: 'El diseño del certificado PDF que descarga un estudiante al completar este curso.',
             no_teachers_yet: 'No hay usuarios con rol "Profesor" todavía. Puedes crearlos desde Usuarios y asignarlos después.',
-            whole_course_option: 'Todo el curso',
-            teacher_module_scope_title: 'A qué carpeta queda escopeado este profesor',
             load_teachers_failed: 'Error al cargar la lista de profesores'
         },
         admin: {
@@ -1257,6 +1258,9 @@ const TRANSLATIONS = {
                 no_courses_yet: "This module doesn't have any courses yet.",
                 no_teacher_assigned: 'No teacher assigned',
                 manage_content_title: "Manage this course's content",
+                edit_teachers_title: "Edit this course's teachers",
+                teachers_updated: 'Teachers updated',
+                teachers_update_failed: 'Error updating the teachers',
                 unlink_title: "Unlink from the module (doesn't delete the course)",
                 name_label: 'Module name *',
                 name_placeholder: 'E.g.: Module 1 - Open Science',
@@ -1461,8 +1465,6 @@ const TRANSLATIONS = {
             certificate_minimal: 'Minimal',
             certificate_hint: 'The design of the PDF certificate a student downloads when completing this course.',
             no_teachers_yet: 'There are no "Teacher" role users yet. You can create them from Users and assign them afterward.',
-            whole_course_option: 'Whole course',
-            teacher_module_scope_title: 'Which folder this teacher is scoped to',
             load_teachers_failed: 'Error loading the teacher list'
         },
         admin: {

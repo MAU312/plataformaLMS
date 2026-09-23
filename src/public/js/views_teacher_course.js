@@ -144,7 +144,7 @@ function renderModuleChildCourseEditForm(course) {
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">${t('admin.editCourse.teachers_label')}</label>
-                    <div id="module-child-teacher-checkboxes" class="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto">
+                    <div id="module-child-teacher-checkboxes" class="border border-gray-300 rounded-lg p-4 max-h-64 overflow-y-auto">
                         <p class="text-sm text-gray-400">${t('contentManager.modules.loading_teachers')}</p>
                     </div>
                 </div>

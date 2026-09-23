@@ -55,7 +55,7 @@ window.renderAdminCreateCourse = async function(params) {
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">${t('admin.createCourse.teachers_label')}</label>
-                    <div id="teacher-checkboxes" class="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto">
+                    <div id="teacher-checkboxes" class="border border-gray-300 rounded-lg p-4 max-h-64 overflow-y-auto">
                         <p class="text-sm text-gray-400">${t('contentManager.modules.loading_teachers')}</p>
                     </div>
                     <p class="mt-1 text-xs text-gray-500">${t('admin.createCourse.teachers_hint')}</p>

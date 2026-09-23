@@ -614,67 +614,40 @@ function renderCourseCardShell({ course, navigateToPath, heightClass = 'h-40', s
 // =================================
 
 /**
- * `modules` (las carpetas del curso) y `moduleScopeByTeacherId` (id →
- * module_id|null, de Course.getCourseTeachers) son opcionales — un curso
- * sin carpetas no muestra el selector de carpeta en absoluto, así un curso
- * "plano" se ve exactamente igual que antes de agregar carpetas. Se llama
- * "carpeta" en el copy visible (no "módulo") para no confundirlo con los
- * módulos-con-cursos-anidados (ver CourseModule) — dos features distintas
- * que comparten el mismo nombre solo a nivel de código histórico
- * (course_teachers.module_id sigue apuntando a una carpeta).
+ * El checkbox marcado asigna a ese profesor como profesor principal (de
+ * todo el curso) — el escopeo por carpeta (course_teachers.module_id)
+ * existió acá antes, pero se sacó de esta lista a pedido de Mauricio: en
+ * la práctica nadie lo usaba (confirmado: 0 filas con module_id no-nulo en
+ * la base real), y con el editor rápido de profesores por curso hijo de
+ * módulo (ver views_content_manager.js) ya no hacía falta. El mecanismo de
+ * permisos por carpeta (Course.canManageContent, requireCourseManager) se
+ * deja intacto en el backend por si se necesita reactivar más adelante —
+ * simplemente ya no hay forma de asignarlo desde acá.
  */
-function renderTeacherCheckboxesHTML(teachers, selectedIds = [], modules = [], moduleScopeByTeacherId = {}) {
+function renderTeacherCheckboxesHTML(teachers, selectedIds = []) {
     if (teachers.length === 0) {
         return `<p class="text-sm text-gray-400 dark:text-slate-500">${t('courseForm.no_teachers_yet')}</p>`;
     }
     return teachers.map(teacher => {
         const checked = selectedIds.includes(teacher.id);
-        const currentModule = moduleScopeByTeacherId[teacher.id];
         return `
-        <div class="teacher-row flex items-center gap-2 py-1 flex-wrap">
-            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
+        <div class="teacher-row flex items-center gap-3 py-2 flex-wrap">
+            <label class="flex items-center gap-3 text-base text-gray-700 dark:text-slate-300">
                 <input type="checkbox" name="teacher_ids" value="${teacher.id}" data-teacher-id="${teacher.id}"
-                    class="teacher-checkbox rounded border-gray-300 text-cenat-green focus:ring-cenat-green" ${checked ? 'checked' : ''}>
-                ${escapeHtml(teacher.name)} <span class="text-gray-400 dark:text-slate-500">(${escapeHtml(teacher.email)})</span>
+                    class="teacher-checkbox w-4 h-4 rounded border-gray-300 text-cenat-green focus:ring-cenat-green" ${checked ? 'checked' : ''}>
+                ${escapeHtml(teacher.name)} <span class="text-sm text-gray-400 dark:text-slate-500">(${escapeHtml(teacher.email)})</span>
             </label>
-            ${modules.length > 0 ? `
-                <select class="teacher-module-select text-xs border border-gray-300 rounded px-1 py-0.5" data-teacher-id="${teacher.id}" ${checked ? '' : 'disabled'} title="${t('courseForm.teacher_module_scope_title')}">
-                    <option value="">${t('courseForm.whole_course_option')}</option>
-                    ${modules.map(m => `<option value="${m.id}" ${String(currentModule) === String(m.id) ? 'selected' : ''}>${escapeHtml(m.title)}</option>`).join('')}
-                </select>
-            ` : ''}
         </div>
         `;
     }).join('');
 }
 
-/**
- * Habilita/deshabilita el select de carpeta de cada fila según su checkbox
- * — un profesor desmarcado no tiene sentido que quede escopeado a nada, así
- * que al desmarcar se resetea a "Todo el curso" (vacío) además de
- * deshabilitarse. Delegado en el contenedor: sigue funcionando después de
- * reinyectar el HTML sin tener que re-enganchar listeners por fila.
- */
-function initTeacherModuleToggle(containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    container.addEventListener('change', (e) => {
-        const checkbox = e.target.closest('.teacher-checkbox');
-        if (!checkbox) return;
-        const select = checkbox.closest('.teacher-row')?.querySelector('.teacher-module-select');
-        if (!select) return;
-        select.disabled = !checkbox.checked;
-        if (!checkbox.checked) select.value = '';
-    });
-}
-
-async function loadTeacherCheckboxes(containerId, selectedIds = [], modules = [], moduleScopeByTeacherId = {}) {
+async function loadTeacherCheckboxes(containerId, selectedIds = []) {
     const container = document.getElementById(containerId);
     if (!container) return;
     try {
         const response = await usersAPI.getByRole('teacher');
-        container.innerHTML = renderTeacherCheckboxesHTML(response.data || [], selectedIds, modules, moduleScopeByTeacherId);
-        initTeacherModuleToggle(containerId);
+        container.innerHTML = renderTeacherCheckboxesHTML(response.data || [], selectedIds);
     } catch (error) {
         container.innerHTML = `<p class="text-sm text-red-500">${t('courseForm.load_teachers_failed')}</p>`;
     }
@@ -684,24 +657,6 @@ function getSelectedTeacherIds(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return [];
     return Array.from(container.querySelectorAll('input[name="teacher_ids"]:checked')).map(el => parseInt(el.value, 10));
-}
-
-/**
- * { userId: moduleId|null } — solo de los profesores actualmente marcados
- * (a un profesor que se está desasignando en esta misma petición no tiene
- * sentido escoparlo). Usado junto con getSelectedTeacherIds al armar el
- * FormData de guardar curso.
- */
-function getTeacherModuleScopes(containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) return {};
-    const result = {};
-    container.querySelectorAll('.teacher-checkbox:checked').forEach((checkbox) => {
-        const teacherId = checkbox.dataset.teacherId;
-        const select = container.querySelector(`.teacher-module-select[data-teacher-id="${teacherId}"]`);
-        result[teacherId] = (select && select.value) ? parseInt(select.value, 10) : null;
-    });
-    return result;
 }
 
 // Mismos ids/orden que CERTIFICATE_STYLES en src/utils/certificate.js — se
@@ -886,7 +841,6 @@ window.renderPagination = renderPagination;
 window.renderTeacherCheckboxesHTML = renderTeacherCheckboxesHTML;
 window.loadTeacherCheckboxes = loadTeacherCheckboxes;
 window.getSelectedTeacherIds = getSelectedTeacherIds;
-window.getTeacherModuleScopes = getTeacherModuleScopes;
 window.getYoutubeVideoId = getYoutubeVideoId;
 window.getYoutubeEmbedUrl = getYoutubeEmbedUrl;
 window.getVimeoEmbedUrl = getVimeoEmbedUrl;

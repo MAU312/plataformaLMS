@@ -36,9 +36,9 @@ window.renderAdminEditCourse = async function(params) {
                 </a>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
                 <!-- Columna izquierda: Info del curso -->
-                <div class="lg:col-span-1">
+                <div class="lg:col-span-2">
                     <form id="edit-course-form" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
                         <div>
                             <label for="title" class="block text-sm font-medium text-gray-700 mb-1">${t('contentManager.edit.title_label')}</label>
@@ -81,7 +81,7 @@ window.renderAdminEditCourse = async function(params) {
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">${t('admin.editCourse.teachers_label')}</label>
-                            <div id="teacher-checkboxes" class="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto">
+                            <div id="teacher-checkboxes" class="border border-gray-300 rounded-lg p-4 max-h-64 overflow-y-auto">
                                 <p class="text-sm text-gray-400">${t('contentManager.modules.loading_teachers')}</p>
                             </div>
                         </div>
@@ -102,7 +102,7 @@ window.renderAdminEditCourse = async function(params) {
                 </div>
 
                 <!-- Columna derecha: Gestión de contenidos -->
-                <div class="lg:col-span-2">
+                <div class="lg:col-span-3">
                     ${renderCourseContentManagerHTML(course, contents)}
                 </div>
             </div>
@@ -123,11 +123,8 @@ window.renderAdminEditCourse = async function(params) {
         // el catch de más abajo con un error que no le correspondía).
         try {
             const teachersResponse = await coursesAPI.getTeachers(course.id);
-            const assignedTeachers = teachersResponse.data?.teachers || [];
-            const assignedTeacherIds = assignedTeachers.map(t => t.id);
-            const moduleScopeByTeacherId = Object.fromEntries(assignedTeachers.map(t => [t.id, t.module_id]));
-            const modules = contents.filter(c => c.type === 'folder').map(c => ({ id: c.id, title: c.title }));
-            loadTeacherCheckboxes('teacher-checkboxes', assignedTeacherIds, modules, moduleScopeByTeacherId);
+            const assignedTeacherIds = (teachersResponse.data?.teachers || []).map(t => t.id);
+            loadTeacherCheckboxes('teacher-checkboxes', assignedTeacherIds);
         } catch (error) {
             console.error('Error loading teachers:', error);
             const container = document.getElementById('teacher-checkboxes');
@@ -170,7 +167,6 @@ async function handleUpdateCourse(courseId) {
     formData.append('is_active', is_active);
     formData.append('certificate_style', document.getElementById('certificate_style').value);
     formData.append('teacher_ids', JSON.stringify(getSelectedTeacherIds('teacher-checkboxes')));
-    formData.append('teacher_modules', JSON.stringify(getTeacherModuleScopes('teacher-checkboxes')));
     if (thumbnailFile) {
         formData.append('thumbnail', thumbnailFile);
     }

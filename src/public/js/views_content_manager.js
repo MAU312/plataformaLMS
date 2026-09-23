@@ -159,28 +159,97 @@ function renderModuleChildCourseRow(courseId, moduleId, childCourse) {
         ? `#/admin/courses/${childCourse.id}/edit`
         : `#/teacher/courses/${childCourse.id}/edit`;
     return `
-        <div class="flex items-center justify-between gap-2 bg-gray-50 rounded-lg px-3 py-2">
-            <div class="flex items-center gap-2 min-w-0">
-                <div class="w-10 h-10 rounded bg-gradient-to-br from-cenat-green to-cenat-green-light flex items-center justify-center overflow-hidden flex-shrink-0">
-                    ${childCourse.thumbnail
-                        ? `<img src="${escapeAttr(childCourse.thumbnail)}" alt="${escapeAttr(childCourse.title)}" class="w-full h-full object-cover">`
-                        : `<i class="fas fa-flask text-white text-sm"></i>`}
+        <div class="bg-gray-50 rounded-lg px-3 py-2">
+            <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                    <div class="w-10 h-10 rounded bg-gradient-to-br from-cenat-green to-cenat-green-light flex items-center justify-center overflow-hidden flex-shrink-0">
+                        ${childCourse.thumbnail
+                            ? `<img src="${escapeAttr(childCourse.thumbnail)}" alt="${escapeAttr(childCourse.title)}" class="w-full h-full object-cover">`
+                            : `<i class="fas fa-flask text-white text-sm"></i>`}
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-sm font-medium text-gray-900 truncate">${escapeHtml(childCourse.title)}</p>
+                        <p class="text-xs text-gray-400 truncate">${childCourse.teacher_names ? escapeHtml(childCourse.teacher_names) : t('contentManager.modules.no_teacher_assigned')}</p>
+                    </div>
                 </div>
-                <div class="min-w-0">
-                    <p class="text-sm font-medium text-gray-900 truncate">${escapeHtml(childCourse.title)}</p>
-                    <p class="text-xs text-gray-400 truncate">${childCourse.teacher_names ? escapeHtml(childCourse.teacher_names) : t('contentManager.modules.no_teacher_assigned')}</p>
+                <div class="flex items-center gap-1 flex-shrink-0">
+                    <button onclick="toggleModuleChildTeacherEditor(${courseId}, ${moduleId}, ${childCourse.id})" class="text-xs text-gray-400 hover:text-cenat-green px-2" title="${t('contentManager.modules.edit_teachers_title')}" aria-label="${t('contentManager.modules.edit_teachers_title')}">
+                        <i class="fas fa-user-edit"></i>
+                    </button>
+                    <a href="${manageHref}" class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200" title="${t('contentManager.modules.manage_content_title')}" aria-label="${t('contentManager.modules.manage_content_title')}">
+                        <i class="fas fa-cog"></i>
+                    </a>
+                    <button onclick="unnestModuleCourseHandler(${courseId}, ${moduleId}, ${childCourse.id})" class="text-xs text-gray-400 hover:text-red-600 px-2" title="${t('contentManager.modules.unlink_title')}" aria-label="${t('contentManager.modules.unlink_title')}">
+                        <i class="fas fa-unlink"></i>
+                    </button>
                 </div>
             </div>
-            <div class="flex items-center gap-1 flex-shrink-0">
-                <a href="${manageHref}" class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200" title="${t('contentManager.modules.manage_content_title')}" aria-label="${t('contentManager.modules.manage_content_title')}">
-                    <i class="fas fa-cog"></i>
-                </a>
-                <button onclick="unnestModuleCourseHandler(${courseId}, ${moduleId}, ${childCourse.id})" class="text-xs text-gray-400 hover:text-red-600 px-2" title="${t('contentManager.modules.unlink_title')}" aria-label="${t('contentManager.modules.unlink_title')}">
-                    <i class="fas fa-unlink"></i>
-                </button>
-            </div>
+            <div id="${scopeId('edit-module-course-teachers', childCourse.id)}" class="hidden"></div>
         </div>
     `;
+}
+
+/**
+ * Panel inline para editar los profesores de un curso hijo SIN salir de la
+ * tarjeta del módulo — antes había que entrar a editar ese curso hijo
+ * completo solo para cambiarle el profesor. Reusa las mismas piezas que ya
+ * arma/lee la lista de checkboxes de profesores en utils.js
+ * (loadTeacherCheckboxes/getSelectedTeacherIds), sin escopeo por carpeta
+ * (un curso hijo recién creado no tiene carpetas propias, y esta acción
+ * rápida no pretende cubrir ese caso).
+ */
+async function toggleModuleChildTeacherEditor(courseId, moduleId, childId) {
+    const containerId = scopeId('edit-module-course-teachers', childId);
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (!container.classList.contains('hidden')) {
+        container.classList.add('hidden');
+        container.innerHTML = '';
+        return;
+    }
+
+    container.classList.remove('hidden');
+    container.innerHTML = `<p class="text-sm text-gray-400 pt-2"><i class="fas fa-spinner fa-spin mr-1"></i> ${t('contentManager.modules.loading_teachers')}</p>`;
+
+    try {
+        const teachersResponse = await coursesAPI.getTeachers(childId);
+        const assignedTeacherIds = (teachersResponse.data?.teachers || []).map(teacher => teacher.id);
+        const teacherListId = scopeId('edit-module-course-teacher-list', childId);
+
+        container.innerHTML = `
+            <div class="bg-white border border-gray-200 rounded-lg p-3 mt-2">
+                <div id="${teacherListId}"></div>
+                <div class="flex gap-2 mt-2">
+                    <button onclick="saveModuleChildTeachers(${courseId}, ${moduleId}, ${childId})" class="text-xs bg-cenat-green text-white px-3 py-1.5 rounded-lg font-semibold">
+                        <i class="fas fa-check mr-1"></i> ${t('contentManager.save')}
+                    </button>
+                    <button onclick="toggleModuleChildTeacherEditor(${courseId}, ${moduleId}, ${childId})" class="text-xs text-gray-600 px-3 py-1.5">
+                        ${t('contentManager.cancel')}
+                    </button>
+                </div>
+            </div>
+        `;
+        await loadTeacherCheckboxes(teacherListId, assignedTeacherIds);
+    } catch (error) {
+        container.innerHTML = `<p class="text-sm text-red-500 pt-2">${t('courseForm.load_teachers_failed')}</p>`;
+    }
+}
+
+async function saveModuleChildTeachers(courseId, moduleId, childId) {
+    const teacherListId = scopeId('edit-module-course-teacher-list', childId);
+    const teacherIds = getSelectedTeacherIds(teacherListId);
+
+    const formData = new FormData();
+    formData.append('teacher_ids', JSON.stringify(teacherIds));
+
+    try {
+        await coursesAPI.update(childId, formData);
+        showToast(t('contentManager.modules.teachers_updated'), 'success');
+        contentManagerRerender();
+    } catch (error) {
+        showToast(error.message || t('contentManager.modules.teachers_update_failed'), 'error');
+    }
 }
 
 function showAddModuleForm(courseId) {
@@ -302,7 +371,7 @@ function showAddModuleCourseForm(courseId, moduleId) {
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.modules.teacher_label')}</label>
-                <div id="${teacherCheckboxesId}" class="border border-gray-300 rounded-lg p-2 max-h-40 overflow-y-auto bg-white">
+                <div id="${teacherCheckboxesId}" class="border border-gray-300 rounded-lg p-3 max-h-56 overflow-y-auto bg-white">
                     <p class="text-sm text-gray-400"><i class="fas fa-spinner fa-spin mr-1"></i> ${t('contentManager.modules.loading_teachers')}</p>
                 </div>
             </div>
