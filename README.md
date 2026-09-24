@@ -14,7 +14,7 @@
   <img alt="Express" src="https://img.shields.io/badge/Express-5-000000?logo=express&logoColor=white">
   <img alt="MySQL" src="https://img.shields.io/badge/MySQL-8-4479A1?logo=mysql&logoColor=white">
   <img alt="Tailwind CSS" src="https://img.shields.io/badge/Tailwind_CSS-3-38BDF8?logo=tailwindcss&logoColor=white">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-424%20passing-brightgreen">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-519%20passing-brightgreen">
   <img alt="Uso" src="https://img.shields.io/badge/uso-académico%20%2F%20institucional-lightgrey">
 </p>
 
@@ -54,7 +54,7 @@ Es una aplicación full-stack: backend en **Node.js/Express** con **MySQL**, y u
 - Mostrar/ocultar contraseña en los formularios de login, registro y restablecimiento
 
 **Cursos y contenido**
-- CRUD de cursos con paginación server-side (catálogo, panel admin, usuarios, estudiantes de un curso, entregas de tarea)
+- CRUD de cursos con paginación server-side y orden estable entre páginas (catálogo, panel admin, usuarios, estudiantes de un curso, entregas de tarea, cursos del profesor, hilos de un foro y respuestas cortas de un cuestionario)
 - Diez tipos de contenido: **video**, **archivo**, **imagen**, **texto**, **URL** (con vista previa embebida de YouTube/Vimeo y detección real de errores de reproducción), **tarea** (entrega única + revisión del profesor), **foro** de discusión (hasta 2 niveles de anidamiento, moderable), **carpeta** (agrupa contenido en un solo nivel), **cuestionario** y **encuesta** (opción múltiple, verdadero/falso o respuesta corta, con calificación automática o manual)
 - Editor completo de preguntas de un cuestionario/encuesta ya creado — bloqueado una vez que algún estudiante respondió, para no perder respuestas reales
 - Reordenamiento de contenido por *drag & drop*, con botones de subir/bajar como alternativa accesible por teclado
@@ -70,7 +70,12 @@ Es una aplicación full-stack: backend en **Node.js/Express** con **MySQL**, y u
 **Interfaz**
 - Modo oscuro, control de tamaño de letra
 - Identidad visual de LANBA (verde `#007031` tomado del logo real)
-- Diseño responsive
+- Diseño responsive: el texto largo sin espacios (una URL pegada, un nombre de archivo) se parte en vez de ensanchar la página, y las tablas del panel de administración scrollean dentro de su tarjeta
+
+**Rendimiento y escala**
+- Probado con datos masivos (~3.000 usuarios, ~2.000 cursos, un curso de 1.700 contenidos, 40 módulos × 10 cursos hijo y un foro de 4.462 mensajes): el catálogo responde en ~12 ms y las vistas revisadas de administrador, profesor, estudiante e invitado no desbordan la pantalla, ni siquiera a 375 px
+- El foro se pagina por hilo (20 por página), los resultados de un cuestionario cargan las respuestas cortas de a 20 por pregunta, y el detalle de un curso pide el estado de todos sus cuestionarios en una sola petición
+- Las búsquedas tratan `%` y `_` como texto literal, y un número de página absurdo devuelve una lista vacía en vez de un error
 
 ## Seguridad
 
@@ -88,6 +93,7 @@ El proyecto pasó por cuatro rondas de revisión de seguridad (36 hallazgos iden
 | Integridad transaccional | Operaciones de varios pasos (crear cuestionario, asignar profesores, desinscribir) usan transacciones de MySQL — todo o nada ante un fallo a mitad de camino |
 | Inyección | Sin XSS almacenado (escapado consistente en atributos HTML y en el HTML de los correos salientes) ni SQL (parámetros preparados en todas las consultas); los CSV exportados escapan valores que empiezan con `=`/`+`/`-`/`@` para evitar inyección de fórmulas |
 | Manejo de errores | En producción, los errores 500 no filtran detalles internos (rutas, mensajes de MySQL, *stack traces*); manejo a nivel de proceso y apagado ordenado ante señales de terminación |
+| Validación de largos | El largo de los campos de texto (títulos, nombres, correos, URL, descripciones, mensajes, textos de preguntas y opciones) se valida en el backend contra los límites reales de las columnas y responde 400 indicando el campo, en vez de un 500 genérico; si la petición traía un archivo subido, se borra. Los errores de los *body parsers* (JSON demasiado grande o mal formado) salen traducidos y sin detalles internos |
 | Dependencias | `npm audit` limpio |
 
 ## Stack tecnológico
@@ -110,10 +116,10 @@ lms-cenat/
 │   ├── app.js                  # Punto de entrada de Express (Helmet/CSP, sesión, health check, apagado ordenado)
 │   ├── config/                 # Conexión a MySQL, configuración de correo
 │   ├── controllers/            # auth, course, content, quiz, forum, submission, user
-│   ├── middlewares/            # Auth (incl. requireCourseManager), rate limiting, validación de archivos, uploads
+│   ├── middlewares/            # Auth (incl. requireCourseManager), rate limiting, validación de archivos y de largos de campos, errores de body parser, uploads
 │   ├── models/                 # Content, ContentQuestion, ContentAnswer, Course, ForumPost, TaskSubmission, User
 │   ├── routes/                 # Un archivo de rutas por dominio (auth, courses, contents, users, submissions, forum-posts)
-│   ├── utils/                  # Generación de certificados PDF
+│   ├── utils/                  # Certificados PDF, paginación, escape de búsquedas LIKE, CSV, i18n, validadores
 │   └── public/                 # Frontend (servido como estático)
 │       ├── index.html          # Shell de la SPA
 │       ├── css/                # Estilos personalizados
@@ -186,13 +192,13 @@ Definidas en `.env` (ver [`.env.example`](.env.example)):
 
 ## Pruebas automatizadas
 
-424 pruebas con el test runner nativo de Node (`node --test`), que mockean modelos y el pool de MySQL — **no requieren una base de datos real corriendo**:
+519 pruebas con el test runner nativo de Node (`node --test`), que mockean modelos y el pool de MySQL — **no requieren una base de datos real corriendo**:
 
 ```bash
 npm test
 ```
 
-Cubren todos los controladores (auth, cursos, contenidos, quiz, foro, entregas, usuarios), middleware de validación de archivos, y todos los modelos (cálculo de progreso, reordenamiento, preguntas/respuestas de cuestionarios, entregas de tareas).
+Cubren todos los controladores (auth, cursos, contenidos, quiz, foro, entregas, usuarios), middleware de validación de archivos, de largos de campos y de errores de *body parser*, los helpers de paginación y de escape de búsquedas, la geometría de los certificados PDF (que ningún texto se pise, aun con nombres y títulos de largo máximo) y todos los modelos (cálculo de progreso, reordenamiento, preguntas/respuestas de cuestionarios, entregas de tareas, orden estable de los listados paginados).
 
 ## API
 
@@ -216,9 +222,9 @@ Todos los endpoints cuelgan de `/api`. Los que requieren sesión están marcados
 |---|---|---|
 | GET | `/` | Catálogo de cursos (paginado) |
 | GET | `/enrolled` 🔒 | Cursos en los que estoy inscrito |
-| GET | `/teaching` 🔒 | Cursos donde estoy asignado como profesor |
+| GET | `/teaching` 🔒 | Cursos donde estoy asignado como profesor (paginado) |
 | GET | `/stats/summary` 🔒👑 | Estadísticas globales |
-| GET | `/:id` | Detalle de un curso |
+| GET | `/:id` | Detalle de un curso (con sus contenidos y, con sesión, el progreso propio) |
 | POST | `/` 🔒👑 | Crear curso |
 | PUT | `/:id` 🔒👑 | Editar curso |
 | DELETE | `/:id` 🔒👑 | Eliminar curso |
@@ -233,6 +239,7 @@ Todos los endpoints cuelgan de `/api`. Los que requieren sesión están marcados
 | Método | Ruta | Descripción |
 |---|---|---|
 | GET | `/course/:courseId` | Contenidos de un curso |
+| GET | `/course/:courseId/quiz-status` 🔒 | Estado del usuario en todos los cuestionarios/encuestas del curso (respondido, puntaje, pendientes) en una sola petición |
 | PUT | `/course/:courseId/reorder` 🔒👑 | Reordenar contenidos (*drag & drop* o botones) |
 | POST | `/video`, `/file`, `/image`, `/text`, `/url`, `/task`, `/forum`, `/folder`, `/quiz`, `/survey` 🔒👑 | Crear contenido de cada tipo |
 | GET | `/:id` | Detalle de un contenido |
@@ -242,10 +249,11 @@ Todos los endpoints cuelgan de `/api`. Los que requieren sesión están marcados
 | POST | `/:id/submit` 🔒 | Entregar una tarea |
 | GET | `/:id/submission` 🔒 | Mi entrega de una tarea |
 | GET | `/:id/submissions` 🔒👑 | Entregas de una tarea (paginado) |
-| GET / POST | `/:id/forum` 🔒 | Ver / responder el hilo de un foro |
+| GET / POST | `/:id/forum` 🔒 | Ver (paginado por hilo: `?page`, `?limit`, `?page=last`) / responder el hilo de un foro |
 | GET | `/:id/questions` 🔒 | Preguntas de un cuestionario/encuesta para responder |
 | POST | `/:id/answers` 🔒 | Enviar respuestas (un intento) |
-| GET | `/:id/results` 🔒👑 | Resultados de un cuestionario/encuesta |
+| GET | `/:id/results` 🔒👑 | Resultados de un cuestionario/encuesta (las respuestas cortas vienen de a 20 por pregunta) |
+| GET | `/:id/questions/:questionId/answers` 🔒👑 | Siguiente página de respuestas de una pregunta de respuesta corta |
 | GET | `/:id/questions/manage` 🔒👑 | Preguntas completas para editar |
 | PUT | `/:id/questions` 🔒👑 | Reemplazar preguntas (bloqueado si ya hay respuestas) |
 | PUT | `/answers/:answerId/grade` 🔒👑 | Calificar manualmente una respuesta corta |
