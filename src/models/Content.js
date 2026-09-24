@@ -1,6 +1,22 @@
 import pool from '../config/db.js';
 import Course from './Course.js';
 
+/**
+ * Nombre del profesor escopeado a una carpeta ("módulo"-carpeta, ver
+ * course_teachers.module_id), o NULL si la carpeta no tiene uno. Se usa como
+ * subquery correlacionado en las dos consultas de contenidos por curso.
+ *
+ * El `AND ct.module_id IS NOT NULL` parece redundante (`module_id = co.id`
+ * nunca es verdadero para un NULL) pero NO lo es para el optimizador: sin
+ * él, MySQL descartaba el índice idx_module (casi todas las filas de
+ * course_teachers tienen module_id NULL, así que estima que el índice no
+ * filtra) y recorría course_teachers COMPLETA por cada contenido — medido
+ * con un curso de 1.697 contenidos y 4.119 filas en course_teachers: 1,7 s
+ * por consulta (y bajo carga concurrente frenaba a toda la app) contra
+ * 0,025 s con la condición. No quitarla.
+ */
+const MODULE_TEACHER_NAME_SUBQUERY = `(SELECT u.name FROM course_teachers ct INNER JOIN users u ON u.id = ct.user_id WHERE ct.module_id = co.id AND ct.module_id IS NOT NULL LIMIT 1)`;
+
 class Content {
   /**
    * "Redacta" un contenido para un usuario sin acceso (ver
@@ -39,7 +55,7 @@ class Content {
     const [rows] = await pool.query(
       `SELECT co.*,
               (SELECT COUNT(*) FROM content_questions cq WHERE cq.content_id = co.id) AS question_count,
-              (SELECT u.name FROM course_teachers ct INNER JOIN users u ON u.id = ct.user_id WHERE ct.module_id = co.id LIMIT 1) AS module_teacher_name
+              ${MODULE_TEACHER_NAME_SUBQUERY} AS module_teacher_name
        FROM contents co WHERE co.course_id = ? ORDER BY co.order_index ASC`,
       [courseId]
     );
@@ -62,7 +78,7 @@ class Content {
         ts.feedback as submission_feedback, ts.reviewed_at as submission_reviewed_at,
         ts.score_earned as submission_score_earned,
         (SELECT COUNT(*) FROM content_questions cq WHERE cq.content_id = co.id) AS question_count,
-        (SELECT u.name FROM course_teachers ct INNER JOIN users u ON u.id = ct.user_id WHERE ct.module_id = co.id LIMIT 1) AS module_teacher_name
+        ${MODULE_TEACHER_NAME_SUBQUERY} AS module_teacher_name
        FROM contents co
        LEFT JOIN content_progress cp ON cp.content_id = co.id AND cp.user_id = ?
        LEFT JOIN task_submissions ts ON ts.content_id = co.id AND ts.user_id = ?

@@ -4,6 +4,13 @@ class User {
   /**
    * Lista paginada de usuarios, con búsqueda opcional por nombre/email.
    * Devuelve también el total que cumple el filtro (sin paginar).
+   *
+   * `id DESC` como desempate del ORDER BY es imprescindible, no cosmético:
+   * `created_at` tiene precisión de segundos y un import CSV crea decenas
+   * de usuarios en el mismo segundo. Sin un orden total, MySQL no garantiza
+   * el mismo orden entre dos páginas (LIMIT/OFFSET) para filas empatadas —
+   * medido con 250 usuarios empatados entre 2.969: 77 aparecían en dos
+   * páginas y 77 no aparecían en ninguna.
    */
   static async findAll({ page = 1, limit = 10, search = '' } = {}) {
     const offset = (page - 1) * limit;
@@ -11,7 +18,7 @@ class User {
     const searchParams = search ? [`%${search}%`, `%${search}%`] : [];
 
     const [rows] = await pool.query(
-      `SELECT id, name, username, email, role, admin_access, is_active, created_at, last_login FROM users ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      `SELECT id, name, username, email, role, admin_access, is_active, created_at, last_login FROM users ${where} ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`,
       [...searchParams, limit, offset]
     );
 
@@ -145,7 +152,7 @@ class User {
        FROM courses c
        INNER JOIN enrollments e ON c.id = e.course_id
        WHERE e.user_id = ?
-       ORDER BY e.enrolled_at DESC
+       ORDER BY e.enrolled_at DESC, e.id DESC
        LIMIT ? OFFSET ?`,
       [userId, limit, offset]
     );

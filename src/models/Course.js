@@ -11,6 +11,10 @@ class Course {
    * top-level de cursos hijo de un módulo, para la tabla separada de
    * "Módulos" en el panel admin: 'top' → solo padres, 'children' → solo
    * hijos, undefined → sin filtrar (comportamiento de siempre).
+   *
+   * El ORDER BY lleva `c.id DESC` de desempate por la misma razón que
+   * User.findAll: filas con el mismo `created_at` necesitan un orden total
+   * estable, o LIMIT/OFFSET puede repetir/omitir filas entre páginas.
    */
   static async _findPaginated({ page, limit, search, activeOnly, scope }) {
     const offset = (page - 1) * limit;
@@ -45,7 +49,7 @@ class Course {
        LEFT JOIN course_modules cm ON cm.id = c.parent_module_id
        LEFT JOIN courses pc ON pc.id = cm.course_id
        ${where}
-       ORDER BY c.created_at DESC
+       ORDER BY c.created_at DESC, c.id DESC
        LIMIT ? OFFSET ?`,
       [...searchParams, limit, offset]
     );
@@ -160,11 +164,34 @@ class Course {
   }
 
   /**
-   * Eliminar curso
+   * Eliminar curso. `contents.folder_id` es una FK a sí misma SIN ON DELETE
+   * (a propósito: borrar una carpeta suelta no debe arrastrar su contenido
+   * en silencio), así que el DELETE del curso — que arrastra sus contenidos
+   * en cascada por course_id — fallaba con ER_ROW_IS_REFERENCED_2 apenas el
+   * curso tenía una carpeta con algo adentro (el borrado en cascada puede
+   * intentar quitar la carpeta antes que sus hijos). Se borran primero los
+   * contenidos que están DENTRO de una carpeta y luego el curso, en una
+   * misma transacción para que un fallo no deje el curso sin la mitad de
+   * su contenido. Las carpetas son de un solo nivel (ver
+   * Content.create/folder_id), por eso una pasada basta.
    */
   static async delete(id) {
-    const [result] = await pool.query('DELETE FROM courses WHERE id = ?', [id]);
-    return result.affectedRows > 0;
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      await connection.query(
+        'DELETE FROM contents WHERE course_id = ? AND folder_id IS NOT NULL',
+        [id]
+      );
+      const [result] = await connection.query('DELETE FROM courses WHERE id = ?', [id]);
+      await connection.commit();
+      return result.affectedRows > 0;
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   }
 
   /**
@@ -392,7 +419,7 @@ class Course {
        FROM enrollments e
        INNER JOIN users u ON u.id = e.user_id
        WHERE e.course_id = ?
-       ORDER BY e.progress DESC, u.name ASC
+       ORDER BY e.progress DESC, u.name ASC, u.id ASC
        LIMIT ? OFFSET ?`,
       [rootId, limit, offset]
     );

@@ -71,7 +71,7 @@ class TaskSubmission {
        FROM task_submissions ts
        INNER JOIN users u ON u.id = ts.user_id
        WHERE ts.content_id = ?
-       ORDER BY ts.submitted_at ASC
+       ORDER BY ts.submitted_at ASC, ts.id ASC
        LIMIT ? OFFSET ?`,
       [contentId, limit, offset]
     );
