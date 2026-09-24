@@ -8,6 +8,16 @@
 
 let currentQuizContentId = null;
 
+// Vista de resultados: /results manda solo las primeras respuestas de cada
+// pregunta de respuesta corta (ver RESULTS_INLINE_SHORT_ANSWERS en
+// quiz.controller.js); "Mostrar más" pide las siguientes de a
+// SHORT_ANSWERS_PAGE_SIZE. `resultAnswersById` guarda los datos de cada fila
+// dibujada para poder actualizar UNA fila al calificarla sin repintar toda la
+// página (repintar perdía lo que el profesor ya había expandido).
+const SHORT_ANSWERS_PAGE_SIZE = 20;
+const resultAnswersById = new Map();
+let currentResultsIsQuiz = true;
+
 window.renderTakeQuiz = async function(params) {
     const app = document.getElementById('app');
     showLoading();
@@ -167,6 +177,8 @@ window.renderQuizResults = async function(params) {
         const content = contentResponse.data;
         const { type, total_respondents, questions } = resultsResponse.data;
         const isQuiz = type === 'quiz';
+        currentResultsIsQuiz = isQuiz;
+        resultAnswersById.clear();
 
         app.innerHTML = `
             <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -211,9 +223,14 @@ function renderResultQuestion(q, index, isQuiz) {
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
                 <p class="font-medium text-gray-900 mb-3">${index + 1}. ${escapeHtml(q.question_text)} ${isQuiz ? `<span class="text-xs font-normal text-gray-400">(${t(q.points === 1 ? 'quiz.point_singular' : 'quiz.point_plural', { count: q.points })})</span>` : ''}</p>
                 ${q.answers.length > 0 ? `
-                    <div class="space-y-2">
-                        ${q.answers.map((a) => renderShortAnswerRow(a, isQuiz)).join('')}
+                    <div id="short-answers-${q.question_id}" class="space-y-2" data-loaded="${q.answers.length}" data-total="${q.answers_total}">
+                        ${q.answers.map((a) => { resultAnswersById.set(a.answer_id, a); return renderShortAnswerRow(a, isQuiz); }).join('')}
                     </div>
+                    ${q.answers_total > q.answers.length ? `
+                        <button onclick="showMoreShortAnswers(${q.question_id}, this)" class="mt-3 text-sm text-cenat-green hover:underline font-medium">
+                            <i class="fas fa-chevron-down mr-1"></i> ${t('quiz.show_more_answers', { remaining: q.answers_total - q.answers.length })}
+                        </button>
+                    ` : ''}
                 ` : `<p class="text-sm text-gray-400">${t('quiz.no_answers_yet')}</p>`}
             </div>
         `;
@@ -255,7 +272,7 @@ function renderShortAnswerRow(a, isQuiz) {
     const statusLabel = a.is_correct == null ? t('quiz.status_pending') : (a.is_correct == 1 ? t('quiz.status_correct') : t('quiz.status_incorrect'));
     const statusClass = a.is_correct == null ? 'text-gray-400' : (a.is_correct == 1 ? 'text-green-600' : 'text-red-600');
     return `
-        <div class="border border-gray-100 rounded-lg p-3">
+        <div class="border border-gray-100 rounded-lg p-3" data-answer-id="${a.answer_id}">
             <div class="flex items-center justify-between gap-2 flex-wrap">
                 <p class="text-sm font-medium text-gray-700">${escapeHtml(a.student_name)}</p>
                 ${isQuiz ? `<span class="text-xs font-semibold ${statusClass}">${statusLabel}</span>` : ''}
@@ -285,7 +302,19 @@ async function gradeAnswerHandler(answerId, isCorrect, btn) {
     try {
         await contentsAPI.gradeAnswer(answerId, { is_correct: isCorrect });
         showToast(t('quiz.grade_success'), 'success');
-        renderQuizResults({ id: currentQuizContentId });
+
+        // Se actualiza SOLO esta fila. Repintar toda la vista (lo que se hacía
+        // antes) volvía a pedir y dibujar todos los resultados por cada clic
+        // — y descartaba las respuestas que el profesor ya había expandido
+        // con "Mostrar más".
+        const answer = resultAnswersById.get(answerId);
+        const row = document.querySelector(`[data-answer-id="${answerId}"]`);
+        if (answer && row) {
+            answer.is_correct = isCorrect ? 1 : 0;
+            row.outerHTML = renderShortAnswerRow(answer, currentResultsIsQuiz);
+        } else {
+            renderQuizResults({ id: currentQuizContentId });
+        }
     } catch (error) {
         showToast(error.message || t('quiz.grade_failed'), 'error');
         buttons.forEach(b => { b.disabled = false; });
@@ -293,3 +322,40 @@ async function gradeAnswerHandler(answerId, isCorrect, btn) {
 }
 
 window.gradeAnswerHandler = gradeAnswerHandler;
+
+/**
+ * "Mostrar más" de una pregunta de respuesta corta: pide la siguiente página
+ * de respuestas y las agrega al final de la lista, sin tocar el resto de la
+ * vista.
+ */
+async function showMoreShortAnswers(questionId, btn) {
+    const list = document.getElementById(`short-answers-${questionId}`);
+    if (!list) return;
+
+    const loaded = Number(list.dataset.loaded);
+    const total = Number(list.dataset.total);
+    btn.disabled = true;
+
+    try {
+        const page = Math.floor(loaded / SHORT_ANSWERS_PAGE_SIZE) + 1;
+        const response = await contentsAPI.getShortAnswers(currentQuizContentId, questionId, { page, limit: SHORT_ANSWERS_PAGE_SIZE });
+        const answers = response.data.answers || [];
+
+        answers.forEach((a) => resultAnswersById.set(a.answer_id, a));
+        list.insertAdjacentHTML('beforeend', answers.map((a) => renderShortAnswerRow(a, currentResultsIsQuiz)).join(''));
+
+        const nowLoaded = loaded + answers.length;
+        list.dataset.loaded = String(nowLoaded);
+        if (answers.length > 0 && nowLoaded < total) {
+            btn.innerHTML = `<i class="fas fa-chevron-down mr-1"></i> ${t('quiz.show_more_answers', { remaining: total - nowLoaded })}`;
+            btn.disabled = false;
+        } else {
+            btn.remove();
+        }
+    } catch (error) {
+        showToast(error.message || t('quiz.results_load_failed'), 'error');
+        btn.disabled = false;
+    }
+}
+
+window.showMoreShortAnswers = showMoreShortAnswers;

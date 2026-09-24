@@ -164,7 +164,7 @@ function renderModuleChildCourseRow(courseId, moduleId, childCourse) {
                 <div class="flex items-center gap-2 min-w-0">
                     <div class="w-10 h-10 rounded bg-gradient-to-br from-cenat-green to-cenat-green-light flex items-center justify-center overflow-hidden flex-shrink-0">
                         ${childCourse.thumbnail
-                            ? `<img src="${escapeAttr(childCourse.thumbnail)}" alt="${escapeAttr(childCourse.title)}" class="w-full h-full object-cover">`
+                            ? `<img src="${escapeAttr(childCourse.thumbnail)}" alt="${escapeAttr(childCourse.title)}" class="w-full h-full object-cover" loading="lazy" decoding="async">`
                             : `<i class="fas fa-flask text-white text-sm"></i>`}
                     </div>
                     <div class="min-w-0">
@@ -260,7 +260,7 @@ function showAddModuleForm(courseId) {
         <form id="add-module-form" class="bg-green-50 rounded-lg p-4 mb-4 space-y-3">
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.modules.name_label')}</label>
-                <input type="text" id="module-title" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="${t('contentManager.modules.name_placeholder')}">
+                <input type="text" id="module-title" required maxlength="150" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="${t('contentManager.modules.name_placeholder')}">
             </div>
             <div class="flex gap-2">
                 <button type="submit" id="submit-module-btn" class="bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
@@ -351,7 +351,7 @@ function showAddModuleCourseForm(courseId, moduleId) {
         <form id="add-module-course-form-${moduleId}" class="bg-green-50 rounded-lg p-4 mb-3 space-y-3">
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.modules.course_title_label')}</label>
-                <input type="text" id="module-course-title-${moduleId}" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="${t('contentManager.modules.course_title_placeholder')}">
+                <input type="text" id="module-course-title-${moduleId}" required maxlength="150" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="${t('contentManager.modules.course_title_placeholder')}">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.modules.description_label')}</label>
@@ -779,7 +779,7 @@ function renderContentItem(content, type) {
     return `
         <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition">
             ${type === 'image'
-                ? `<img src="${escapeAttr(content.url)}" alt="" class="w-10 h-10 rounded object-cover flex-shrink-0">`
+                ? `<img src="${escapeAttr(content.url)}" alt="" class="w-10 h-10 rounded object-cover flex-shrink-0" loading="lazy" decoding="async">`
                 : `<i class="fas ${icon} text-xl text-cenat-green"></i>`
             }
             <div class="flex-1 min-w-0">
@@ -899,7 +899,7 @@ function showAddFolderForm(courseId) {
         <form id="add-folder-form" class="bg-green-50 rounded-lg p-4 mb-4 space-y-3">
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.folders.name_label')}</label>
-                <input type="text" id="folder-title" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="${t('contentManager.folders.name_placeholder')}">
+                <input type="text" id="folder-title" required maxlength="150" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="${t('contentManager.folders.name_placeholder')}">
             </div>
             <div class="flex gap-2">
                 <button type="submit" id="submit-folder-btn" class="bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
@@ -951,7 +951,7 @@ function showAddFileBasedContentForm(courseId, folderId, { type, ns, fieldName, 
         <form class="add-${type}-form bg-green-50 rounded-lg p-4 mb-4 space-y-3">
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">${t(`contentManager.${ns}.title_label`)}</label>
-                <input type="text" class="${type}-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="${t(`contentManager.${ns}.title_placeholder`)}">
+                <input type="text" maxlength="150" class="${type}-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="${t(`contentManager.${ns}.title_placeholder`)}">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">${t(`contentManager.${ns}.description_label`)}</label>
@@ -1090,7 +1090,7 @@ function showAddSimpleTextForm(courseId, folderId, { type, ns, rows, contentLabe
         <form class="add-${type}-form bg-green-50 rounded-lg p-4 mb-4 space-y-3">
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">${t(`contentManager.${ns}.title_label`)}</label>
-                <input type="text" class="${type}-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="${t(`contentManager.${ns}.title_placeholder`)}">
+                <input type="text" maxlength="150" class="${type}-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="${t(`contentManager.${ns}.title_placeholder`)}">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">${t(contentLabelKey)}</label>
@@ -1152,7 +1152,7 @@ function showAddUrlForm(courseId, folderId) {
         <form class="add-url-form bg-green-50 rounded-lg p-4 mb-4 space-y-3">
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.url.title_label')}</label>
-                <input type="text" class="url-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="${t('contentManager.url.title_placeholder')}">
+                <input type="text" maxlength="150" class="url-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="${t('contentManager.url.title_placeholder')}">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.url.description_label')}</label>
@@ -1160,7 +1160,7 @@ function showAddUrlForm(courseId, folderId) {
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.url.url_label')}</label>
-                <input type="url" class="url-value w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="${t('contentManager.url.url_placeholder')}">
+                <input type="url" maxlength="500" class="url-value w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="${t('contentManager.url.url_placeholder')}">
                 <p class="text-xs text-gray-500 mt-1">${t('contentManager.url.url_hint')}</p>
             </div>
             <div class="url-preview-container"></div>
@@ -1263,7 +1263,7 @@ function showAddTaskForm(courseId, folderId) {
         <form class="add-task-form bg-green-50 rounded-lg p-4 mb-4 space-y-3">
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.task.title_label')}</label>
-                <input type="text" class="task-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="${t('contentManager.task.title_placeholder')}">
+                <input type="text" maxlength="150" class="task-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="${t('contentManager.task.title_placeholder')}">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.task.instructions_label')}</label>
@@ -1461,7 +1461,7 @@ function renderQuestionForm(container, {
         <form class="question-content-form bg-green-50 rounded-lg p-4 mb-4 space-y-3">
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">${t(isQuiz ? 'contentManager.quiz.title_label_quiz' : 'contentManager.quiz.title_label_survey')}</label>
-                <input type="text" class="quiz-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="${t(isQuiz ? 'contentManager.quiz.title_placeholder_quiz' : 'contentManager.quiz.title_placeholder_survey')}" value="${escapeAttr(initialTitle)}">
+                <input type="text" maxlength="150" class="quiz-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required placeholder="${t(isQuiz ? 'contentManager.quiz.title_placeholder_quiz' : 'contentManager.quiz.title_placeholder_survey')}" value="${escapeAttr(initialTitle)}">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.quiz.description_label')}</label>
@@ -1736,7 +1736,7 @@ function renderEditForm(content, respondentCount = 0) {
     const titleField = `
         <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.edit.title_label')}</label>
-            <input type="text" class="edit-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required value="${escapeAttr(content.title)}">
+            <input type="text" maxlength="150" class="edit-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required value="${escapeAttr(content.title)}">
         </div>
     `;
 
@@ -1786,7 +1786,7 @@ function renderEditForm(content, respondentCount = 0) {
             body = descriptionField(t('contentManager.edit.description_label'))
                 + `<div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">${t('contentManager.edit.url_label')}</label>
-                    <input type="url" class="edit-url w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required value="${escapeAttr(content.url || '')}">
+                    <input type="url" maxlength="500" class="edit-url w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" required value="${escapeAttr(content.url || '')}">
                 </div>`;
             break;
         case 'quiz':

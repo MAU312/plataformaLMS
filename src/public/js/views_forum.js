@@ -2,23 +2,32 @@
  * Views - Hilo de un tema de foro (post principal + respuestas de 2 niveles)
  */
 
+// Respuestas de nivel 1 por página (cada una con todas las suyas de nivel 2) —
+// mismo valor que FORUM_THREADS_PER_PAGE en forum.controller.js. Un foro con
+// miles de respuestas se traía y dibujaba completo (41.000 nodos DOM en la
+// prueba de carga); ahora se pagina como el resto de los listados.
+const FORUM_THREADS_PER_PAGE = 20;
+
 let currentForumTopicId = null;
+let currentForumPage = 1;
+const forumPageRequestGuard = createStaleResponseGuard();
 
 window.renderForumThread = async function(params) {
     const app = document.getElementById('app');
     showLoading();
     currentForumTopicId = params.id;
+    currentForumPage = 1;
     // Mismo guard que views_course_detail.js: si se navega rápido a otro
     // foro/página antes de que termine este fetch, no debe pisar la vista
     // a la que el usuario ya navegó.
     const myNavToken = getNavToken();
 
     try {
-        const response = await contentsAPI.getForumThread(params.id);
+        const response = await contentsAPI.getForumThread(params.id, { page: 1, limit: FORUM_THREADS_PER_PAGE });
         if (myNavToken !== getNavToken()) return;
 
-        const { topic, posts } = response.data;
-        renderForumPage(topic, posts);
+        renderForumPage(response.data.topic);
+        updateForumPosts(response.data, response.pagination);
     } catch (error) {
         console.error('Error loading forum:', error);
         app.innerHTML = `
@@ -33,10 +42,15 @@ window.renderForumThread = async function(params) {
     }
 };
 
-function renderForumPage(topic, posts) {
+/**
+ * Arma el cascarón de la página (tema + formulario de respuesta + los
+ * contenedores vacíos de encabezado/lista/paginación). Las respuestas en sí
+ * las dibuja updateForumPosts — así cambiar de página, o publicar/editar/
+ * borrar una respuesta, solo repinta la lista y no todo el hilo (con su
+ * formulario y lo que el usuario haya escrito en él).
+ */
+function renderForumPage(topic) {
     const app = document.getElementById('app');
-    const currentUser = getCurrentUser();
-    const totalReplies = posts.reduce((sum, post) => sum + 1 + (post.replies ? post.replies.length : 0), 0);
 
     app.innerHTML = `
         <div class="bg-white border-b">
@@ -71,17 +85,10 @@ function renderForumPage(topic, posts) {
             </div>
 
             <!-- Respuestas -->
-            <h2 class="text-lg font-bold text-gray-900 mb-4">
-                ${t(totalReplies === 1 ? 'forum.reply_singular' : 'forum.reply_plural', { count: totalReplies })}
-            </h2>
-            <div id="forum-posts-list" class="space-y-4">
-                ${posts.length > 0 ? posts.map(post => renderTopLevelPost(post, currentUser)).join('') : `
-                    <div class="empty-state bg-white rounded-xl border border-gray-100">
-                        <i class="fas fa-comment-slash"></i>
-                        <p class="text-gray-600">${t('forum.empty_replies')}</p>
-                    </div>
-                `}
-            </div>
+            <h2 id="forum-replies-heading" class="text-lg font-bold text-gray-900 mb-4"></h2>
+            <div id="forum-pagination-top" class="mb-4"></div>
+            <div id="forum-posts-list" class="space-y-4"></div>
+            <div id="forum-pagination-bottom" class="mt-4"></div>
         </div>
     `;
 
@@ -91,8 +98,68 @@ function renderForumPage(topic, posts) {
         await submitForumReply(topic.id, null, textarea.value, e.target.querySelector('button[type="submit"]'));
     });
 
-    setupForumPostListeners(topic, currentUser);
+    setupForumPostListeners();
 }
+
+/**
+ * Dibuja (o redibuja) SOLO la lista de respuestas, el encabezado con el
+ * total y los controles de paginación (arriba y abajo de la lista).
+ * `data` es lo que devuelve GET /contents/:id/forum: `{ topic, posts,
+ * total_posts }`; `pagination` viene aparte en la respuesta.
+ */
+function updateForumPosts(data, pagination) {
+    const { posts, total_posts: totalPosts } = data;
+    const currentUser = getCurrentUser();
+    currentForumPage = pagination.page;
+
+    document.getElementById('forum-replies-heading').textContent =
+        t(totalPosts === 1 ? 'forum.reply_singular' : 'forum.reply_plural', { count: totalPosts });
+
+    document.getElementById('forum-posts-list').innerHTML = posts.length > 0
+        ? posts.map(post => renderTopLevelPost(post, currentUser)).join('')
+        : `
+            <div class="empty-state bg-white rounded-xl border border-gray-100">
+                <i class="fas fa-comment-slash"></i>
+                <p class="text-gray-600">${t('forum.empty_replies')}</p>
+            </div>
+        `;
+
+    const paginationHtml = posts.length > 0
+        ? renderPagination(pagination.page, pagination.totalPages, pagination.total, FORUM_THREADS_PER_PAGE, 'goToForumPage')
+        : '';
+    document.getElementById('forum-pagination-top').innerHTML = paginationHtml;
+    document.getElementById('forum-pagination-bottom').innerHTML = paginationHtml;
+}
+
+/**
+ * Trae y dibuja una página de respuestas. `page` puede ser un número o
+ * 'last' (donde queda una respuesta recién publicada). Si la página pedida
+ * quedó vacía (se borró la única respuesta de la última página), retrocede
+ * a la última que sí tiene.
+ */
+async function loadForumPosts(page, { scroll = true } = {}) {
+    if (!document.getElementById('forum-posts-list')) return;
+
+    const isStale = forumPageRequestGuard.start();
+    try {
+        const response = await contentsAPI.getForumThread(currentForumTopicId, { page, limit: FORUM_THREADS_PER_PAGE });
+        if (isStale()) return;
+
+        if (response.data.posts.length === 0 && response.pagination.page > 1) {
+            return loadForumPosts('last', { scroll });
+        }
+
+        updateForumPosts(response.data, response.pagination);
+        if (scroll) scrollToElement('forum-replies-heading');
+    } catch (error) {
+        if (isStale()) return;
+        showToast(error.message || t('forum.load_failed_fallback'), 'error');
+    }
+}
+
+window.goToForumPage = function(page) {
+    loadForumPosts(page);
+};
 
 function renderTopLevelPost(post, currentUser) {
     return `
@@ -203,7 +270,7 @@ function toggleEditForm(postId) {
             submitBtn.disabled = true;
             await forumPostsAPI.update(postId, { body: textarea.value.trim() });
             showToast(t('forum.reply_updated'), 'success');
-            renderForumThread({ id: currentForumTopicId });
+            await loadForumPosts(currentForumPage, { scroll: false });
         } catch (error) {
             showToast(error.message || t('forum.edit_failed'), 'error');
             submitBtn.disabled = false;
@@ -222,7 +289,18 @@ async function submitForumReply(topicId, parentId, body, submitBtn) {
         if (submitBtn) submitBtn.disabled = true;
         const response = await contentsAPI.postForumReply(topicId, { body: trimmed, parent_id: parentId || undefined });
         showToast(t('forum.reply_published'), 'success');
-        renderForumThread({ id: topicId });
+        if (parentId) {
+            // Una respuesta a otra cuelga del mismo hilo (nivel 2): queda en
+            // la página que ya se está viendo.
+            await loadForumPosts(currentForumPage, { scroll: false });
+        } else {
+            // Una respuesta directa al tema es la más reciente: por orden
+            // cronológico queda al final, en la última página.
+            const topicTextarea = document.getElementById('reply-to-topic-body');
+            if (topicTextarea) topicTextarea.value = '';
+            if (submitBtn) submitBtn.disabled = false;
+            await loadForumPosts('last');
+        }
 
         // Igual que al tildar un checkbox, entregar una tarea, o responder
         // un quiz/encuesta (ver views_course_detail.js/views_quiz.js): si
@@ -247,7 +325,7 @@ async function deleteForumPost(postId) {
     try {
         await forumPostsAPI.delete(postId);
         showToast(t('forum.reply_deleted'), 'success');
-        renderForumThread({ id: currentForumTopicId });
+        await loadForumPosts(currentForumPage, { scroll: false });
     } catch (error) {
         showToast(error.message || t('forum.delete_failed'), 'error');
     }

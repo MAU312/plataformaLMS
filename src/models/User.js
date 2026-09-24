@@ -1,4 +1,5 @@
 import pool from '../config/db.js';
+import { escapeLike } from '../utils/sql.js';
 
 class User {
   /**
@@ -15,7 +16,8 @@ class User {
   static async findAll({ page = 1, limit = 10, search = '' } = {}) {
     const offset = (page - 1) * limit;
     const where = search ? 'WHERE name LIKE ? OR email LIKE ?' : '';
-    const searchParams = search ? [`%${search}%`, `%${search}%`] : [];
+    const pattern = `%${escapeLike(search)}%`;
+    const searchParams = search ? [pattern, pattern] : [];
 
     const [rows] = await pool.query(
       `SELECT id, name, username, email, role, admin_access, is_active, created_at, last_login FROM users ${where} ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`,

@@ -11,6 +11,7 @@ import { isAuthenticated, requireCourseManager } from '../middlewares/auth.middl
 import { uploadVideo, uploadFile, uploadSubmission, uploadContentImage } from '../middlewares/upload.middleware.js';
 import { verifyFileSignature } from '../middlewares/fileSignature.middleware.js';
 import { submitTaskLimiter, forumPostLimiter, contentCreateLimiter } from '../middlewares/rateLimit.middleware.js';
+import { validateFieldLengths } from '../middlewares/validateFieldLengths.middleware.js';
 import { t } from '../utils/i18n.js';
 
 const router = express.Router();
@@ -74,12 +75,20 @@ async function folderIdFromAnswerParam(req) {
 const courseManagerFromBody = [
   isAuthenticated,
   contentCreateLimiter,
-  requireCourseManager((req) => req.body.course_id, (req) => req.body.folder_id || null)
+  requireCourseManager((req) => req.body.course_id, (req) => req.body.folder_id || null),
+  validateFieldLengths('title', 'description', 'url')
 ];
 
 // ==============================================
 // RUTAS ESPECÍFICAS PRIMERO (antes de /:id)
 // ==============================================
+
+/**
+ * GET /api/contents/course/:courseId/quiz-status
+ * Estado del usuario en todos los quizzes/encuestas del curso (una sola
+ * petición en vez de una por quiz). Ver quiz.controller.js.
+ */
+router.get('/course/:courseId/quiz-status', isAuthenticated, quizController.getQuizStatusByCourse);
 
 /**
  * GET /api/contents/course/:courseId
@@ -110,6 +119,7 @@ router.post(
   contentCreateLimiter,
   uploadVideo.single('video'),
   requireCourseManager((req) => req.body.course_id, (req) => req.body.folder_id || null),
+  validateFieldLengths('title', 'description'),
   verifyFileSignature('video'),
   contentController.createVideoContent
 );
@@ -125,6 +135,7 @@ router.post(
   contentCreateLimiter,
   uploadFile.single('file'),
   requireCourseManager((req) => req.body.course_id, (req) => req.body.folder_id || null),
+  validateFieldLengths('title', 'description'),
   verifyFileSignature('file'),
   contentController.createFileContent
 );
@@ -140,6 +151,7 @@ router.post(
   contentCreateLimiter,
   uploadContentImage.single('image'),
   requireCourseManager((req) => req.body.course_id, (req) => req.body.folder_id || null),
+  validateFieldLengths('title', 'description'),
   verifyFileSignature('image'),
   contentController.createImageContent
 );
@@ -199,6 +211,7 @@ router.post(
   contentCreateLimiter,
   uploadFile.single('file'),
   requireCourseManager((req) => req.body.course_id, (req) => req.body.folder_id || null),
+  validateFieldLengths('title', 'description'),
   (req, res, next) => {
     if (!req.file) return next();
     verifyFileSignature('file')(req, res, next);
@@ -359,6 +372,19 @@ router.get(
 );
 
 /**
+ * GET /api/contents/:id/questions/:questionId/answers
+ * Una página de las respuestas de una pregunta de respuesta corta (el resto
+ * de las que /results no manda completas). Admin, o el profesor asignado al
+ * curso.
+ */
+router.get(
+  '/:id/questions/:questionId/answers',
+  isAuthenticated,
+  requireCourseManager(courseIdFromContentParam, folderIdFromContentParam),
+  quizController.getShortAnswers
+);
+
+/**
  * GET /api/contents/:id/questions/manage
  * Preguntas de un cuestionario/encuesta para editar (con is_correct
  * siempre incluido y el conteo de respondentes). Admin, o el profesor
@@ -381,6 +407,7 @@ router.put(
   '/:id/questions',
   isAuthenticated,
   requireCourseManager(courseIdFromContentParam, folderIdFromContentParam),
+  validateFieldLengths('title', 'description'),
   quizController.updateQuestions
 );
 
@@ -396,7 +423,7 @@ router.get('/:id/forum', isAuthenticated, forumController.listPosts);
  * diferencia de crear el TEMA (POST /forum, solo admin/profesor), acá
  * cualquier admin/inscrito/profesor puede responder.
  */
-router.post('/:id/forum', isAuthenticated, forumPostLimiter, forumController.createPost);
+router.post('/:id/forum', isAuthenticated, forumPostLimiter, validateFieldLengths('body'), forumController.createPost);
 
 /**
  * GET /api/contents/:id
@@ -442,6 +469,7 @@ router.put(
     };
     handleUpload(req, res, next);
   },
+  validateFieldLengths('title', 'description', 'url'),
   (req, res, next) => {
     if (['text', 'url', 'forum', 'folder', 'quiz', 'survey'].includes(req.contentType)) return next();
     const signatureKind = req.contentType === 'video' ? 'video' : req.contentType === 'image' ? 'image' : 'file';

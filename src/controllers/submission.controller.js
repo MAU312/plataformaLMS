@@ -4,6 +4,7 @@ import TaskSubmission from '../models/TaskSubmission.js';
 import { deleteFile } from '../middlewares/upload.middleware.js';
 import { UPLOADS_ROOT } from '../config/uploads.js';
 import { t } from '../utils/i18n.js';
+import { parsePagination, buildPagination } from '../utils/pagination.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -84,14 +85,13 @@ export const listSubmissions = async (req, res) => {
       return res.status(404).json({ success: false, message: t(req.locale, 'errors.task_not_found') });
     }
 
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+    const { page, limit } = parsePagination(req.query, 20);
     const { rows: submissions, total } = await TaskSubmission.findPaginatedByContent(id, { page, limit });
 
     res.json({
       success: true,
       data: { content, submissions },
-      pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) }
+      pagination: buildPagination(page, limit, total)
     });
   } catch (error) {
     console.error('Error al obtener las entregas:', error);

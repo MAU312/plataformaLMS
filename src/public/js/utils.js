@@ -597,7 +597,7 @@ function renderCourseCardShell({ course, navigateToPath, heightClass = 'h-40', s
         <div class="course-card bg-white rounded-xl shadow-md overflow-hidden border border-gray-100" onclick="navigateTo('${navigateToPath}')">
             <div class="${heightClass} bg-gradient-to-br from-cenat-green to-cenat-green-light flex items-center justify-center relative overflow-hidden">
                 ${thumbnailUrl
-                    ? `<img src="${escapeAttr(thumbnailUrl)}" alt="${escapeAttr(course.title)}" class="w-full h-full object-cover">`
+                    ? `<img src="${escapeAttr(thumbnailUrl)}" alt="${escapeAttr(course.title)}" class="w-full h-full object-cover" loading="lazy" decoding="async">`
                     : `<i class="fas fa-flask text-5xl text-white opacity-80"></i>`
                 }
                 ${showInactiveBadge && !course.is_active ? '<span class="badge badge-inactive absolute top-3 right-3">Inactivo</span>' : ''}

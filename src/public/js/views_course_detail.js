@@ -38,22 +38,12 @@ window.renderCourseDetail = async function(params) {
         // de que el profesor esté asignado a ESTE curso); esto solo
         // controla cómo se dibuja la UI.
         const hasAccess = isLoggedIn && (isEnrolled || isAdmin() || isTeacher());
-        let contents = course.contents || [];
-
-        if (isLoggedIn) {
-            // Igual criterio que la carga de módulos más abajo: un error acá
-            // no debe tirar toda la página a la pantalla genérica de "no se
-            // pudo cargar el curso" cuando el curso ya se cargó bien — se
-            // degrada al `course.contents` que ya trajo la respuesta de
-            // arriba (sin el estado de completado/entrega por usuario, pero
-            // visible en vez de nada).
-            try {
-                const contentsResponse = await contentsAPI.getByCourse(course.id);
-                contents = contentsResponse.data || contents;
-            } catch (error) {
-                console.error('Error al cargar el contenido del curso:', error);
-            }
-        }
+        // Con sesión, `course.contents` ya trae el estado propio del usuario
+        // (completado, entrega de cada tarea) — el backend lo resuelve en la
+        // misma respuesta de GET /courses/:id (ver getCourseById). Antes se
+        // pedía además GET /contents/course/:id, descargando el listado
+        // completo dos veces.
+        const contents = course.contents || [];
 
         // Módulos de este curso (cursos hijo completos, con su propia
         // portada/título/profesor) — endpoint público, igual que el resto
@@ -157,12 +147,14 @@ window.renderCourseDetail = async function(params) {
         const allQuizzes = contents.filter(c => c.type === 'quiz' || c.type === 'survey');
         let quizStatusById = {};
         if (hasAccess && allQuizzes.length > 0) {
-            // Mismo criterio que la carga de contenido/módulos: un error acá
-            // no debe tirar toda la página, solo dejar el estado de
-            // quiz/encuesta sin resolver (vuelve a mostrar "Responder").
+            // Una sola petición con el estado de TODOS los quizzes/encuestas
+            // del curso (antes una GET /:id/questions por cada uno: 369
+            // peticiones paralelas en un curso grande). Un error acá no debe
+            // tirar toda la página, solo dejar el estado de quiz/encuesta sin
+            // resolver (vuelve a mostrar "Responder").
             try {
-                const quizResponses = await Promise.all(allQuizzes.map(q => contentsAPI.getQuestions(q.id)));
-                allQuizzes.forEach((q, i) => { quizStatusById[q.id] = quizResponses[i].data; });
+                const statusResponse = await contentsAPI.getQuizStatusByCourse(course.id);
+                quizStatusById = statusResponse.data || {};
             } catch (error) {
                 console.error('Error al cargar el estado de quizzes/encuestas:', error);
             }
@@ -311,7 +303,7 @@ window.renderCourseDetail = async function(params) {
                                 ${allSurveysCount > 0 ? renderCourseInfoLink('fa-poll', allSurveysCount, t('courseDetail.info_surveys'), anchorForType(contents, 'survey')) : ''}
                                 ${allForumsCount > 0 ? renderCourseInfoLink('fa-comments', allForumsCount, t('courseDetail.info_forums'), anchorForType(contents, 'forum')) : ''}
                                 ${folders.length > 0 ? renderCourseInfoLink('fa-folder', folders.length, t('courseDetail.info_folders'), anchorForType(contents, 'folder')) : ''}
-                                <li><i class="fas fa-users mr-2 text-gray-400"></i>${t('home.enrolled_count', { count: course.enrolled_count || 0 })}</li>
+                                <li><i class="fas fa-users mr-2 text-gray-400"></i>${tPlural('home.enrolled_count', course.enrolled_count || 0)}</li>
                             </ul>
                         </div>
 
@@ -777,9 +769,10 @@ function renderTaskCard(task, submission, hasAccess) {
 }
 
 /**
- * `quizStatus` es lo que devuelve GET /:id/questions (ver
- * contentsAPI.getQuestions, precargado en quizStatusById más arriba):
- * `{ already_answered, questions, my_answers? }`. Cuestionario y encuesta
+ * `quizStatus` es el resumen de ESTE quiz/encuesta que devuelve
+ * GET /contents/course/:courseId/quiz-status (ver
+ * contentsAPI.getQuizStatusByCourse, precargado en quizStatusById más
+ * arriba): `{ already_answered, score, max_score, pending }`. Cuestionario y encuesta
  * comparten esta misma tarjeta — la única diferencia es si se muestra un
  * puntaje (cuestionario) o solo un agradecimiento (encuesta), ya que una
  * encuesta no tiene respuesta correcta.
@@ -807,13 +800,10 @@ function renderQuizCard(content, quizStatus, hasAccess) {
     let statusHTML;
     if (alreadyAnswered) {
         if (isQuiz) {
-            const myAnswers = quizStatus.my_answers || [];
-            const pointsByQuestion = new Map((quizStatus.questions || []).map(q => [q.id, q.points || 1]));
-            const maxScore = (quizStatus.questions || []).reduce((sum, q) => sum + (q.points || 1), 0);
-            const score = myAnswers
-                .filter(a => a.is_correct == 1)
-                .reduce((sum, a) => sum + (pointsByQuestion.get(a.question_id) || 1), 0);
-            const pending = myAnswers.filter(a => a.is_correct === null).length;
+            // El backend ya calcula puntaje, máximo y pendientes (ver
+            // ContentAnswer.getStatusByCourse) — antes se armaban acá a
+            // partir de las preguntas y respuestas completas de cada quiz.
+            const { score = 0, max_score: maxScore = 0, pending = 0 } = quizStatus;
             statusHTML = `
                 <div class="bg-green-50 rounded-lg p-3">
                     <p class="text-sm text-green-700 font-medium"><i class="fas fa-check-circle mr-1"></i> ${t('courseDetail.already_answered_quiz')}</p>

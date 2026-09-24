@@ -6,6 +6,7 @@ import { isAuthenticated, isAdmin, requireCourseManager } from '../middlewares/a
 import { uploadThumbnail } from '../middlewares/upload.middleware.js';
 import { verifyFileSignature } from '../middlewares/fileSignature.middleware.js';
 import { enrollLimiter, courseCreateLimiter } from '../middlewares/rateLimit.middleware.js';
+import { validateFieldLengths } from '../middlewares/validateFieldLengths.middleware.js';
 
 const router = express.Router();
 
@@ -45,6 +46,7 @@ router.get('/enrolled', isAuthenticated, courseController.getEnrolledCourses);
 /**
  * GET /api/courses/teaching
  * Cursos donde el usuario actual está asignado como profesor
+ * Paginado (?page, ?limit) — mismo contrato que /api/courses/enrolled
  * Requiere autenticación
  */
 router.get('/teaching', isAuthenticated, courseController.getTeachingCourses);
@@ -73,6 +75,7 @@ router.post(
   isAdmin,
   courseCreateLimiter,
   uploadThumbnail.single('thumbnail'),
+  validateFieldLengths('title', 'description'),
   verifyFileSignature('image'),
   courseController.createCourse
 );
@@ -90,6 +93,7 @@ router.put(
   isAuthenticated,
   requireCourseManager(courseIdFromChildCourseParam),
   uploadThumbnail.single('thumbnail'),
+  validateFieldLengths('title', 'description'),
   verifyFileSignature('image'),
   courseController.updateCourse
 );
@@ -174,6 +178,6 @@ router.get('/:id/modules', courseModuleController.getModules);
  * (no uno escopeado a una carpeta) — requireCourseManager sin
  * resolveFolderId ya exige exactamente eso.
  */
-router.post('/:id/modules', isAuthenticated, requireCourseManager((req) => req.params.id), courseModuleController.createModule);
+router.post('/:id/modules', isAuthenticated, requireCourseManager((req) => req.params.id), validateFieldLengths('title'), courseModuleController.createModule);
 
 export default router;

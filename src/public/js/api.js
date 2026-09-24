@@ -142,7 +142,7 @@ const coursesAPI = {
     downloadGrades: async (id) => { window.open(`${API_URL}/courses/${id}/grades/export`, '_blank'); },
     downloadStudentGrades: async (id, studentId) => { window.open(`${API_URL}/courses/${id}/students/${studentId}/grades/export`, '_blank'); },
     getTeachers: async (id) => apiRequest(`/courses/${id}/teachers`),
-    getTeaching: async () => apiRequest('/courses/teaching')
+    getTeaching: async ({ page = 1, limit = 12 } = {}) => apiRequest(`/courses/teaching?${new URLSearchParams({ page, limit })}`)
 };
 
 // =================================
@@ -174,6 +174,8 @@ const contentsAPI = {
     createQuiz: async (data) => apiRequest('/contents/quiz', { method: 'POST', body: JSON.stringify(data) }),
     createSurvey: async (data) => apiRequest('/contents/survey', { method: 'POST', body: JSON.stringify(data) }),
     getQuestions: async (id) => apiRequest(`/contents/${id}/questions`),
+    getQuizStatusByCourse: async (courseId) => apiRequest(`/contents/course/${courseId}/quiz-status`),
+    getShortAnswers: async (id, questionId, { page = 1, limit = 20 } = {}) => apiRequest(`/contents/${id}/questions/${questionId}/answers?${new URLSearchParams({ page, limit })}`),
     getQuestionsForManage: async (id) => apiRequest(`/contents/${id}/questions/manage`),
     updateQuestions: async (id, data) => apiRequest(`/contents/${id}/questions`, { method: 'PUT', body: JSON.stringify(data) }),
     submitAnswers: async (id, data) => apiRequest(`/contents/${id}/answers`, { method: 'POST', body: JSON.stringify(data) }),
@@ -181,7 +183,7 @@ const contentsAPI = {
     gradeAnswer: async (answerId, data) => apiRequest(`/contents/answers/${answerId}/grade`, { method: 'PUT', body: JSON.stringify(data) }),
     createForum: async (data) => apiRequest('/contents/forum', { method: 'POST', body: JSON.stringify(data) }),
     createFolder: async (data) => apiRequest('/contents/folder', { method: 'POST', body: JSON.stringify(data) }),
-    getForumThread: async (id) => apiRequest(`/contents/${id}/forum`),
+    getForumThread: async (id, { page = 1, limit = 20 } = {}) => apiRequest(`/contents/${id}/forum?${new URLSearchParams({ page, limit })}`),
     postForumReply: async (id, data) => apiRequest(`/contents/${id}/forum`, { method: 'POST', body: JSON.stringify(data) }),
     submit: async (id, formData) => apiRequestFormData(`/contents/${id}/submit`, formData),
     getSubmissions: async (id, { page = 1, limit = 20 } = {}) => apiRequest(`/contents/${id}/submissions?${new URLSearchParams({ page, limit })}`),

@@ -38,10 +38,11 @@ test('listPosts: 403 si no tiene acceso (no inscrito, ni profesor, ni admin)', a
 test('listPosts: agrupa las respuestas en 2 niveles (nivel 1 con su array replies)', async (t) => {
   t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'forum', course_id: 5, title: 'Tema', description: 'Texto principal' }));
   t.mock.method(Course, 'canAccessMedia', async () => true);
-  t.mock.method(ForumPost, 'findByContentId', async () => ([
+  t.mock.method(ForumPost, 'countByContentId', async () => ({ total_all: 3, total_top: 2 }));
+  t.mock.method(ForumPost, 'findThreadPage', async () => ([
     { id: 10, content_id: 1, parent_id: null, body: 'Respuesta 1' },
-    { id: 11, content_id: 1, parent_id: 10, body: 'Respuesta a la 1' },
-    { id: 12, content_id: 1, parent_id: null, body: 'Respuesta 2' }
+    { id: 12, content_id: 1, parent_id: null, body: 'Respuesta 2' },
+    { id: 11, content_id: 1, parent_id: 10, body: 'Respuesta a la 1' }
   ]));
 
   const req = mockReq({ params: { id: 1 }, session: { user: { id: 1, role: 'student' } } });
@@ -53,6 +54,57 @@ test('listPosts: agrupa las respuestas en 2 niveles (nivel 1 con su array replie
   assert.equal(res.body.data.posts[0].replies.length, 1);
   assert.equal(res.body.data.posts[0].replies[0].id, 11);
   assert.equal(res.body.data.posts[1].replies.length, 0);
+  assert.equal(res.body.data.total_posts, 3, 'total_posts cuenta ambos niveles (para el encabezado "N respuestas")');
+});
+
+test('listPosts: pagina por respuesta de nivel 1 (20 por defecto) y pasa page/limit al modelo', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'forum', course_id: 5 }));
+  t.mock.method(Course, 'canAccessMedia', async () => true);
+  t.mock.method(ForumPost, 'countByContentId', async () => ({ total_all: 130, total_top: 45 }));
+  const pageCall = t.mock.method(ForumPost, 'findThreadPage', async () => []);
+
+  const res = mockRes();
+  await forumController.listPosts(mockReq({ params: { id: 1 }, query: { page: '2' }, session: { user: { id: 1, role: 'student' } } }), res);
+
+  assert.deepEqual(pageCall.mock.calls[0].arguments, [1, { page: 2, limit: 20 }]);
+  assert.deepEqual(res.body.pagination, { page: 2, limit: 20, total: 45, totalPages: 3 });
+});
+
+test('listPosts: page=last salta a la última página (donde queda una respuesta recién publicada)', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'forum', course_id: 5 }));
+  t.mock.method(Course, 'canAccessMedia', async () => true);
+  t.mock.method(ForumPost, 'countByContentId', async () => ({ total_all: 130, total_top: 45 }));
+  const pageCall = t.mock.method(ForumPost, 'findThreadPage', async () => []);
+
+  const res = mockRes();
+  await forumController.listPosts(mockReq({ params: { id: 1 }, query: { page: 'last' }, session: { user: { id: 1, role: 'student' } } }), res);
+
+  assert.equal(pageCall.mock.calls[0].arguments[1].page, 3, '45 hilos / 20 por página = 3 páginas');
+  assert.equal(res.body.pagination.page, 3);
+});
+
+test('listPosts: page=last en un foro vacío es la página 1 (no 0)', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'forum', course_id: 5 }));
+  t.mock.method(Course, 'canAccessMedia', async () => true);
+  t.mock.method(ForumPost, 'countByContentId', async () => ({ total_all: 0, total_top: 0 }));
+  const pageCall = t.mock.method(ForumPost, 'findThreadPage', async () => []);
+
+  const res = mockRes();
+  await forumController.listPosts(mockReq({ params: { id: 1 }, query: { page: 'last' }, session: { user: { id: 1, role: 'student' } } }), res);
+
+  assert.equal(pageCall.mock.calls[0].arguments[1].page, 1);
+  assert.deepEqual(res.body.data.posts, []);
+});
+
+test('listPosts: un page absurdo o un limit enorme se acotan (no llegan crudos a MySQL)', async (t) => {
+  t.mock.method(Content, 'findById', async () => ({ id: 1, type: 'forum', course_id: 5 }));
+  t.mock.method(Course, 'canAccessMedia', async () => true);
+  t.mock.method(ForumPost, 'countByContentId', async () => ({ total_all: 0, total_top: 0 }));
+  const pageCall = t.mock.method(ForumPost, 'findThreadPage', async () => []);
+
+  await forumController.listPosts(mockReq({ params: { id: 1 }, query: { page: '99999999999999999999', limit: '9999' }, session: { user: { id: 1, role: 'student' } } }), mockRes());
+
+  assert.deepEqual(pageCall.mock.calls[0].arguments[1], { page: 1000000, limit: 50 });
 });
 
 // =================================

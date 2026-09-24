@@ -7,6 +7,7 @@ import { deleteFile } from '../middlewares/upload.middleware.js';
 import certificateGenerator, { isValidCertificateStyle, DEFAULT_CERTIFICATE_STYLE } from '../utils/certificate.js';
 import { toCsv } from '../utils/csv.js';
 import { t } from '../utils/i18n.js';
+import { parsePagination, buildPagination } from '../utils/pagination.js';
 
 /**
  * Nombre de archivo seguro a partir de un título/nombre real — sin tildes
@@ -32,10 +33,7 @@ export const getAllCourses = async (req, res) => {
   try {
     // Si es admin, mostrar todos los cursos, sino solo activos
     const isAdmin = req.session?.user?.role === 'admin' || Boolean(req.session?.user?.admin_access);
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    // Tope de 50: un límite arbitrariamente alto en la query string no
-    // debería poder forzar al servidor a traer/enviar de más.
-    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 12));
+    const { page, limit } = parsePagination(req.query, 12);
     const search = String(req.query.search || '').trim();
     // 'top'|'children' distingue cursos normales de cursos hijo de un
     // módulo (tabla "Módulos" del panel admin) — cualquier otro valor se
@@ -51,7 +49,7 @@ export const getAllCourses = async (req, res) => {
     res.json({
       success: true,
       data: rows,
-      pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) }
+      pagination: buildPagination(page, limit, total)
     });
   } catch (error) {
     console.error('Error al obtener cursos:', error);
@@ -77,8 +75,15 @@ export const getCourseById = async (req, res) => {
       });
     }
 
-    // Obtener contenidos del curso
-    const rawContents = await Content.findByCourse(id);
+    // Obtener contenidos del curso. Con sesión, vienen con el estado propio
+    // del usuario (completado, entrega de cada tarea) — el mismo criterio
+    // que GET /api/contents/course/:courseId. Antes esta respuesta traía los
+    // contenidos SIN progreso y el detalle de curso pedía además
+    // /contents/course/:id para tenerlo: el listado completo (850 KB en un
+    // curso de 1.700 contenidos) se descargaba y armaba dos veces.
+    const rawContents = req.session?.user
+      ? await Content.findByCourseWithProgress(id, req.session.user.id)
+      : await Content.findByCourse(id);
 
     // Verificar si el usuario está inscrito (si hay sesión activa) y traer
     // su inscripción (progreso/certificado). Course.getEnrollment ya
@@ -596,14 +601,13 @@ export const unenrollCourse = async (req, res) => {
 export const getEnrolledCourses = async (req, res) => {
   try {
     const userId = req.session.user.id;
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 12));
+    const { page, limit } = parsePagination(req.query, 12);
     const { rows: courses, total } = await User.getEnrolledCourses(userId, { page, limit });
 
     res.json({
       success: true,
       data: courses,
-      pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) }
+      pagination: buildPagination(page, limit, total)
     });
   } catch (error) {
     console.error('Error al obtener cursos inscritos:', error);
@@ -667,8 +671,7 @@ export const getCourseStudents = async (req, res) => {
       return res.status(404).json({ success: false, message: t(req.locale, 'errors.course_not_found') });
     }
 
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+    const { page, limit } = parsePagination(req.query, 20);
     const { rows: students, total } = await Course.getEnrolledStudents(id, { page, limit });
 
     // Nota final por estudiante (ver Content.calculateCourseGrade) — solo
@@ -693,7 +696,7 @@ export const getCourseStudents = async (req, res) => {
     res.json({
       success: true,
       data: { course, students },
-      pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) }
+      pagination: buildPagination(page, limit, total)
     });
   } catch (error) {
     console.error('Error al obtener estudiantes del curso:', error);
@@ -819,12 +822,14 @@ export const getCourseTeachers = async (req, res) => {
 };
 
 /**
- * Cursos donde el usuario autenticado está asignado como profesor.
+ * Cursos donde el usuario autenticado está asignado como profesor
+ * (paginados: ?page, ?limit — mismo contrato que /api/courses/enrolled).
  */
 export const getTeachingCourses = async (req, res) => {
   try {
-    const courses = await Course.getCoursesForTeacher(req.session.user.id);
-    res.json({ success: true, data: courses });
+    const { page, limit } = parsePagination(req.query, 12);
+    const { rows: courses, total } = await Course.getCoursesForTeacher(req.session.user.id, { page, limit });
+    res.json({ success: true, data: courses, pagination: buildPagination(page, limit, total) });
   } catch (error) {
     console.error('Error al obtener cursos como profesor:', error);
     res.status(500).json({ success: false, message: t(req.locale, 'errors.get_teaching_courses_failed') });

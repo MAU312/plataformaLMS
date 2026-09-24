@@ -1,6 +1,7 @@
 import express from 'express';
 import * as authController from '../controllers/auth.controller.js';
 import { isAuthenticated } from '../middlewares/auth.middleware.js';
+import { validateFieldLengths } from '../middlewares/validateFieldLengths.middleware.js';
 import { loginLimiter, registerLimiter, forgotPasswordLimiter, resetPasswordLimiter } from '../middlewares/rateLimit.middleware.js';
 
 const router = express.Router();
@@ -9,7 +10,7 @@ const router = express.Router();
  * POST /api/auth/register
  * Registrar nuevo usuario
  */
-router.post('/register', registerLimiter, authController.register);
+router.post('/register', registerLimiter, validateFieldLengths('name', 'email'), authController.register);
 
 /**
  * POST /api/auth/login

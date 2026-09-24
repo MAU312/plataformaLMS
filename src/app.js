@@ -10,6 +10,7 @@ import morgan from 'morgan';
 import pool from './config/db.js';
 import { UPLOADS_ROOT } from './config/uploads.js';
 import { resolveLocale } from './middlewares/i18n.middleware.js';
+import { handleBodyParserError } from './middlewares/bodyParserError.middleware.js';
 import { t } from './utils/i18n.js';
 
 const MySQLStore = expressMySQLSession(session);
@@ -208,6 +209,10 @@ app.get('/*splat', (req, res) => {
 // =============================================
 // Error handling middleware
 // =============================================
+
+// Errores de los body parsers (JSON demasiado grande o mal formado): sin
+// esto el handler genérico de abajo respondía el mensaje crudo en inglés.
+app.use(handleBodyParserError);
 
 // Manejo específico de errores de Multer (archivo muy grande, campo de
 // archivo inesperado, etc.). Sin esto, estos errores caían en el handler

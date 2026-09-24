@@ -2,11 +2,15 @@ import Content from '../models/Content.js';
 import Course from '../models/Course.js';
 import ForumPost from '../models/ForumPost.js';
 import { t } from '../utils/i18n.js';
+import { parsePagination, buildPagination } from '../utils/pagination.js';
+
+// Respuestas de nivel 1 por página (cada una con todas las suyas de nivel 2).
+const FORUM_THREADS_PER_PAGE = 20;
 
 /**
  * Agrupa el listado plano de posts en árbol de 2 niveles: cada post de
  * nivel 1 (parent_id null) con su array `replies` de posts de nivel 2
- * (parent_id = el id de ese post de nivel 1). ForumPost.findByContentId ya
+ * (parent_id = el id de ese post de nivel 1). ForumPost.findThreadPage ya
  * viene ordenado por fecha, así que alcanza un solo recorrido.
  */
 function buildThread(posts) {
@@ -35,9 +39,13 @@ function buildThread(posts) {
 
 /**
  * GET /api/contents/:id/forum
- * Lista el tema (post principal) y todas sus respuestas, agrupadas en 2
- * niveles. Mismo criterio de acceso que el resto del contenido de un
- * curso: admin, inscrito, o profesor asignado.
+ * Lista el tema (post principal) y UNA PÁGINA de sus respuestas, agrupadas
+ * en 2 niveles (?page, ?limit — se pagina por respuesta de nivel 1, cada
+ * una con todas las suyas de nivel 2). `?page=last` salta a la última
+ * página: es donde queda una respuesta recién publicada (orden
+ * cronológico). `data.total_posts` cuenta ambos niveles, para el
+ * encabezado "N respuestas". Mismo criterio de acceso que el resto del
+ * contenido de un curso: admin, inscrito, o profesor asignado.
  */
 export const listPosts = async (req, res) => {
   try {
@@ -56,11 +64,16 @@ export const listPosts = async (req, res) => {
       });
     }
 
-    const posts = await ForumPost.findByContentId(id);
+    const { page: requestedPage, limit } = parsePagination(req.query, FORUM_THREADS_PER_PAGE);
+    const { total_all: totalPosts, total_top: totalThreads } = await ForumPost.countByContentId(id);
+    const page = req.query.page === 'last' ? Math.max(1, Math.ceil(totalThreads / limit)) : requestedPage;
+
+    const posts = await ForumPost.findThreadPage(id, { page, limit });
 
     res.json({
       success: true,
-      data: { topic: content, posts: buildThread(posts) }
+      data: { topic: content, posts: buildThread(posts), total_posts: totalPosts },
+      pagination: buildPagination(page, limit, totalThreads)
     });
   } catch (error) {
     console.error('Error al obtener el foro:', error);

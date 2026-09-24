@@ -4,6 +4,14 @@ import ContentAnswer from '../models/ContentAnswer.js';
 import Course from '../models/Course.js';
 import pool from '../config/db.js';
 import { t } from '../utils/i18n.js';
+import { FIELD_LIMITS, exceedsFieldLimit } from '../middlewares/validateFieldLengths.middleware.js';
+import { parsePagination, buildPagination } from '../utils/pagination.js';
+
+// Respuestas de una pregunta de respuesta corta que vienen ya incluidas en
+// /results; el resto se pide de a páginas (ver getShortAnswers). Sin tope,
+// un quiz con 100 preguntas cortas y 150 estudiantes mandaba 3,4 MB y el
+// navegador dibujaba 151.000 nodos.
+const RESULTS_INLINE_SHORT_ANSWERS = 20;
 
 const QUESTION_TYPES = ['short_answer', 'multiple_choice', 'true_false'];
 
@@ -65,6 +73,9 @@ function validateQuestions(questions, isQuiz, locale) {
     if (!q.text || !String(q.text).trim()) {
       return { ok: false, message: t(locale, 'errors.question_text_required') };
     }
+    if (exceedsFieldLimit('question_text', String(q.text).trim())) {
+      return { ok: false, message: t(locale, 'errors.question_text_too_long') };
+    }
     if (q.points !== undefined && (!Number.isInteger(q.points) || q.points < 1)) {
       return { ok: false, message: t(locale, 'errors.question_points_invalid') };
     }
@@ -80,6 +91,9 @@ function validateQuestions(questions, isQuiz, locale) {
       }
       if (!options.every((o) => o.text && String(o.text).trim())) {
         return { ok: false, message: t(locale, 'errors.option_text_required') };
+      }
+      if (options.some((o) => exceedsFieldLimit('option_text', String(o.text).trim()))) {
+        return { ok: false, message: t(locale, 'errors.option_text_too_long', { max: FIELD_LIMITS.option_text.max }) };
       }
       if (isQuiz && options.filter((o) => o.is_correct).length !== 1) {
         return { ok: false, message: t(locale, 'errors.exactly_one_correct_option') };
@@ -349,6 +363,41 @@ export const getQuestions = async (req, res) => {
 };
 
 /**
+ * GET /api/contents/course/:courseId/quiz-status
+ * Estado del usuario en TODOS los cuestionarios/encuestas del curso, en una
+ * sola petición: `{ [contentId]: { already_answered, score, max_score,
+ * pending } }`. Mismo acceso que GET /:id/questions (admin, inscrito o
+ * profesor asignado). Reemplaza el N+1 de pedir /:id/questions por cada
+ * quiz al abrir el detalle del curso.
+ */
+export const getQuizStatusByCourse = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+
+    const canAccess = await Course.canAccessMedia(courseId, req.session?.user);
+    if (!canAccess) {
+      return res.status(403).json({ success: false, message: t(req.locale, 'errors.quiz_view_access_required') });
+    }
+
+    const rows = await ContentAnswer.getStatusByCourse(courseId, req.session.user.id);
+    const status = {};
+    for (const row of rows) {
+      status[row.content_id] = {
+        already_answered: Number(row.answered_count) > 0,
+        score: Number(row.score),
+        max_score: Number(row.max_score),
+        pending: Number(row.pending_count)
+      };
+    }
+
+    res.json({ success: true, data: status });
+  } catch (error) {
+    console.error('Error al obtener el estado de los cuestionarios:', error);
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.get_quiz_status_failed') });
+  }
+};
+
+/**
  * Envía todas las respuestas de un intento a la vez. `req.quizContent` lo
  * deja puesto el middleware inline de la ruta (ver content.routes.js,
  * mismo patrón que req.taskContent en /:id/submit): ya validó que el
@@ -484,8 +533,16 @@ export const getResults = async (req, res) => {
     const totalRespondents = new Set(answers.map((a) => a.user_id)).size;
     const isQuiz = content.type === 'quiz';
 
+    // Se agrupa UNA vez por pregunta: filtrar el arreglo completo por cada
+    // pregunta era O(preguntas x respuestas) (300 x 45.000 en el quiz grande).
+    const answersByQuestion = new Map();
+    for (const answer of answers) {
+      if (!answersByQuestion.has(answer.question_id)) answersByQuestion.set(answer.question_id, []);
+      answersByQuestion.get(answer.question_id).push(answer);
+    }
+
     const questionResults = questions.map((q) => {
-      const questionAnswers = answers.filter((a) => a.question_id === q.id);
+      const questionAnswers = answersByQuestion.get(q.id) || [];
 
       if (q.question_type === 'short_answer') {
         return {
@@ -493,7 +550,11 @@ export const getResults = async (req, res) => {
           question_text: q.question_text,
           question_type: q.question_type,
           points: q.points,
-          answers: questionAnswers.map((a) => ({
+          // `answers` trae solo las primeras RESULTS_INLINE_SHORT_ANSWERS;
+          // `answers_total` dice cuántas hay en total (las demás se piden
+          // con GET /:id/questions/:questionId/answers).
+          answers_total: questionAnswers.length,
+          answers: questionAnswers.slice(0, RESULTS_INLINE_SHORT_ANSWERS).map((a) => ({
             answer_id: a.id,
             student_name: a.student_name,
             student_email: a.student_email,
@@ -536,6 +597,61 @@ export const getResults = async (req, res) => {
     });
   } catch (error) {
     console.error('Error al obtener resultados:', error);
+    res.status(500).json({ success: false, message: t(req.locale, 'errors.get_results_failed') });
+  }
+};
+
+/**
+ * GET /api/contents/:id/questions/:questionId/answers
+ * Una página (?page, ?limit) de las respuestas de una pregunta de
+ * respuesta corta — el resto de las que /results ya no manda completas (ver
+ * RESULTS_INLINE_SHORT_ANSWERS). Mismo acceso que /results: admin, o el
+ * profesor asignado al curso. Cada respuesta tiene el mismo formato que en
+ * /results.
+ */
+export const getShortAnswers = async (req, res) => {
+  try {
+    const { id, questionId } = req.params;
+
+    const content = await Content.findById(id);
+    if (!content) {
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.content_not_found') });
+    }
+    if (!['quiz', 'survey'].includes(content.type)) {
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.not_quiz_or_survey') });
+    }
+
+    const question = await ContentQuestion.findById(questionId);
+    if (!question || question.content_id !== content.id) {
+      return res.status(404).json({ success: false, message: t(req.locale, 'errors.question_not_found') });
+    }
+    if (question.question_type !== 'short_answer') {
+      return res.status(400).json({ success: false, message: t(req.locale, 'errors.not_short_answer_question') });
+    }
+
+    const { page, limit } = parsePagination(req.query, RESULTS_INLINE_SHORT_ANSWERS);
+    const [rows, total] = await Promise.all([
+      ContentAnswer.findPageByQuestion(question.id, { page, limit }),
+      ContentAnswer.countByQuestion(question.id)
+    ]);
+
+    const isQuiz = content.type === 'quiz';
+    res.json({
+      success: true,
+      data: {
+        answers: rows.map((a) => ({
+          answer_id: a.id,
+          student_name: a.student_name,
+          student_email: a.student_email,
+          answer_text: a.answer_text,
+          is_correct: isQuiz ? a.is_correct : undefined,
+          submitted_at: a.submitted_at
+        }))
+      },
+      pagination: buildPagination(page, limit, total)
+    });
+  } catch (error) {
+    console.error('Error al obtener las respuestas de la pregunta:', error);
     res.status(500).json({ success: false, message: t(req.locale, 'errors.get_results_failed') });
   }
 };

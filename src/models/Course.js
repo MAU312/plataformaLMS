@@ -1,4 +1,5 @@
 import pool from '../config/db.js';
+import { escapeLike } from '../utils/sql.js';
 
 class Course {
   /**
@@ -31,7 +32,8 @@ class Course {
     if (scope === 'children') conditions.push('c.parent_module_id IS NOT NULL');
     if (search) {
       conditions.push('(c.title LIKE ? OR c.description LIKE ?)');
-      searchParams.push(`%${search}%`, `%${search}%`);
+      const pattern = `%${escapeLike(search)}%`;
+      searchParams.push(pattern, pattern);
     }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
@@ -313,20 +315,36 @@ class Course {
   }
 
   /**
-   * Obtener los cursos donde un usuario está asignado como profesor.
+   * Obtener los cursos donde un usuario está asignado como profesor,
+   * paginados (igual que "Mis cursos" del estudiante, ver
+   * User.getEnrolledCourses) + el total sin paginar. `enrolled_count` se
+   * cuenta contra la RAÍZ (`COALESCE(pc.id, c.id)`, mismo criterio que
+   * findById/_findPaginated): un curso hijo de un módulo nunca tiene
+   * inscripciones propias — las tiene su curso padre — y contarlo contra sí
+   * mismo mostraba siempre 0 inscritos en la tarjeta del profesor de módulo.
    */
-  static async getCoursesForTeacher(userId) {
+  static async getCoursesForTeacher(userId, { page = 1, limit = 12 } = {}) {
+    const offset = (page - 1) * limit;
     const [rows] = await pool.query(
       `SELECT c.*,
-       (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id) as enrolled_count,
+       (SELECT COUNT(*) FROM enrollments WHERE course_id = COALESCE(pc.id, c.id)) as enrolled_count,
        (SELECT COUNT(*) FROM contents WHERE course_id = c.id) as content_count
        FROM course_teachers ct
        INNER JOIN courses c ON c.id = ct.course_id
+       LEFT JOIN course_modules cm ON cm.id = c.parent_module_id
+       LEFT JOIN courses pc ON pc.id = cm.course_id
        WHERE ct.user_id = ?
-       ORDER BY c.created_at DESC`,
+       ORDER BY c.created_at DESC, c.id DESC
+       LIMIT ? OFFSET ?`,
+      [userId, limit, offset]
+    );
+
+    const [countRows] = await pool.query(
+      'SELECT COUNT(*) as total FROM course_teachers WHERE user_id = ?',
       [userId]
     );
-    return rows;
+
+    return { rows, total: countRows[0].total };
   }
 
   /**

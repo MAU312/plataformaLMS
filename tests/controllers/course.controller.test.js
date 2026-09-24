@@ -331,15 +331,6 @@ test('getCourseTeachers: devuelve el curso y la lista de profesores asignados', 
   assert.equal(res.body.data.teachers.length, 1);
 });
 
-test('getTeachingCourses: pasa el id del usuario en sesión a Course.getCoursesForTeacher', async (t) => {
-  const call = t.mock.method(Course, 'getCoursesForTeacher', async () => ([{ id: 1 }]));
-  const req = mockReq({ session: { user: { id: 9 } } });
-  const res = mockRes();
-  await courseController.getTeachingCourses(req, res);
-  assert.equal(res.statusCode, 200);
-  assert.equal(call.mock.calls[0].arguments[0], 9);
-});
-
 test('enrollCourse: 404 si el curso no existe', async (t) => {
   t.mock.method(Course, 'findById', async () => undefined);
   const req = mockReq({ params: { id: 5 }, session: { user: { id: 1 } } });
@@ -398,7 +389,7 @@ test('unenrollCourse: 400 si no estaba inscrito', async (t) => {
 
 test('getCourseById: oculta las URLs de contenido a un visitante no inscrito', async (t) => {
   t.mock.method(Course, 'findById', async () => ({ id: 5, title: 'Curso' }));
-  t.mock.method(Content, 'findByCourse', async () => ([
+  t.mock.method(Content, 'findByCourseWithProgress', async () => ([
     { id: 1, title: 'Video 1', url: '/uploads/videos/secreto.mp4' }
   ]));
   t.mock.method(Course, 'isUserEnrolled', async () => false);
@@ -416,7 +407,7 @@ test('getCourseById: oculta las URLs de contenido a un visitante no inscrito', a
 
 test('getCourseById: expone las URLs reales a un estudiante inscrito', async (t) => {
   t.mock.method(Course, 'findById', async () => ({ id: 5, title: 'Curso' }));
-  t.mock.method(Content, 'findByCourse', async () => ([
+  t.mock.method(Content, 'findByCourseWithProgress', async () => ([
     { id: 1, title: 'Video 1', url: '/uploads/videos/real.mp4' }
   ]));
   t.mock.method(Course, 'isUserEnrolled', async () => true);
@@ -435,7 +426,7 @@ test('getCourseById: expone las URLs reales a un estudiante inscrito', async (t)
 
 test('getCourseById: expone las URLs reales a un admin sin importar inscripción', async (t) => {
   t.mock.method(Course, 'findById', async () => ({ id: 5, title: 'Curso' }));
-  t.mock.method(Content, 'findByCourse', async () => ([
+  t.mock.method(Content, 'findByCourseWithProgress', async () => ([
     { id: 1, title: 'Video 1', url: '/uploads/videos/real.mp4' }
   ]));
   t.mock.method(Course, 'isUserEnrolled', async () => false);
@@ -450,7 +441,7 @@ test('getCourseById: expone las URLs reales a un admin sin importar inscripción
 
 test('getCourseById: expone las URLs reales a un profesor asignado al curso, sin estar inscrito', async (t) => {
   t.mock.method(Course, 'findById', async () => ({ id: 5, title: 'Curso' }));
-  t.mock.method(Content, 'findByCourse', async () => ([
+  t.mock.method(Content, 'findByCourseWithProgress', async () => ([
     { id: 1, title: 'Video 1', url: '/uploads/videos/real.mp4' }
   ]));
   t.mock.method(Course, 'isUserEnrolled', async () => false);
@@ -475,6 +466,61 @@ test('getCourseById: oculta las URLs a un visitante anónimo (sin sesión)', asy
   await courseController.getCourseById(req, res);
 
   assert.equal(res.body.data.contents[0].url, null);
+});
+
+test('getCourseById: con sesión trae los contenidos CON el progreso del usuario (una sola respuesta, sin pedir /contents/course/:id aparte)', async (t) => {
+  t.mock.method(Course, 'findById', async () => ({ id: 5, title: 'Curso' }));
+  const withProgress = t.mock.method(Content, 'findByCourseWithProgress', async () => ([
+    { id: 1, title: 'Video 1', url: '/uploads/videos/real.mp4', completed: 1 }
+  ]));
+  const withoutProgress = t.mock.method(Content, 'findByCourse', async () => []);
+  t.mock.method(Course, 'isUserEnrolled', async () => true);
+  t.mock.method(Course, 'isUserTeacher', async () => false);
+  t.mock.method(Course, 'getEnrollment', async () => ({ id: 9, progress: 100, enrolled_at: new Date(), completed_at: null }));
+  t.mock.method(Content, 'calculateGroupProgress', async () => ({ progress: 100, total: 1, completed: 1 }));
+
+  const req = mockReq({ params: { id: 5 }, session: { user: { id: 42, role: 'student' } } });
+  const res = mockRes();
+  await courseController.getCourseById(req, res);
+
+  assert.deepEqual(withProgress.mock.calls[0].arguments, [5, 42], 'pide los contenidos del curso 5 con el progreso del usuario 42');
+  assert.equal(withoutProgress.mock.calls.length, 0);
+  assert.equal(res.body.data.contents[0].completed, 1);
+});
+
+test('getCourseById: sin sesión usa la consulta sin progreso (no hay usuario de quien traerlo)', async (t) => {
+  t.mock.method(Course, 'findById', async () => ({ id: 5, title: 'Curso' }));
+  const withProgress = t.mock.method(Content, 'findByCourseWithProgress', async () => []);
+  const withoutProgress = t.mock.method(Content, 'findByCourse', async () => ([{ id: 1, title: 'Video 1', url: '/x.mp4' }]));
+
+  const req = mockReq({ params: { id: 5 }, session: null });
+  const res = mockRes();
+  await courseController.getCourseById(req, res);
+
+  assert.equal(withoutProgress.mock.calls.length, 1);
+  assert.equal(withProgress.mock.calls.length, 0);
+});
+
+test('getTeachingCourses: pagina (mismo contrato que /courses/enrolled) y pasa page/limit a Course.getCoursesForTeacher', async (t) => {
+  const call = t.mock.method(Course, 'getCoursesForTeacher', async () => ({ rows: [{ id: 1 }], total: 30 }));
+  const req = mockReq({ session: { user: { id: 9 } }, query: { page: '2', limit: '10' } });
+  const res = mockRes();
+  await courseController.getTeachingCourses(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(call.mock.calls[0].arguments, [9, { page: 2, limit: 10 }]);
+  assert.deepEqual(res.body.data, [{ id: 1 }]);
+  assert.deepEqual(res.body.pagination, { page: 2, limit: 10, total: 30, totalPages: 3 });
+});
+
+test('getTeachingCourses: page/limit por defecto 1/12, y un page absurdo se acota en vez de romper', async (t) => {
+  const call = t.mock.method(Course, 'getCoursesForTeacher', async () => ({ rows: [], total: 0 }));
+  const res = mockRes();
+  await courseController.getTeachingCourses(mockReq({ session: { user: { id: 9 } } }), res);
+  assert.deepEqual(call.mock.calls[0].arguments[1], { page: 1, limit: 12 });
+
+  await courseController.getTeachingCourses(mockReq({ session: { user: { id: 9 } }, query: { page: '99999999999999999999', limit: '9999' } }), mockRes());
+  assert.deepEqual(call.mock.calls[1].arguments[1], { page: 1000000, limit: 50 });
 });
 
 test('getCertificate: 404 si el curso no existe', async (t) => {

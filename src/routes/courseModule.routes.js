@@ -5,6 +5,7 @@ import { isAuthenticated, requireCourseManager } from '../middlewares/auth.middl
 import { uploadThumbnail } from '../middlewares/upload.middleware.js';
 import { verifyFileSignature } from '../middlewares/fileSignature.middleware.js';
 import { courseCreateLimiter } from '../middlewares/rateLimit.middleware.js';
+import { validateFieldLengths } from '../middlewares/validateFieldLengths.middleware.js';
 
 const router = express.Router();
 
@@ -25,7 +26,7 @@ const moduleManager = [isAuthenticated, requireCourseManager(courseIdFromModuleP
 /**
  * PUT /api/course-modules/:moduleId
  */
-router.put('/:moduleId', ...moduleManager, courseModuleController.updateModule);
+router.put('/:moduleId', ...moduleManager, validateFieldLengths('title'), courseModuleController.updateModule);
 
 /**
  * DELETE /api/course-modules/:moduleId
@@ -42,6 +43,7 @@ router.post(
   ...moduleManager,
   courseCreateLimiter,
   uploadThumbnail.single('thumbnail'),
+  validateFieldLengths('title', 'description'),
   verifyFileSignature('image'),
   courseModuleController.createModuleCourse
 );

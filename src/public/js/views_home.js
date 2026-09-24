@@ -116,8 +116,8 @@ function renderCourseCard(course) {
             ${escapeHtml(course.description || t('home.no_description'))}
         </p>
         <div class="flex items-center justify-between text-sm text-gray-500 border-t pt-3">
-            <span><i class="fas fa-play-circle mr-1 text-cenat-green"></i> ${t('home.contents_count', { count: contentCount })}</span>
-            <span><i class="fas fa-users mr-1 text-cenat-green"></i> ${t('home.enrolled_count', { count: enrolledCount })}</span>
+            <span><i class="fas fa-play-circle mr-1 text-cenat-green"></i> ${tPlural('home.contents_count', contentCount)}</span>
+            <span><i class="fas fa-users mr-1 text-cenat-green"></i> ${tPlural('home.enrolled_count', enrolledCount)}</span>
         </div>
     `;
 

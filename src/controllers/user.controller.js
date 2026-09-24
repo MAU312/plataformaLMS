@@ -7,6 +7,8 @@ import { parseCsv } from '../utils/csv.js';
 import { generateTempPassword } from '../utils/password.js';
 import mailer from '../config/mailer.js';
 import { t } from '../utils/i18n.js';
+import { parsePagination, buildPagination } from '../utils/pagination.js';
+import { exceedsFieldLimit } from '../middlewares/validateFieldLengths.middleware.js';
 import { EMAIL_REGEX, USERNAME_REGEX } from '../utils/validators.js';
 
 const VALID_ROLES = ['admin', 'student', 'teacher'];
@@ -84,8 +86,7 @@ export const createUser = async (req, res) => {
  */
 export const getAllUsers = async (req, res) => {
   try {
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 10));
+    const { page, limit } = parsePagination(req.query, 10);
     const search = String(req.query.search || '').trim();
 
     const { rows, total } = await User.findAll({ page, limit, search });
@@ -93,7 +94,7 @@ export const getAllUsers = async (req, res) => {
     res.json({
       success: true,
       data: rows,
-      pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) }
+      pagination: buildPagination(page, limit, total)
     });
   } catch (error) {
     console.error('Error al obtener usuarios:', error);
@@ -314,7 +315,10 @@ export const bulkImportUsers = async (req, res) => {
       const name = String(rows[i][nameKey] || '').trim();
       const email = String(rows[i][emailKey] || '').trim().toLowerCase();
 
-      if (!name || !email || !EMAIL_REGEX.test(email)) {
+      // Un nombre/email más largo que la columna (100) fallaba recién en el
+      // INSERT y se reportaba como un genérico "no se pudo crear" — se trata
+      // como fila inválida, igual que un email mal formado.
+      if (!name || !email || !EMAIL_REGEX.test(email) || exceedsFieldLimit('name', name) || exceedsFieldLimit('email', email)) {
         results.push({ row: rowNum, email: email || null, status: 'error', message: t(req.locale, 'errors.row_invalid_name_email') });
         continue;
       }

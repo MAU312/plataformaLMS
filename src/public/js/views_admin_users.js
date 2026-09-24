@@ -95,12 +95,12 @@ function openCreateUserModal() {
             <form id="create-user-form" class="space-y-4">
                 <div>
                     <label for="new-user-name" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.createModal.name_label')}</label>
-                    <input type="text" id="new-user-name" required
+                    <input type="text" id="new-user-name" required maxlength="100"
                         class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
                 </div>
                 <div>
                     <label for="new-user-email" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.createModal.email_label')}</label>
-                    <input type="email" id="new-user-email" required
+                    <input type="email" id="new-user-email" required maxlength="100"
                         class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
                 </div>
                 <div>

@@ -183,6 +183,7 @@ window.renderRegister = async function(params) {
                                     name="name"
                                     type="text"
                                     required
+                                    maxlength="100"
                                     class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
                                     placeholder="${escapeAttr(t('auth.register.name_placeholder'))}"
                                 >
@@ -203,6 +204,7 @@ window.renderRegister = async function(params) {
                                     name="email"
                                     type="email"
                                     required
+                                    maxlength="100"
                                     class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
                                     placeholder="${escapeAttr(t('auth.register.email_placeholder'))}"
                                 >

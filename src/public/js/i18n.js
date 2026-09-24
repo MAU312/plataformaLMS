@@ -161,8 +161,10 @@ const TRANSLATIONS = {
             search_placeholder: 'Buscar curso...',
             retry: 'Reintentar',
             no_description: 'Sin descripción disponible',
-            contents_count: '{{count}} contenidos',
-            enrolled_count: '{{count}} inscritos',
+            contents_count_singular: '{{count}} contenido',
+            contents_count_plural: '{{count}} contenidos',
+            enrolled_count_singular: '{{count}} inscrito',
+            enrolled_count_plural: '{{count}} inscritos',
             empty_search_title: 'No se encontraron cursos',
             empty_search_subtitle: 'Intenta con otro término de búsqueda',
             empty_title: 'No hay cursos disponibles aún',
@@ -228,6 +230,7 @@ const TRANSLATIONS = {
             no_questions_quiz: 'Este cuestionario todavía no tiene preguntas',
             no_questions_survey: 'Esta encuesta todavía no tiene preguntas',
             no_answers_yet: 'Nadie ha respondido esta pregunta todavía',
+            show_more_answers: 'Mostrar más ({{remaining}} restantes)',
             correct_incorrect_percent: '{{correct}} correctas, {{incorrect}} incorrectas ({{percent}}%)',
             status_pending: 'Pendiente',
             status_correct: 'Correcta',
@@ -821,12 +824,17 @@ const TRANSLATIONS = {
             role_admin: 'Administrador',
             role_teacher: 'Profesor',
             role_student: 'Estudiante',
-            my_progress: 'Mi progreso ({{count}} cursos)',
+            my_progress_singular: 'Mi progreso ({{count}} curso)',
+            my_progress_plural: 'Mi progreso ({{count}} cursos)',
             not_enrolled_yet: 'No estás inscrito en ningún curso aún',
             assigned_courses: 'Cursos asignados ({{count}})',
-            enrolled_count_suffix: '{{count}} inscritos',
-            contents_count_suffix: '{{count}} contenidos',
+            enrolled_count_suffix_singular: '{{count}} inscrito',
+            enrolled_count_suffix_plural: '{{count}} inscritos',
+            contents_count_suffix_singular: '{{count}} contenido',
+            contents_count_suffix_plural: '{{count}} contenidos',
             no_assigned_courses: 'Aún no tienes cursos asignados',
+            showing_first_of: 'Mostrando los primeros {{shown}} de {{total}} cursos.',
+            view_all_courses: 'Ver todos',
             load_failed: 'Error al cargar el perfil',
             avatar_field_label: 'La foto de perfil',
             avatar_updated: 'Foto de perfil actualizada exitosamente',
@@ -980,8 +988,10 @@ const TRANSLATIONS = {
             search_placeholder: 'Search course...',
             retry: 'Retry',
             no_description: 'No description available',
-            contents_count: '{{count}} contents',
-            enrolled_count: '{{count}} enrolled',
+            contents_count_singular: '{{count}} content',
+            contents_count_plural: '{{count}} contents',
+            enrolled_count_singular: '{{count}} enrolled',
+            enrolled_count_plural: '{{count}} enrolled',
             empty_search_title: 'No courses found',
             empty_search_subtitle: 'Try a different search term',
             empty_title: 'No courses available yet',
@@ -1047,6 +1057,7 @@ const TRANSLATIONS = {
             no_questions_quiz: "This quiz doesn't have any questions yet",
             no_questions_survey: "This survey doesn't have any questions yet",
             no_answers_yet: 'No one has answered this question yet',
+            show_more_answers: 'Show more ({{remaining}} remaining)',
             correct_incorrect_percent: '{{correct}} correct, {{incorrect}} incorrect ({{percent}}%)',
             status_pending: 'Pending',
             status_correct: 'Correct',
@@ -1640,12 +1651,17 @@ const TRANSLATIONS = {
             role_admin: 'Administrator',
             role_teacher: 'Teacher',
             role_student: 'Student',
-            my_progress: 'My progress ({{count}} courses)',
+            my_progress_singular: 'My progress ({{count}} course)',
+            my_progress_plural: 'My progress ({{count}} courses)',
             not_enrolled_yet: "You're not enrolled in any course yet",
             assigned_courses: 'Assigned courses ({{count}})',
-            enrolled_count_suffix: '{{count}} enrolled',
-            contents_count_suffix: '{{count}} contents',
+            enrolled_count_suffix_singular: '{{count}} enrolled',
+            enrolled_count_suffix_plural: '{{count}} enrolled',
+            contents_count_suffix_singular: '{{count}} content',
+            contents_count_suffix_plural: '{{count}} contents',
             no_assigned_courses: "You don't have any assigned courses yet",
+            showing_first_of: 'Showing the first {{shown}} of {{total}} courses.',
+            view_all_courses: 'View all',
             load_failed: 'Error loading the profile',
             avatar_field_label: 'The profile picture',
             avatar_updated: 'Profile picture updated successfully',
@@ -1695,6 +1711,17 @@ function t(key, vars) {
         });
     }
     return value;
+}
+
+/**
+ * Igual que t(), pero elige la variante `<baseKey>_singular` cuando `count` es
+ * exactamente 1 y `<baseKey>_plural` en cualquier otro caso (incluido 0) —
+ * el mismo par de claves que ya se usaba a mano en varios lugares
+ * (`t(n === 1 ? 'x_singular' : 'x_plural', { count: n })`), sin repetir el
+ * ternario en cada vista. `count` se pasa solo como variable {{count}}.
+ */
+function tPlural(baseKey, count, vars) {
+    return t(`${baseKey}_${count === 1 ? 'singular' : 'plural'}`, { ...vars, count });
 }
 
 /**
@@ -1763,6 +1790,7 @@ applyStaticTranslations();
 syncLanguageSelects();
 
 window.t = t;
+window.tPlural = tPlural;
 window.getLocale = getLocale;
 window.setLocale = setLocale;
 window.applyStaticTranslations = applyStaticTranslations;

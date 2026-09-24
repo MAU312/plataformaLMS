@@ -3,6 +3,7 @@ import * as submissionController from '../controllers/submission.controller.js';
 import TaskSubmission from '../models/TaskSubmission.js';
 import Content from '../models/Content.js';
 import { isAuthenticated, requireCourseManager } from '../middlewares/auth.middleware.js';
+import { validateFieldLengths } from '../middlewares/validateFieldLengths.middleware.js';
 
 const router = express.Router();
 
@@ -34,6 +35,7 @@ router.put(
   '/:id/review',
   isAuthenticated,
   requireCourseManager(courseIdFromSubmissionParam),
+  validateFieldLengths('feedback'),
   submissionController.reviewSubmission
 );
 

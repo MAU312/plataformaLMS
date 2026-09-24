@@ -10,6 +10,10 @@ window.renderProfile = async function(params) {
 
     try {
         let enrolledCourses = [];
+        // Total REAL de inscripciones (viene en `pagination`): `enrolledCourses`
+        // solo trae hasta 50, así que contarlo con .length mostraba "50 cursos"
+        // para un estudiante inscrito en cientos.
+        let enrolledTotal = 0;
         if (isStudent()) {
             // Esta sección no pagina, muestra el progreso de TODOS los
             // cursos de un vistazo — se pide hasta el tope real que
@@ -18,12 +22,15 @@ window.renderProfile = async function(params) {
             // silencio a un estudiante inscrito en más de 12 cursos.
             const response = await coursesAPI.getEnrolled({ limit: 50 });
             enrolledCourses = response.data || [];
+            enrolledTotal = response.pagination?.total ?? enrolledCourses.length;
         }
 
         let teachingCourses = [];
+        let teachingTotal = 0;
         if (isTeacher()) {
-            const response = await coursesAPI.getTeaching();
+            const response = await coursesAPI.getTeaching({ limit: 50 });
             teachingCourses = response.data || [];
+            teachingTotal = response.pagination?.total ?? teachingCourses.length;
         }
 
         app.innerHTML = `
@@ -62,7 +69,7 @@ window.renderProfile = async function(params) {
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                         <h2 class="text-lg font-bold text-gray-900 mb-4">
                             <i class="fas fa-chart-line text-cenat-green mr-2"></i>
-                            ${t('profile.my_progress', { count: enrolledCourses.length })}
+                            ${tPlural('profile.my_progress', enrolledTotal)}
                         </h2>
                         ${enrolledCourses.length > 0 ? `
                             <div class="space-y-4">
@@ -78,6 +85,7 @@ window.renderProfile = async function(params) {
                                     </div>
                                 `).join('')}
                             </div>
+                            ${renderProfileTruncationNote(enrolledCourses.length, enrolledTotal, '#/my-courses')}
                         ` : `
                             <p class="text-gray-500 text-center py-6">${t('profile.not_enrolled_yet')}</p>
                         `}
@@ -88,7 +96,7 @@ window.renderProfile = async function(params) {
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                         <h2 class="text-lg font-bold text-gray-900 mb-4">
                             <i class="fas fa-chalkboard-teacher text-cenat-green mr-2"></i>
-                            ${t('profile.assigned_courses', { count: teachingCourses.length })}
+                            ${t('profile.assigned_courses', { count: teachingTotal })}
                         </h2>
                         ${teachingCourses.length > 0 ? `
                             <div class="space-y-3">
@@ -96,12 +104,13 @@ window.renderProfile = async function(params) {
                                     <div class="border border-gray-100 rounded-lg p-4 flex items-center justify-between gap-3">
                                         <a href="#/teacher/courses/${course.id}/edit" class="font-medium text-gray-900 hover:text-cenat-green truncate">${escapeHtml(course.title)}</a>
                                         <div class="flex items-center gap-4 text-sm text-gray-500 flex-shrink-0">
-                                            <span><i class="fas fa-users mr-1"></i>${t('profile.enrolled_count_suffix', { count: course.enrolled_count || 0 })}</span>
-                                            <span><i class="fas fa-layer-group mr-1"></i>${t('profile.contents_count_suffix', { count: course.content_count || 0 })}</span>
+                                            <span><i class="fas fa-users mr-1"></i>${tPlural('profile.enrolled_count_suffix', course.enrolled_count || 0)}</span>
+                                            <span><i class="fas fa-layer-group mr-1"></i>${tPlural('profile.contents_count_suffix', course.content_count || 0)}</span>
                                         </div>
                                     </div>
                                 `).join('')}
                             </div>
+                            ${renderProfileTruncationNote(teachingCourses.length, teachingTotal, '#/teacher/courses')}
                         ` : `
                             <p class="text-gray-500 text-center py-6">${t('profile.no_assigned_courses')}</p>
                         `}
@@ -136,6 +145,22 @@ window.renderProfile = async function(params) {
  * botón "Quitar foto" solo existe en el DOM cuando ya hay una foto puesta
  * (ver el template de arriba).
  */
+/**
+ * Aviso bajo la lista de cursos del perfil cuando hay más cursos de los que
+ * se cargaron (la lista pide hasta 50): sin él, un estudiante o profesor
+ * con más de 50 cursos veía una lista cortada sin ninguna pista de que
+ * faltaban. Devuelve '' si se mostró todo.
+ */
+function renderProfileTruncationNote(shown, total, viewAllHref) {
+    if (total <= shown) return '';
+    return `
+        <p class="text-sm text-gray-500 mt-4">
+            ${t('profile.showing_first_of', { shown, total })}
+            <a href="${viewAllHref}" class="text-cenat-green hover:underline font-medium">${t('profile.view_all_courses')}</a>
+        </p>
+    `;
+}
+
 function setupAvatarControls() {
     const editBtn = document.getElementById('edit-avatar-btn');
     const fileInput = document.getElementById('avatar-file-input');

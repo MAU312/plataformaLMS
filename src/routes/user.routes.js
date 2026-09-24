@@ -4,6 +4,7 @@ import { isAuthenticated, isAdmin } from '../middlewares/auth.middleware.js';
 import { userCreateLimiter } from '../middlewares/rateLimit.middleware.js';
 import { uploadAvatar, uploadCsv } from '../middlewares/upload.middleware.js';
 import { verifyFileSignature } from '../middlewares/fileSignature.middleware.js';
+import { validateFieldLengths } from '../middlewares/validateFieldLengths.middleware.js';
 import { t } from '../utils/i18n.js';
 
 const router = express.Router();
@@ -13,7 +14,7 @@ const router = express.Router();
 router.put('/me/avatar', isAuthenticated, uploadAvatar.single('avatar'), verifyFileSignature('image'), userController.updateMyAvatar);
 router.delete('/me/avatar', isAuthenticated, userController.removeMyAvatar);
 
-router.post('/', isAuthenticated, isAdmin, userCreateLimiter, userController.createUser);
+router.post('/', isAuthenticated, isAdmin, userCreateLimiter, validateFieldLengths('name', 'email'), userController.createUser);
 router.post('/bulk-import', isAuthenticated, isAdmin, userCreateLimiter, uploadCsv.single('csv'), userController.bulkImportUsers);
 router.get('/', isAuthenticated, isAdmin, userController.getAllUsers);
 router.get('/stats/count', isAuthenticated, isAdmin, userController.getUserStats);
@@ -36,7 +37,7 @@ router.get('/by-role/:role', isAuthenticated, (req, res, next) => {
   });
 }, userController.getUsersByRole);
 router.get('/:id', isAuthenticated, isAdmin, userController.getUserById);
-router.put('/:id', isAuthenticated, isAdmin, userController.updateUser);
+router.put('/:id', isAuthenticated, isAdmin, validateFieldLengths('name', 'email'), userController.updateUser);
 router.put('/:id/toggle-active', isAuthenticated, isAdmin, userController.toggleUserActive);
 router.put('/:id/admin-access', isAuthenticated, isAdmin, userController.setUserAdminAccess);
 router.delete('/:id', isAuthenticated, isAdmin, userController.deleteUser);
