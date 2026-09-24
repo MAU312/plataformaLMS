@@ -33,6 +33,29 @@ function formatDate(completedAt) {
 }
 
 /**
+ * Dibuja un texto del usuario (nombre del estudiante, título del curso) con
+ * el MAYOR tamaño de letra ≤ `size` con el que su bloque —ya partido en
+ * varias líneas por pdfkit según `width`— cabe en `maxHeight`, sin bajar
+ * de `minSize`. Los tres diseños ubican el resto del texto en posiciones
+ * fijas (y), así que un nombre largo (hasta 100 caracteres) o un título
+ * largo se partía en 2-3 líneas y PISABA el renglón fijo de abajo ("ha
+ * completado exitosamente el curso"). `maxHeight` es el espacio real que
+ * queda entre el inicio del texto y el siguiente elemento fijo.
+ *
+ * Se llama con la fuente/color ya elegidos por quien dibuja; acá solo se
+ * ajusta el tamaño.
+ */
+function drawFittedText(doc, text, x, y, { width, maxHeight, size, minSize, ...textOptions }) {
+  let fontSize = size;
+  doc.fontSize(fontSize);
+  while (fontSize > minSize && doc.heightOfString(text, { width, ...textOptions }) > maxHeight) {
+    fontSize -= 1;
+    doc.fontSize(fontSize);
+  }
+  doc.text(text, x, y, { width, ...textOptions });
+}
+
+/**
  * Estilo original: marco doble (uno grueso, uno fino adentro), logo
  * centrado arriba, todo el texto centrado.
  */
@@ -53,14 +76,16 @@ function drawClassic(doc, { studentName, courseTitle, completedAt }) {
   doc.font('Helvetica').fontSize(14).fillColor('#4b5563')
     .text('Se certifica que', 0, 215, { align: 'center' });
 
-  doc.font('Helvetica-Bold').fontSize(26).fillColor(BRAND_GREEN)
-    .text(studentName, 60, 245, { align: 'center', width: width - 120 });
+  // Presupuesto de alto: de y=245 hasta el renglón fijo de y=290.
+  doc.font('Helvetica-Bold').fillColor(BRAND_GREEN);
+  drawFittedText(doc, studentName, 60, 245, { align: 'center', width: width - 120, maxHeight: 41, size: 26, minSize: 12 });
 
   doc.font('Helvetica').fontSize(14).fillColor('#4b5563')
     .text('ha completado exitosamente el curso', 0, 290, { align: 'center' });
 
-  doc.font('Helvetica-Bold').fontSize(20).fillColor('#1f2937')
-    .text(courseTitle, 80, 318, { align: 'center', width: width - 160 });
+  // Presupuesto: de y=318 hasta la fecha (height - 110), con un respiro.
+  doc.font('Helvetica-Bold').fillColor('#1f2937');
+  drawFittedText(doc, courseTitle, 80, 318, { align: 'center', width: width - 160, maxHeight: height - 110 - 318 - 10, size: 20, minSize: 10 });
 
   doc.font('Helvetica').fontSize(12).fillColor('#6b7280')
     .text(`Fecha de finalización: ${formatDate(completedAt)}`, 0, height - 110, { align: 'center' });
@@ -100,14 +125,16 @@ function drawModern(doc, { studentName, courseTitle, completedAt }) {
   doc.font('Helvetica').fontSize(13).fillColor('#4b5563')
     .text('Se certifica que', 70, bandHeight + 120, { width: width - 140 });
 
-  doc.font('Helvetica-Bold').fontSize(28).fillColor(BRAND_GREEN)
-    .text(studentName, 70, bandHeight + 145, { width: width - 140 });
+  // Presupuesto: de y=bandHeight+145 hasta el renglón fijo de bandHeight+195.
+  doc.font('Helvetica-Bold').fillColor(BRAND_GREEN);
+  drawFittedText(doc, studentName, 70, bandHeight + 145, { width: width - 140, maxHeight: 46, size: 28, minSize: 12 });
 
   doc.font('Helvetica').fontSize(13).fillColor('#4b5563')
     .text('completó exitosamente el curso', 70, bandHeight + 195, { width: width - 140 });
 
-  doc.font('Helvetica-Bold').fontSize(19).fillColor('#1f2937')
-    .text(courseTitle, 70, bandHeight + 220, { width: width - 140 });
+  // Presupuesto: hasta la franja inferior (height - 50), con un respiro.
+  doc.font('Helvetica-Bold').fillColor('#1f2937');
+  drawFittedText(doc, courseTitle, 70, bandHeight + 220, { width: width - 140, maxHeight: height - 50 - (bandHeight + 220) - 10, size: 19, minSize: 10 });
 
   doc.font('Helvetica').fontSize(11).fillColor('#ffffff')
     .text(`Fecha de finalización: ${formatDate(completedAt)}`, 70, height - 35, { width: width - 300 });
@@ -133,8 +160,10 @@ function drawMinimal(doc, { studentName, courseTitle, completedAt }) {
   doc.font('Helvetica').fontSize(13).fillColor('#6b7280')
     .text('Este certificado se otorga a', 0, 195, { align: 'center' });
 
-  doc.font('Helvetica-Bold').fontSize(34).fillColor('#1f2937')
-    .text(studentName, 60, 225, { align: 'center', width: width - 120 });
+  // Presupuesto: de y=225 hasta la línea fina de y=278 (el nombre no debe
+  // llegar a taparla), con un respiro.
+  doc.font('Helvetica-Bold').fillColor('#1f2937');
+  drawFittedText(doc, studentName, 60, 225, { align: 'center', width: width - 120, maxHeight: 278 - 225 - 4, size: 34, minSize: 12 });
 
   // Línea fina centrada debajo del nombre, del mismo ancho que el texto
   // "por haber completado..." — un detalle minimalista en vez de un marco.
@@ -145,8 +174,9 @@ function drawMinimal(doc, { studentName, courseTitle, completedAt }) {
   doc.font('Helvetica').fontSize(13).fillColor('#6b7280')
     .text('por haber completado el curso', 0, 295, { align: 'center' });
 
-  doc.font('Helvetica-Bold').fontSize(18).fillColor(BRAND_GREEN)
-    .text(courseTitle, 80, 322, { align: 'center', width: width - 160 });
+  // Presupuesto: hasta la fecha (height - 60), con un respiro.
+  doc.font('Helvetica-Bold').fillColor(BRAND_GREEN);
+  drawFittedText(doc, courseTitle, 80, 322, { align: 'center', width: width - 160, maxHeight: height - 60 - 322 - 10, size: 18, minSize: 10 });
 
   doc.font('Helvetica').fontSize(10).fillColor('#9ca3af')
     .text(formatDate(completedAt), 0, height - 60, { align: 'center' });
