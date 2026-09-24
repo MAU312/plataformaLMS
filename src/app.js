@@ -71,10 +71,11 @@ if (process.env.TRUST_PROXY) {
 // Cabeceras HTTP de seguridad (anti-clickjacking, anti-sniffing de MIME,
 // desactiva X-Powered-By, etc.). La CSP se arma a mano en vez de con los
 // defaults de Helmet (script-src/style-src 'self') porque el frontend
-// carga Tailwind y Font Awesome desde CDN, usa atributos onclick inline
-// en el HTML, e incrusta reproductores de YouTube/Vimeo — se permite
-// puntualmente cada uno de esos orígenes en vez de desactivar la CSP por
-// completo.
+// usa atributos onclick inline en el HTML e incrusta reproductores de
+// YouTube/Vimeo — se permite puntualmente cada uno de esos orígenes en
+// vez de desactivar la CSP por completo. Tailwind (compilado, ver
+// "build:css") y Font Awesome (/vendor/fontawesome) se sirven desde el
+// propio servidor: no hay ningún CDN externo permitido.
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -84,8 +85,11 @@ app.use(helmet({
       // el frontend depende en TODAS partes de atributos onclick="..."
       // inline (no hay build step que los reemplace por addEventListener).
       scriptSrcAttr: ["'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'", 'https://cdnjs.cloudflare.com'],
-      fontSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'data:'],
+      // Font Awesome ahora se sirve desde /vendor/fontawesome (ya no cdnjs),
+      // así que la política deja de permitir hojas de estilo y fuentes de
+      // terceros: menos superficie y sin dependencia de un CDN externo.
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      fontSrc: ["'self'", 'data:'],
       imgSrc: ["'self'", 'data:'],
       // 'blob:' es necesario para la previsualización local del video antes
       // de subirlo (URL.createObjectURL en el formulario de agregar video).

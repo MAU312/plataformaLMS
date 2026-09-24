@@ -27,8 +27,14 @@
          "Play" en tiempo de ejecución. -->
     <link rel="stylesheet" href="/css/tailwind.css">
 
-    <!-- Font Awesome para iconos -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Font Awesome Free 6.4.0 servido desde el propio servidor (antes cdnjs).
+         Si la red del hosting bloqueaba el CDN, TODOS los íconos desaparecían,
+         y con ellos los botones de solo ícono (editar, eliminar, menú...). Solo
+         se incluye la familia "solid" (la única que usa la app: `fas`); ver
+         vendor/fontawesome/LICENSE.txt (íconos CC BY 4.0, fuentes OFL 1.1,
+         código MIT). -->
+    <link rel="stylesheet" href="/vendor/fontawesome/css/fontawesome.min.css">
+    <link rel="stylesheet" href="/vendor/fontawesome/css/solid.min.css">
 
     <!-- CSS personalizado -->
     <link rel="stylesheet" href="/css/styles.css">
