@@ -649,7 +649,12 @@ const TRANSLATIONS = {
             certificate_minimal: 'Minimalista',
             certificate_hint: 'El diseño del certificado PDF que descarga un estudiante al completar este curso.',
             no_teachers_yet: 'No hay usuarios con rol "Profesor" todavía. Puedes crearlos desde Usuarios y asignarlos después.',
-            load_teachers_failed: 'Error al cargar la lista de profesores'
+            load_teachers_failed: 'Error al cargar la lista de profesores',
+            teacher_search_placeholder: 'Buscar por nombre o correo',
+            teacher_search_aria_label: 'Buscar profesor por nombre o correo',
+            teacher_search_no_results: 'Ningún profesor coincide con la búsqueda.',
+            teachers_selected_singular: '{{count}} seleccionado',
+            teachers_selected_plural: '{{count}} seleccionados'
         },
         admin: {
             back_to_courses: 'Volver a cursos',
@@ -1476,7 +1481,12 @@ const TRANSLATIONS = {
             certificate_minimal: 'Minimal',
             certificate_hint: 'The design of the PDF certificate a student downloads when completing this course.',
             no_teachers_yet: 'There are no "Teacher" role users yet. You can create them from Users and assign them afterward.',
-            load_teachers_failed: 'Error loading the teacher list'
+            load_teachers_failed: 'Error loading the teacher list',
+            teacher_search_placeholder: 'Search by name or email',
+            teacher_search_aria_label: 'Search teacher by name or email',
+            teacher_search_no_results: 'No teachers match your search.',
+            teachers_selected_singular: '{{count}} selected',
+            teachers_selected_plural: '{{count}} selected'
         },
         admin: {
             back_to_courses: 'Back to courses',

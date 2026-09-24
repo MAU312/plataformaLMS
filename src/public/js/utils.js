@@ -628,18 +628,100 @@ function renderTeacherCheckboxesHTML(teachers, selectedIds = []) {
     if (teachers.length === 0) {
         return `<p class="text-sm text-gray-400 dark:text-slate-500">${t('courseForm.no_teachers_yet')}</p>`;
     }
-    return teachers.map(teacher => {
+    const rowsHTML = teachers.map(teacher => {
         const checked = selectedIds.includes(teacher.id);
         return `
-        <div class="teacher-row flex items-center gap-3 py-2 flex-wrap">
-            <label class="flex items-center gap-3 text-base text-gray-700 dark:text-slate-300">
+        <div class="teacher-row flex items-center gap-3 py-2 flex-wrap" data-search="${escapeAttr(normalizeSearchText(`${teacher.name} ${teacher.email}`))}">
+            <label class="flex items-start gap-3 min-w-0 max-w-full text-base text-gray-700 dark:text-slate-300">
                 <input type="checkbox" name="teacher_ids" value="${teacher.id}" data-teacher-id="${teacher.id}"
-                    class="teacher-checkbox w-4 h-4 rounded border-gray-300 text-cenat-green focus:ring-cenat-green" ${checked ? 'checked' : ''}>
-                ${escapeHtml(teacher.name)} <span class="text-sm text-gray-400 dark:text-slate-500">(${escapeHtml(teacher.email)})</span>
+                    class="teacher-checkbox mt-1 w-4 h-4 shrink-0 rounded border-gray-300 text-cenat-green focus:ring-cenat-green" ${checked ? 'checked' : ''}>
+                <span class="min-w-0 break-words">${escapeHtml(teacher.name)} <span class="text-sm text-gray-400 dark:text-slate-500">(${escapeHtml(teacher.email)})</span></span>
             </label>
         </div>
         `;
     }).join('');
+
+    // El buscador va "sticky" arriba: el recuadro que contiene esta lista
+    // (en todos los formularios que la usan) es el que tiene el scroll, y
+    // sin esto la barra se iría de vista al bajar por la lista.
+    // `-top-4 -mt-4 pt-4`: sticky se ancla al borde del CONTENIDO del
+    // recuadro, no al de su padding (p-4 en la mayoría de los formularios),
+    // así que con `top-0` las filas se asomaban por la franja de padding
+    // sobre la barra. Así el bloque se extiende hacia arriba hasta cubrirla;
+    // en un recuadro con menos padding (p-3, o ninguno) ese exceso queda
+    // recortado fuera del scroll sin que se note.
+    // El <input> no lleva `name` a propósito: no debe colarse en ningún
+    // FormData/serialización de los formularios que envuelven esta lista.
+    return `
+        <div class="sticky -top-4 z-10 -mt-4 bg-white pb-2 pt-4">
+            <div class="relative">
+                <input type="search" class="teacher-search-input w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green"
+                    placeholder="${escapeAttr(t('courseForm.teacher_search_placeholder'))}"
+                    aria-label="${escapeAttr(t('courseForm.teacher_search_aria_label'))}" autocomplete="off">
+                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+            </div>
+            <p class="teacher-selected-count text-xs text-gray-500 mt-1"></p>
+        </div>
+        <div class="teacher-list">${rowsHTML}</div>
+        <p class="teacher-no-results hidden text-sm text-gray-400 dark:text-slate-500 py-2" role="status">${t('courseForm.teacher_search_no_results')}</p>
+    `;
+}
+
+/**
+ * Minúsculas y sin tildes/diacríticos ("Sofía" → "sofia", "Núñez" → "nunez"),
+ * para que buscar sin acentos encuentre igual a quien sí los lleva.
+ */
+function normalizeSearchText(text) {
+    return String(text || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
+/**
+ * Conecta el buscador de la lista de profesores. El filtro solo OCULTA filas
+ * (style.display) — nunca las saca del DOM: un profesor ya marcado que no
+ * coincide con la búsqueda sigue marcado, y getSelectedTeacherIds lo sigue
+ * leyendo al guardar. Por eso el contador "N seleccionados": al filtrar, los
+ * marcados que quedan fuera de la búsqueda dejan de verse, y el contador es
+ * la forma de saber cuántos hay asignados igual.
+ * Se busca por nombre y correo; varias palabras se combinan con AND en
+ * cualquier orden ("rojas ana" encuentra a "Ana Rojas").
+ */
+function setupTeacherCheckboxFilter(container) {
+    const searchInput = container.querySelector('.teacher-search-input');
+    if (!searchInput) return; // lista vacía: no se pintó el buscador
+    const rows = Array.from(container.querySelectorAll('.teacher-row'));
+    const counter = container.querySelector('.teacher-selected-count');
+    const noResults = container.querySelector('.teacher-no-results');
+
+    const updateSelectedCount = () => {
+        const selected = container.querySelectorAll('input[name="teacher_ids"]:checked').length;
+        counter.textContent = tPlural('courseForm.teachers_selected', selected);
+    };
+
+    const applyFilter = () => {
+        const terms = normalizeSearchText(searchInput.value).split(/\s+/).filter(Boolean);
+        let visibleCount = 0;
+        rows.forEach(row => {
+            const matches = terms.every(term => row.dataset.search.includes(term));
+            // style.display y no la clase `hidden`: `flex` (de la fila) y
+            // `hidden` son ambas utilidades de display y la que gana depende
+            // del orden en el CSS compilado.
+            row.style.display = matches ? '' : 'none';
+            if (matches) visibleCount++;
+        });
+        noResults.classList.toggle('hidden', visibleCount > 0);
+    };
+
+    searchInput.addEventListener('input', applyFilter);
+    // Enter en un <input> dentro de un <form> lo envía: acá guardaría el
+    // curso entero a medio buscar un profesor.
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') e.preventDefault();
+    });
+    // Delegado en la lista (un elemento nuevo en cada carga): el contenedor
+    // persiste entre llamadas a loadTeacherCheckboxes, así que un listener
+    // puesto en él se acumularía.
+    container.querySelector('.teacher-list').addEventListener('change', updateSelectedCount);
+    updateSelectedCount();
 }
 
 async function loadTeacherCheckboxes(containerId, selectedIds = []) {
@@ -648,6 +730,7 @@ async function loadTeacherCheckboxes(containerId, selectedIds = []) {
     try {
         const response = await usersAPI.getByRole('teacher');
         container.innerHTML = renderTeacherCheckboxesHTML(response.data || [], selectedIds);
+        setupTeacherCheckboxFilter(container);
     } catch (error) {
         container.innerHTML = `<p class="text-sm text-red-500">${t('courseForm.load_teachers_failed')}</p>`;
     }

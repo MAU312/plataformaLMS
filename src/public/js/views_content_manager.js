@@ -219,7 +219,7 @@ async function toggleModuleChildTeacherEditor(courseId, moduleId, childId) {
 
         container.innerHTML = `
             <div class="bg-white border border-gray-200 rounded-lg p-3 mt-2">
-                <div id="${teacherListId}"></div>
+                <div id="${teacherListId}" class="max-h-56 overflow-y-auto"></div>
                 <div class="flex gap-2 mt-2">
                     <button onclick="saveModuleChildTeachers(${courseId}, ${moduleId}, ${childId})" class="text-xs bg-cenat-green text-white px-3 py-1.5 rounded-lg font-semibold">
                         <i class="fas fa-check mr-1"></i> ${t('contentManager.save')}
