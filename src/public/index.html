@@ -52,9 +52,13 @@
             <div class="flex justify-between items-center h-16">
                 <!-- Logo -->
                 <div class="flex items-center min-w-0">
-                    <a href="#/" class="flex items-center space-x-2 min-w-0">
-                        <img src="/images/logo-lanba-icono.png" alt="LANBA" class="h-8 w-8 object-contain flex-shrink-0">
-                        <span class="font-bold text-lg md:text-xl text-cenat-green truncate">LMS LANBA - CeNAT</span>
+                    <!-- En teléfonos (< 640 px) solo el logo: el título no cabía junto a
+                         los 4 controles de la derecha (se veía como "LMS LANBA …") y
+                         esos controles necesitan 44 px cada uno para tocarse bien.
+                         aria-label conserva el nombre para lectores de pantalla. -->
+                    <a href="#/" class="flex items-center space-x-2 min-w-0" aria-label="LMS LANBA - CeNAT">
+                        <img src="/images/logo-lanba-icono.png" alt="" class="h-8 w-8 object-contain flex-shrink-0">
+                        <span class="hidden sm:inline font-bold text-lg md:text-xl text-cenat-green truncate">LMS LANBA - CeNAT</span>
                     </a>
                 </div>
 
@@ -129,7 +133,7 @@
                 </div>
 
                 <!-- Mobile menu button -->
-                <div class="lg:hidden flex items-center gap-3 flex-shrink-0">
+                <div class="lg:hidden flex items-center gap-1 sm:gap-3 flex-shrink-0">
                     <select id="language-select-mobile" onchange="setLocale(this.value)" title="Idioma" data-i18n-title="nav.language" aria-label="Idioma" data-i18n-aria-label="nav.language" class="text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded px-1 py-0.5">
                         <option value="es">ES</option>
                         <option value="en">EN</option>

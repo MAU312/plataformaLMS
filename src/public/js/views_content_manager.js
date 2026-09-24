@@ -125,8 +125,8 @@ function renderModuleCard(courseId, module) {
     const courseCount = module.courses.length;
     return `
         <details class="border border-gray-100 rounded-lg mb-3" open data-module-id="${module.id}">
-            <summary class="cursor-pointer list-none p-3 flex items-center justify-between gap-2">
-                <div class="flex items-center gap-2 min-w-0">
+            <summary class="manager-row cursor-pointer list-none p-3 flex items-center justify-between gap-2">
+                <div class="manager-row-title flex items-center gap-2 min-w-0">
                     <i class="fas fa-chevron-right text-gray-400 text-xs module-chevron transition-transform"></i>
                     <i class="fas fa-layer-group text-cenat-green"></i>
                     <span class="font-semibold text-gray-900 truncate">${escapeHtml(module.title)}</span>
@@ -160,8 +160,8 @@ function renderModuleChildCourseRow(courseId, moduleId, childCourse) {
         : `#/teacher/courses/${childCourse.id}/edit`;
     return `
         <div class="bg-gray-50 rounded-lg px-3 py-2">
-            <div class="flex items-center justify-between gap-2">
-                <div class="flex items-center gap-2 min-w-0">
+            <div class="manager-row flex items-center justify-between gap-2">
+                <div class="manager-row-title flex items-center gap-2 min-w-0">
                     <div class="w-10 h-10 rounded bg-gradient-to-br from-cenat-green to-cenat-green-light flex items-center justify-center overflow-hidden flex-shrink-0">
                         ${childCourse.thumbnail
                             ? `<img src="${escapeAttr(childCourse.thumbnail)}" alt="${escapeAttr(childCourse.title)}" class="w-full h-full object-cover" loading="lazy" decoding="async">`
@@ -443,8 +443,8 @@ function renderDraggableFolderItem(courseId, contents, folder) {
             <div class="flex-1 min-w-0">
                 <div id="content-display-${folder.id}">
                     <details class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" open>
-                        <summary class="cursor-pointer list-none p-4 flex items-center justify-between gap-2">
-                            <div class="flex items-center gap-2 min-w-0">
+                        <summary class="manager-row cursor-pointer list-none p-4 flex items-center justify-between gap-2">
+                            <div class="manager-row-title flex items-center gap-2 min-w-0">
                                 <i class="fas fa-chevron-right text-gray-400 text-xs folder-chevron transition-transform"></i>
                                 <i class="fas fa-folder-open text-cenat-green"></i>
                                 <span class="font-bold text-gray-900 truncate">${escapeHtml(folder.title)}</span>
@@ -608,10 +608,10 @@ function encodeDataAttr(obj) {
 function renderReorderButtons(contentId) {
     return `
         <span class="reorder-buttons flex flex-col justify-center flex-shrink-0">
-            <button type="button" onclick="moveContentItem(${contentId}, -1)" class="text-gray-300 hover:text-cenat-green leading-none px-1" title="${t('contentManager.move_up')}" aria-label="${t('contentManager.move_up')}">
+            <button type="button" onclick="moveContentItem(${contentId}, -1)" class="reorder-btn text-gray-300 hover:text-cenat-green leading-none px-1" title="${t('contentManager.move_up')}" aria-label="${t('contentManager.move_up')}">
                 <i class="fas fa-chevron-up text-xs"></i>
             </button>
-            <button type="button" onclick="moveContentItem(${contentId}, 1)" class="text-gray-300 hover:text-cenat-green leading-none px-1" title="${t('contentManager.move_down')}" aria-label="${t('contentManager.move_down')}">
+            <button type="button" onclick="moveContentItem(${contentId}, 1)" class="reorder-btn text-gray-300 hover:text-cenat-green leading-none px-1" title="${t('contentManager.move_down')}" aria-label="${t('contentManager.move_down')}">
                 <i class="fas fa-chevron-down text-xs"></i>
             </button>
         </span>
@@ -777,7 +777,7 @@ function renderContentItem(content, type) {
     const icons = { video: 'fa-play-circle', url: 'fa-link', text: 'fa-align-left', task: 'fa-tasks', image: 'fa-image' };
     const icon = icons[type] || getFileIcon(content.url);
     return `
-        <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition">
+        <div class="manager-row flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition">
             ${type === 'image'
                 ? `<img src="${escapeAttr(content.url)}" alt="" class="w-10 h-10 rounded object-cover flex-shrink-0" loading="lazy" decoding="async">`
                 : `<i class="fas ${icon} text-xl text-cenat-green"></i>`
@@ -799,7 +799,7 @@ function renderContentItem(content, type) {
 
 function renderTaskItem(content) {
     return `
-        <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition">
+        <div class="manager-row flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition">
             <i class="fas fa-tasks text-xl text-cenat-green"></i>
             <div class="flex-1 min-w-0">
                 <p class="font-medium text-gray-900 truncate">${escapeHtml(content.title)}</p>
@@ -822,7 +822,7 @@ function renderQuizManagerItem(content) {
     const isQuiz = content.type === 'quiz';
     const questionCount = content.question_count || 0;
     return `
-        <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition">
+        <div class="manager-row flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition">
             <i class="fas ${isQuiz ? 'fa-question-circle' : 'fa-poll'} text-xl text-cenat-green"></i>
             <div class="flex-1 min-w-0">
                 <p class="font-medium text-gray-900 truncate">${escapeHtml(content.title)}</p>
@@ -843,7 +843,7 @@ function renderQuizManagerItem(content) {
 
 function renderForumItem(content) {
     return `
-        <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition">
+        <div class="manager-row flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition">
             <i class="fas fa-comments text-xl text-cenat-green"></i>
             <div class="flex-1 min-w-0">
                 <p class="font-medium text-gray-900 truncate">${escapeHtml(content.title)}</p>

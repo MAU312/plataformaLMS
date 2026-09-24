@@ -729,6 +729,146 @@ input[aria-invalid="true"] {
 }
 
 /* =================================
+   OBJETIVOS TÁCTILES (móvil y pantallas táctiles)
+   Medido en 375 px: los botones de solo ícono (editar, eliminar, descargar,
+   desvincular...) medían 12-31 px de ancho por 16-24 de alto, con
+   "Editar profesores" pegado a "Desvincular del módulo" — un toque fallido
+   borra o desvincula. WCAG 2.2 pide 24 px como mínimo (2.5.8); 40-44 px es
+   lo que un dedo toca cómodo. Un solo selector cubre TODOS los botones y
+   enlaces cuyo único hijo es un <i> (patrón que usa toda la app), en vez de
+   tocar cada plantilla.
+   Se excluyen: los que ya crecen con `-m-2` (cierre del toast y de los
+   modales), los botones de subir/bajar (van apilados; ver .reorder-btn) y el
+   enlace superpuesto de las tarjetas de curso.
+   ================================= */
+
+@media (max-width: 640px), (pointer: coarse) {
+    button:has(> i:only-child):not(.reorder-btn):not(.\-m-2),
+    a:has(> i:only-child):not(.course-card-link) {
+        min-width: 40px;
+        min-height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Agarradera de arrastre del gestor de contenido: el arrastre HTML5 no
+       funciona con el dedo en los navegadores móviles, y las flechas subir/
+       bajar (renderReorderButtons) existen justamente como alternativa. En un
+       curso con carpetas cada nivel de anidación gastaba ~90 px entre
+       agarradera y flechas, y las filas quedaban en ~118 px de ancho. */
+    .drag-handle {
+        display: none;
+    }
+
+    /* Subir/bajar: dos botones apilados; 40 px cada uno serían 80 px de alto. */
+    .reorder-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 36px;
+        min-height: 26px;
+    }
+
+    .pagination-btn {
+        min-width: 40px;
+        min-height: 40px;
+    }
+
+    /* Enlaces "← Volver" (ícono de flecha + texto) y botones de texto: 20 px de alto. */
+    a:has(> i.fa-arrow-left) {
+        display: inline-flex;
+        align-items: center;
+        min-height: 40px;
+    }
+
+    .expandable-text-toggle,
+    button.text-left {
+        display: inline-flex;
+        align-items: center;
+        min-height: 32px;
+    }
+
+    /* Check de "completado" del estudiante (la interacción principal del curso):
+       se ve de 24 px, pero la zona de toque llega a 40 px con un pseudo-elemento
+       invisible — sin cambiar cómo se ve ni empujar el título. */
+    .content-checkbox {
+        position: relative;
+    }
+
+    .content-checkbox::after {
+        content: '';
+        position: absolute;
+        inset: -8px;
+    }
+
+    /* Selector de rol de la tabla de usuarios (una "píldora" de 26 px de alto). */
+    select.badge {
+        min-height: 32px;
+    }
+}
+
+/* Barra superior en teléfonos y tablets (menú hamburguesa, < lg): cada control
+   a 44 px. Caben los cuatro más el logo desde 320 px de ancho. */
+@media (max-width: 1023.98px) {
+    /* #navbar delante: la regla base de .text-size-btn está más abajo en este
+       archivo y, con la misma especificidad, le ganaría a esta. */
+    #navbar .text-size-btn {
+        width: 44px;
+        height: 44px;
+    }
+
+    #dark-mode-toggle-mobile,
+    #mobile-menu-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    #language-select-mobile {
+        min-height: 44px;
+        padding-inline: 0.5rem;
+    }
+}
+
+/* Filas del gestor de contenido (contenido, tarea, cuestionario, foro,
+   carpeta, módulo, curso hijo): ícono + título + 2-3 botones en una sola línea
+   dejaban el título en ~95 px ("M…", "Fundament…") al agrandar los botones.
+   En pantallas angostas la fila se parte: el título ocupa su propia línea (al
+   menos 8 rem) y los botones pasan a una segunda, alineados a la derecha. */
+@media (max-width: 640px) {
+    .manager-row {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        row-gap: 0.25rem;
+    }
+
+    .manager-row > .flex-1,
+    .manager-row > .manager-row-title {
+        flex: 1 1 8rem;
+        min-width: 0;
+    }
+
+    /* Si el ícono/miniatura queda solo en su línea (fila muy angosta por la
+       anidación de carpetas), va a la izquierda y no pegado a los botones. */
+    .manager-row > i:first-child,
+    .manager-row > img:first-child {
+        margin-right: auto;
+    }
+
+    /* Encabezado de módulo/carpeta (<summary>): el "(2 cursos)" y la insignia
+       del profesor pasan a una segunda línea antes de recortar el título con
+       "…". (No aplica a la fila de curso hijo, donde el título ya vive en su
+       propio bloque junto a la miniatura.) */
+    summary.manager-row > .manager-row-title {
+        flex-wrap: wrap;
+        row-gap: 0.125rem;
+    }
+}
+
+/* =================================
    MOVIMIENTO REDUCIDO
    Preferencia del sistema operativo (vestibular, fotosensibilidad...). Se
    quitan el desplazamiento suave, el rebote/aparición, el confeti (ver

@@ -913,14 +913,14 @@ function renderPagination(currentPage, totalPages, totalItems, perPage, callback
             <span>${t('common.showing_range', { start, end, total: totalItems })}</span>
             <div class="flex items-center gap-1">
                 <button type="button" onclick="${callbackFn}(${currentPage - 1})"
-                    class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                    class="pagination-btn px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
                     aria-label="${escapeAttr(t('common.previous_page'))}"
                     ${currentPage === 1 ? 'disabled' : ''}>
                     <i class="fas fa-chevron-left" aria-hidden="true"></i>
                 </button>
                 ${pages.map(p => `
                     <button type="button" onclick="${callbackFn}(${p})"
-                        class="px-3 py-1 rounded font-medium transition ${p === currentPage
+                        class="pagination-btn px-3 py-1 rounded font-medium transition ${p === currentPage
                             ? 'bg-cenat-green text-white'
                             : 'hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300'}"
                         aria-label="${escapeAttr(t('common.go_to_page', { page: p }))}"
@@ -929,7 +929,7 @@ function renderPagination(currentPage, totalPages, totalItems, perPage, callback
                     </button>
                 `).join('')}
                 <button type="button" onclick="${callbackFn}(${currentPage + 1})"
-                    class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                    class="pagination-btn px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
                     aria-label="${escapeAttr(t('common.next_page'))}"
                     ${currentPage === totalPages ? 'disabled' : ''}>
                     <i class="fas fa-chevron-right" aria-hidden="true"></i>
