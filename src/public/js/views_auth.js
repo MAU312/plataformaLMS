@@ -16,9 +16,9 @@ window.renderLogin = async function(params) {
                 <!-- Logo y Header -->
                 <div class="text-center">
                     <img src="/images/logo-lanba.png" alt="LANBA" class="mx-auto h-16 w-auto object-contain mb-4">
-                    <h2 class="text-3xl font-extrabold text-gray-900 mb-2">
+                    <h1 class="text-3xl font-extrabold text-gray-900 mb-2">
                         ${t('auth.login.title')}
-                    </h2>
+                    </h1>
                     <p class="text-gray-600">
                         ${t('auth.login.subtitle')}
                     </p>
@@ -40,6 +40,7 @@ window.renderLogin = async function(params) {
                                     id="email"
                                     name="email"
                                     type="text"
+                                    autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"
                                     required
                                     class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
                                     placeholder="${escapeAttr(t('auth.login.identifier_placeholder'))}"
@@ -60,6 +61,7 @@ window.renderLogin = async function(params) {
                                     id="password"
                                     name="password"
                                     type="password"
+                                    autocomplete="current-password"
                                     required
                                     class="appearance-none relative block w-full pl-10 pr-10 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
                                     placeholder="••••••••"
@@ -158,9 +160,9 @@ window.renderRegister = async function(params) {
                 <!-- Logo y Header -->
                 <div class="text-center">
                     <img src="/images/logo-lanba.png" alt="LANBA" class="mx-auto h-16 w-auto object-contain mb-4">
-                    <h2 class="text-3xl font-extrabold text-gray-900 mb-2">
+                    <h1 class="text-3xl font-extrabold text-gray-900 mb-2">
                         ${t('auth.register.title')}
-                    </h2>
+                    </h1>
                     <p class="text-gray-600">
                         ${t('auth.register.subtitle')}
                     </p>
@@ -182,6 +184,7 @@ window.renderRegister = async function(params) {
                                     id="name"
                                     name="name"
                                     type="text"
+                                    autocomplete="name"
                                     required
                                     maxlength="100"
                                     class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
@@ -203,6 +206,7 @@ window.renderRegister = async function(params) {
                                     id="email"
                                     name="email"
                                     type="email"
+                                    autocomplete="email" autocapitalize="none" spellcheck="false"
                                     required
                                     maxlength="100"
                                     class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
@@ -224,6 +228,7 @@ window.renderRegister = async function(params) {
                                     id="username"
                                     name="username"
                                     type="text"
+                                    autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"
                                     minlength="3"
                                     maxlength="50"
                                     pattern="[a-zA-Z0-9_.-]+"
@@ -246,6 +251,7 @@ window.renderRegister = async function(params) {
                                     id="password"
                                     name="password"
                                     type="password"
+                                    autocomplete="new-password"
                                     required
                                     minlength="6"
                                     class="appearance-none relative block w-full pl-10 pr-10 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
@@ -273,6 +279,7 @@ window.renderRegister = async function(params) {
                                     id="password-confirm"
                                     name="password-confirm"
                                     type="password"
+                                    autocomplete="new-password"
                                     required
                                     minlength="6"
                                     class="appearance-none relative block w-full pl-10 pr-10 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
@@ -355,9 +362,9 @@ window.renderForgotPassword = async function(params) {
             <div class="max-w-md w-full space-y-8 bg-white p-10 rounded-2xl shadow-2xl fade-in">
                 <div class="text-center">
                     <img src="/images/logo-lanba.png" alt="LANBA" class="mx-auto h-16 w-auto object-contain mb-4">
-                    <h2 class="text-3xl font-extrabold text-gray-900 mb-2">
+                    <h1 class="text-3xl font-extrabold text-gray-900 mb-2">
                         ${t('auth.forgotPassword.title')}
-                    </h2>
+                    </h1>
                     <p class="text-gray-600">
                         ${t('auth.forgotPassword.subtitle')}
                     </p>
@@ -376,6 +383,7 @@ window.renderForgotPassword = async function(params) {
                                 id="email"
                                 name="email"
                                 type="email"
+                                autocomplete="email" autocapitalize="none" spellcheck="false"
                                 required
                                 class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
                                 placeholder="${escapeAttr(t('auth.forgotPassword.email_placeholder'))}"
@@ -435,9 +443,9 @@ window.renderResetPassword = async function(params) {
             <div class="max-w-md w-full space-y-8 bg-white p-10 rounded-2xl shadow-2xl fade-in">
                 <div class="text-center">
                     <img src="/images/logo-lanba.png" alt="LANBA" class="mx-auto h-16 w-auto object-contain mb-4">
-                    <h2 class="text-3xl font-extrabold text-gray-900 mb-2">
+                    <h1 class="text-3xl font-extrabold text-gray-900 mb-2">
                         ${t('auth.resetPassword.title')}
-                    </h2>
+                    </h1>
                     <p class="text-gray-600">
                         ${t('auth.resetPassword.subtitle')}
                     </p>
@@ -456,6 +464,7 @@ window.renderResetPassword = async function(params) {
                                 id="password"
                                 name="password"
                                 type="password"
+                                autocomplete="new-password"
                                 required
                                 minlength="6"
                                 class="appearance-none relative block w-full pl-10 pr-10 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"
@@ -480,6 +489,7 @@ window.renderResetPassword = async function(params) {
                                 id="password-confirm"
                                 name="password-confirm"
                                 type="password"
+                                autocomplete="new-password"
                                 required
                                 minlength="6"
                                 class="appearance-none relative block w-full pl-10 pr-10 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition"

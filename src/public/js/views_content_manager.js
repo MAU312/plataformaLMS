@@ -366,7 +366,7 @@ function showAddModuleCourseForm(courseId, moduleId) {
                     <input type="file" id="module-course-thumbnail-${moduleId}" accept="image/*" class="hidden">
                 </div>
                 <div id="module-course-thumbnail-preview-${moduleId}" class="mt-2 hidden">
-                    <img id="module-course-thumbnail-preview-img-${moduleId}" class="h-20 rounded-lg object-cover">
+                    <img id="module-course-thumbnail-preview-img-${moduleId}" alt="${escapeAttr(t('common.image_preview_alt'))}" class="h-20 rounded-lg object-cover">
                 </div>
             </div>
             <div>
@@ -1407,10 +1407,10 @@ function renderQuestionForm(container, {
         const isTrueFalse = questionType === 'true_false';
         return `
             <div class="option-row flex items-center gap-2" ${isTrueFalse ? `data-fixed-text="${escapeAttr(opt.text)}"` : ''}>
-                ${isQuiz ? `<input type="radio" name="correct-${qIndex}" class="option-correct-radio" ${opt.is_correct ? 'checked' : ''}>` : ''}
+                ${isQuiz ? `<input type="radio" name="correct-${qIndex}" class="option-correct-radio" aria-label="${escapeAttr(t('contentManager.quiz.correct_option_aria', { o: oIndex + 1, q: qIndex + 1 }))}" ${opt.is_correct ? 'checked' : ''}>` : ''}
                 ${isTrueFalse
                     ? `<span class="text-sm text-gray-700 flex-1">${escapeHtml(opt.text)}</span>`
-                    : `<input type="text" maxlength="500" class="option-text flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="${t('contentManager.quiz.option_placeholder', { n: oIndex + 1 })}" value="${escapeAttr(opt.text)}">`
+                    : `<input type="text" maxlength="500" aria-label="${escapeAttr(t('contentManager.quiz.option_aria', { o: oIndex + 1, q: qIndex + 1 }))}" class="option-text flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="${t('contentManager.quiz.option_placeholder', { n: oIndex + 1 })}" value="${escapeAttr(opt.text)}">`
                 }
                 ${!isTrueFalse && options.length > 2 ? `
                     <button type="button" class="remove-option-btn text-gray-400 hover:text-red-500 px-1" title="${t('contentManager.quiz.remove_option_title')}" aria-label="${t('contentManager.quiz.remove_option_title')}">
@@ -1428,7 +1428,7 @@ function renderQuestionForm(container, {
             <div class="question-row border border-gray-200 rounded-lg p-3 space-y-2" data-q-index="${qIndex}">
                 <div class="flex items-start gap-2 flex-wrap">
                     <span class="text-sm font-semibold text-gray-500 mt-2">${qIndex + 1}.</span>
-                    <input type="text" class="question-text flex-1 min-w-[10rem] px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="${t('contentManager.quiz.question_placeholder')}" value="${escapeAttr(q.text || '')}">
+                    <input type="text" aria-label="${escapeAttr(t('contentManager.quiz.question_aria', { n: qIndex + 1 }))}" class="question-text flex-1 min-w-[10rem] px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="${t('contentManager.quiz.question_placeholder')}" value="${escapeAttr(q.text || '')}">
                     <select class="question-type-select px-2 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" title="${t('contentManager.quiz.question_type_title')}">
                         ${getQuestionTypeOptions().map((opt) => `<option value="${opt.value}" ${questionType === opt.value ? 'selected' : ''}>${opt.label}</option>`).join('')}
                     </select>

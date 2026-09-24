@@ -147,9 +147,9 @@ function renderAdminLayout(content, activeSection) {
                     <h2 class="text-lg font-bold text-cenat-green mb-6">
                         <i class="fas fa-shield-alt mr-2"></i>${t('nav.admin')}
                     </h2>
-                    <nav class="space-y-1">
+                    <nav class="space-y-1" aria-label="${escapeAttr(t('nav.admin'))}">
                         ${menuItems.map(item => `
-                            <a href="#${item.path}" class="flex items-center gap-3 px-4 py-3 rounded-lg transition ${activeSection === item.id ? 'bg-green-50 text-cenat-green font-semibold' : 'text-gray-600 hover:bg-gray-50'}">
+                            <a href="#${item.path}" ${activeSection === item.id ? 'aria-current="page"' : ''} class="flex items-center gap-3 px-4 py-3 rounded-lg transition ${activeSection === item.id ? 'bg-green-50 text-cenat-green font-semibold' : 'text-gray-600 hover:bg-gray-50'}">
                                 <i class="fas ${item.icon} w-5"></i>
                                 <span>${item.label}</span>
                             </a>
@@ -160,7 +160,7 @@ function renderAdminLayout(content, activeSection) {
 
             <!-- Mobile sidebar selector -->
             <div class="md:hidden fixed bottom-4 right-4 z-40">
-                <select onchange="navigateTo(this.value)" class="bg-cenat-green text-white rounded-lg px-4 py-2 shadow-lg">
+                <select onchange="navigateTo(this.value)" aria-label="${escapeAttr(t('admin.nav.section_select_aria'))}" class="bg-cenat-green text-white rounded-lg px-4 py-2 shadow-lg">
                     ${menuItems.map(item => `
                         <option value="${item.path}" ${activeSection === item.id ? 'selected' : ''}>${item.label}</option>
                     `).join('')}

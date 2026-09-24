@@ -61,7 +61,7 @@ window.renderAdminEditCourse = async function(params) {
                                 <input type="file" id="thumbnail" name="thumbnail" accept="image/*" class="hidden">
                             </div>
                             <div id="thumbnail-preview" class="mt-3 ${course.thumbnail ? '' : 'hidden'}">
-                                <img id="thumbnail-preview-img" src="${course.thumbnail ? escapeAttr(course.thumbnail) : ''}" class="h-32 rounded-lg object-cover">
+                                <img id="thumbnail-preview-img" alt="${escapeAttr(t('common.image_preview_alt'))}" src="${course.thumbnail ? escapeAttr(course.thumbnail) : ''}" class="h-32 rounded-lg object-cover">
                             </div>
                         </div>
 
@@ -92,7 +92,7 @@ window.renderAdminEditCourse = async function(params) {
                     </form>
 
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-6">
-                        <h3 class="font-semibold text-gray-900 mb-2">${t('admin.editCourse.stats_heading')}</h3>
+                        <h2 class="font-semibold text-gray-900 mb-2">${t('admin.editCourse.stats_heading')}</h2>
                         <ul class="text-sm text-gray-600 space-y-2">
                             <li class="flex justify-between"><span>${t('admin.editCourse.stat_enrolled')}</span> <strong>${course.enrolled_count || 0}</strong></li>
                             <li class="flex justify-between"><span>${t('admin.editCourse.stat_videos')}</span> <strong>${videos.length}</strong></li>

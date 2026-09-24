@@ -448,8 +448,9 @@ function renderContentRow(content, isActiveVideo, canTrackProgress, type, hasAcc
                 ${content.file_size ? `<p class="text-xs text-gray-500">${formatFileSize(content.file_size)}</p>` : ''}
             </div>
             ${!isVideo ? (hasAccess ? `
-                <button onclick="downloadContent(${content.id})" class="text-cenat-green hover:text-cenat-green-hover">
-                    <i class="fas fa-download"></i>
+                <button type="button" onclick="downloadContent(${content.id})" class="text-cenat-green hover:text-cenat-green-hover"
+                    aria-label="${escapeAttr(t('courseDetail.download_file_aria', { title: content.title }))}" title="${escapeAttr(t('courseDetail.download_file_aria', { title: content.title }))}">
+                    <i class="fas fa-download" aria-hidden="true"></i>
                 </button>
             ` : `
                 <span class="text-gray-400 text-xs" title="${escapeAttr(t('courseDetail.enroll_to_download'))}">
@@ -754,7 +755,7 @@ function renderTaskCard(task, submission, hasAccess) {
                             </div>
                         ` : `
                             <form class="task-submit-form flex flex-wrap items-center gap-2" data-task-id="${task.id}">
-                                <input type="file" class="task-submit-file text-sm flex-1 min-w-0" required>
+                                <input type="file" class="task-submit-file text-sm flex-1 min-w-0" required aria-label="${escapeAttr(t('courseDetail.task_file_aria', { title: task.title }))}">
                                 <button type="submit" class="bg-cenat-green text-white px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap">
                                     <i class="fas fa-upload mr-1"></i> ${t('courseDetail.submit_button')}
                                 </button>
@@ -1031,7 +1032,7 @@ function renderPublicCourseModulesHTML(modules) {
                     <div id="module-course-grid-${m.id}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 ${i === 0 ? '' : 'hidden'}">
                         ${m.courses.length === 0
                             ? `<p class="text-gray-400 text-sm col-span-full text-center py-4">${t('courseDetail.module_empty')}</p>`
-                            : m.courses.map(c => renderCourseCard(c)).join('')}
+                            : m.courses.map(c => renderCourseCard(c, 'h2')).join('')}
                     </div>
                 `).join('')}
             </div>
@@ -1226,6 +1227,10 @@ function closeCompletionModal() {
 }
 
 function launchConfetti() {
+    // Movimiento reducido (preferencia del sistema): el modal se muestra igual,
+    // solo sin la lluvia de confeti.
+    if (prefersReducedMotion()) return;
+
     const colors = ['#007031', '#22c55e', '#84cc16', '#f59e0b', '#ef4444'];
     const container = document.getElementById('completion-modal');
     if (!container) return;

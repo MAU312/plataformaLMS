@@ -72,6 +72,31 @@ td {
 .border-b        { border-bottom-color: #c7cdd6 !important; }
 .border-t        { border-top-color: #c7cdd6 !important; }
 
+/* =================================
+   CONTRASTE DEL TEXTO SECUNDARIO - MODO CLARO
+   `text-gray-400` (#9ca3af) da 2,54:1 sobre blanco y `text-gray-500`
+   (#6b7280) 4,39:1 sobre el fondo de página (#f3f4f6): las pistas, los
+   "(1 punto)", los correos entre paréntesis y los subtítulos quedaban por
+   debajo del mínimo WCAG AA (4,5:1). Se oscurecen lo justo: 400 = #656d7b
+   (5,2 sobre blanco / 4,7 sobre #f3f4f6) y 500 = #5f6877 (5,6 / 5,1). Van
+   después de Tailwind (styles.css carga al final), y los estados hover
+   (hover:text-red-500 en botones de ícono, etc.) siguen ganando por
+   especificidad.
+   ::placeholder — el gris por defecto del navegador/Tailwind daba 2,54:1.
+   ================================= */
+
+.text-gray-400 { color: #656d7b; }
+.text-gray-500 { color: #5f6877; }
+
+/* input::placeholder (no ::placeholder a secas): la base de Tailwind ya
+   define `input::placeholder, textarea::placeholder` con el gris de 2,54:1, y
+   un selector de menor especificidad no la pisaría. */
+input::placeholder,
+textarea::placeholder {
+    color: #6b7280; /* 4,8:1 sobre blanco */
+    opacity: 1;
+}
+
 /* El navbar no trae ancho de borde propio (solo shadow-md), así que el
    color de arriba no alcanza a mostrarse: se define el borde completo. */
 #navbar {
@@ -225,7 +250,7 @@ td {
 }
 
 .dark footer p {
-    color: #94a3b8;
+    color: #b4c0d0; /* antes #94a3b8: 4,04:1 sobre el fondo del footer */
 }
 
 /* Tarjetas blancas */
@@ -234,13 +259,25 @@ td {
     color: #e2e8f0;
 }
 
-/* Textos grises */
+/* Textos grises.
+   Los tres últimos (600/500/400) son el texto SECUNDARIO: descripciones,
+   nombre del profesor, "0 contenidos", fechas de las tablas, pistas. Antes
+   valían #94a3b8 / #64748b / #475569 y sobre la tarjeta (#334155) daban
+   4,04:1 / 2,18:1 / 1,37:1 — el mínimo WCAG AA para texto normal es 4,5:1, y
+   los dos últimos casi no se leían. Nuevos valores (calculados, no
+   estimados; sobre #334155 / #1e293b / #14432a): 600 = #b4c0d0 (5,6 / 7,9 /
+   6,1), 500 = #a9b6ca (5,0 / 7,1 / 5,5), 400 = #a0aec0 (4,6 / 6,5 / 5,0).
+   Se mantiene el orden de jerarquía (900 > 800 > 700 > 600 > 500 > 400). */
 .dark .text-gray-900 { color: #f1f5f9 !important; }
 .dark .text-gray-800 { color: #e2e8f0 !important; }
 .dark .text-gray-700 { color: #cbd5e1 !important; }
-.dark .text-gray-600 { color: #94a3b8 !important; }
-.dark .text-gray-500 { color: #64748b !important; }
-.dark .text-gray-400 { color: #475569 !important; }
+.dark .text-gray-600 { color: #b4c0d0 !important; }
+.dark .text-gray-500 { color: #a9b6ca !important; }
+.dark .text-gray-400 { color: #a0aec0 !important; }
+/* Las variantes `dark:text-slate-*` de Tailwind (#94a3b8 y #64748b) tienen
+   el mismo problema cuando van solas en un elemento, sin su text-gray-*. */
+.dark .dark\:text-slate-400 { color: #b4c0d0 !important; }
+.dark .dark\:text-slate-500 { color: #a0aec0 !important; }
 
 /* Bordes */
 .dark .border-gray-100 { border-color: #475569 !important; }
@@ -268,9 +305,11 @@ td {
     color: #e2e8f0 !important;
 }
 
+/* #a9b6ca: 5,0:1 sobre #334155 (los buscadores del admin son bg-white, que
+   en oscuro pasa a #334155) y 7,1:1 sobre #1e293b. Antes #94a3b8: 4,04:1. */
 .dark input::placeholder,
 .dark textarea::placeholder {
-    color: #94a3b8 !important;
+    color: #a9b6ca !important;
 }
 
 /* Tablas */
@@ -369,12 +408,41 @@ td {
 .course-card img { transition: transform 0.3s ease; }
 .course-card:hover img { transform: scale(1.05); }
 
+/* Enlace REAL superpuesto a toda la tarjeta (ver renderCourseCardShell en
+   utils.js): Tab lo enfoca, Enter lo abre y un lector de pantalla lo anuncia
+   como enlace con el título del curso. z-index 1 lo pone encima del
+   contenido de la tarjeta; lo interactivo de dentro ("Leer más") sube a 2
+   para seguir siendo clickeable. */
+.course-card-link {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: inherit;
+}
+
+.course-card .expandable-text-toggle {
+    position: relative;
+    z-index: 2;
+}
+
+/* Foco visible sobre CUALQUIER fondo (la tarjeta mezcla una portada verde,
+   una zona blanca y, en modo oscuro, una zona slate): anillo de dos tonos,
+   oscuro por fuera y blanco por dentro — uno de los dos siempre contrasta. */
+.course-card-link:focus-visible {
+    outline: 3px solid #ffffff;
+    outline-offset: -6px;
+    box-shadow: inset 0 0 0 3px #0f172a;
+}
+
 /* =================================
    BOTONES
    ================================= */
 
 .btn-cenat {
-    background: linear-gradient(135deg, var(--cenat-green) 0%, var(--cenat-green-light) 100%);
+    /* El degradado terminaba en --cenat-green-light (#22c55e): el texto
+       blanco sobre ese extremo daba 2,3:1 (mínimo AA: 4,5:1). #0c863a da
+       4,7:1 con texto blanco y conserva el degradado, más sutil. */
+    background: linear-gradient(135deg, var(--cenat-green) 0%, #0c863a 100%);
     color: white;
     padding: 0.75rem 1.5rem;
     border-radius: 0.5rem;
@@ -433,10 +501,14 @@ td {
     font-weight: 600;
 }
 
+/* Texto blanco sobre cada fondo, mínimo WCAG AA 4,5:1. Antes "Activo"
+   (#10b981) daba 2,54:1, "Estudiante" (#3b82f6) 3,68:1 y "Profesor"
+   (#8b5cf6) 4,23:1; ahora los tonos -700 de la misma familia: 5,5 / 6,7 /
+   7,1. Admin (4,83) e Inactivo (4,83) ya cumplían. */
 .badge-admin    { background: #dc2626; color: white; }
-.badge-teacher  { background: #8b5cf6; color: white; }
-.badge-student  { background: #3b82f6; color: white; }
-.badge-active   { background: #10b981; color: white; }
+.badge-teacher  { background: #6d28d9; color: white; }
+.badge-student  { background: #1d4ed8; color: white; }
+.badge-active   { background: #047857; color: white; }
 .badge-inactive { background: #6b7280; color: white; }
 
 /* =================================
@@ -570,6 +642,30 @@ td {
 
 @media print {
     nav, footer, .no-print { display: none !important; }
+}
+
+/* =================================
+   MOVIMIENTO REDUCIDO
+   Preferencia del sistema operativo (vestibular, fotosensibilidad...). Se
+   quitan el desplazamiento suave, el rebote/aparición, el confeti (ver
+   launchConfetti) y el "salto" de tarjetas y botones al pasar el mouse.
+   NO se tocan los spinners de carga: esos comunican que algo está pasando,
+   y congelarlos dejaría al usuario sin ninguna señal de progreso.
+   ================================= */
+
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+
+    .fade-in,
+    .animate-bounce { animation: none; }
+
+    .course-card,
+    .course-card img,
+    .btn-cenat { transition: none; }
+
+    .course-card:hover,
+    .course-card:hover img,
+    .btn-cenat:hover { transform: none; }
 }
 
 /* =================================

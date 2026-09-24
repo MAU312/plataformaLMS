@@ -133,8 +133,9 @@ function renderSubmissionRow(s) {
             ` : ''}
             <td class="py-3 px-4 text-gray-600 max-w-xs whitespace-normal break-words">${s.feedback ? escapeHtml(s.feedback) : '—'}</td>
             <td class="py-3 px-4 text-right whitespace-nowrap">
-                <button onclick="downloadSubmissionHandler(${s.id})" class="text-cenat-green hover:text-cenat-green-hover mr-3" title="${escapeAttr(t('taskSubmissions.download_submission_title'))}">
-                    <i class="fas fa-download"></i>
+                <button type="button" onclick="downloadSubmissionHandler(${s.id})" class="text-cenat-green hover:text-cenat-green-hover mr-3"
+                    title="${escapeAttr(t('taskSubmissions.download_submission_title'))}" aria-label="${escapeAttr(t('taskSubmissions.download_submission_title'))}">
+                    <i class="fas fa-download" aria-hidden="true"></i>
                 </button>
                 <button onclick="showReviewForm(${s.id})" class="text-sm bg-green-50 text-cenat-green px-3 py-1.5 rounded-lg hover:bg-green-100 transition">
                     <i class="fas fa-check mr-1"></i> ${reviewed ? t('taskSubmissions.edit_review') : t('taskSubmissions.mark_reviewed')}

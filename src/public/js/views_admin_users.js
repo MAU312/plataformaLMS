@@ -55,7 +55,7 @@ window.renderAdminUsers = async function(params) {
         </div>
 
         <div class="relative mb-4">
-            <input type="text" id="search-admin-users" placeholder="${t('admin.users.search_placeholder')}"
+            <input type="text" id="search-admin-users" placeholder="${escapeAttr(t('admin.users.search_placeholder'))}" aria-label="${escapeAttr(t('admin.users.search_placeholder'))}"
                 class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
             <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
         </div>
@@ -66,9 +66,9 @@ window.renderAdminUsers = async function(params) {
         </div>
     `, 'users');
 
-    document.getElementById('search-admin-users').addEventListener('input', debounce((e) => {
+    document.getElementById('search-admin-users').addEventListener('input', debounce(async (e) => {
         currentUserSearch = e.target.value.trim();
-        loadAdminUsers(1);
+        announceResultCount(await loadAdminUsers(1));
     }, 300));
 
     await loadAdminUsers(1);
@@ -95,23 +95,23 @@ function openCreateUserModal() {
             <form id="create-user-form" class="space-y-4">
                 <div>
                     <label for="new-user-name" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.createModal.name_label')}</label>
-                    <input type="text" id="new-user-name" required maxlength="100"
+                    <input type="text" id="new-user-name" autocomplete="off" required maxlength="100"
                         class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
                 </div>
                 <div>
                     <label for="new-user-email" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.createModal.email_label')}</label>
-                    <input type="email" id="new-user-email" required maxlength="100"
+                    <input type="email" id="new-user-email" autocomplete="off" required maxlength="100"
                         class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
                 </div>
                 <div>
                     <label for="new-user-username" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.createModal.username_label')}</label>
-                    <input type="text" id="new-user-username" minlength="3" maxlength="50"
+                    <input type="text" id="new-user-username" autocomplete="off" minlength="3" maxlength="50"
                         placeholder="${t('admin.users.createModal.username_placeholder')}"
                         class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
                 </div>
                 <div>
                     <label for="new-user-password" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">${t('admin.users.createModal.password_label')}</label>
-                    <input type="password" id="new-user-password" required minlength="6"
+                    <input type="password" id="new-user-password" autocomplete="new-password" required minlength="6"
                         placeholder="${t('auth.register.password_hint')}"
                         class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
                 </div>
@@ -350,6 +350,7 @@ async function loadAdminUsers(page) {
         currentPageUsers = response.data || [];
         currentUsersPagination = response.pagination || { total: currentPageUsers.length, totalPages: 1 };
         renderUsersTable(currentPageUsers, page, currentUserId, currentUsersPagination);
+        return currentUsersPagination.total;
     } catch (error) {
         if (isStale()) return;
         console.error('Error loading users:', error);
@@ -400,6 +401,7 @@ function renderUsersTable(users, page, currentUserId, pagination) {
                             <td class="py-3 px-4 text-gray-600 dark:text-slate-300">${escapeHtml(user.email)}</td>
                             <td class="py-3 px-4">
                                 <select onchange="changeUserRole(${user.id}, this.value)"
+                                    aria-label="${escapeAttr(t('admin.users.role_select_aria', { name: user.name }))}"
                                     class="badge ${user.role === 'admin' ? 'badge-admin' : user.role === 'teacher' ? 'badge-teacher' : 'badge-student'} border-0 cursor-pointer"
                                     ${isMe ? 'disabled' : ''}>
                                     <option value="student" ${user.role === 'student' ? 'selected' : ''}>${t('admin.users.role_student')}</option>
@@ -410,7 +412,7 @@ function renderUsersTable(users, page, currentUserId, pagination) {
                                     <button onclick="toggleUserAdminAccess(${user.id})"
                                         title="${user.admin_access ? t('admin.users.remove_admin_access_title') : t('admin.users.grant_admin_access_title')}"
                                         aria-label="${user.admin_access ? t('admin.users.remove_admin_access_title') : t('admin.users.grant_admin_access_title')}"
-                                        class="ml-1 ${user.admin_access ? 'text-cenat-green' : 'text-gray-300 dark:text-slate-500'} ${isMe ? 'opacity-30 cursor-not-allowed' : 'hover:opacity-80'} transition"
+                                        class="ml-1 ${user.admin_access ? 'text-cenat-green' : 'text-gray-400 dark:text-slate-500'} ${isMe ? 'opacity-30 cursor-not-allowed' : 'hover:opacity-80'} transition"
                                         ${isMe ? 'disabled' : ''}>
                                         <i class="fas fa-user-shield"></i>
                                     </button>

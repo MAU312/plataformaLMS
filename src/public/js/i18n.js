@@ -24,7 +24,15 @@ const TRANSLATIONS = {
             show_password: 'Mostrar contraseña',
             hide_password: 'Ocultar contraseña',
             read_more: 'Leer más',
-            read_less: 'Leer menos'
+            read_less: 'Leer menos',
+            close: 'Cerrar',
+            pagination_nav: 'Paginación',
+            previous_page: 'Página anterior',
+            next_page: 'Página siguiente',
+            go_to_page: 'Ir a la página {{page}}',
+            results_singular: '{{count}} resultado',
+            results_plural: '{{count}} resultados',
+            image_preview_alt: 'Vista previa de la imagen'
         },
         // Título de pestaña por ruta (ver router.js) — se llama a t() en
         // cada handleRoute(), no una sola vez al cargar el script, para que
@@ -74,7 +82,8 @@ const TRANSLATIONS = {
             toggle_dark_mode: 'Cambiar modo oscuro/claro',
             switch_to_light: 'Cambiar a modo claro',
             switch_to_dark: 'Cambiar a modo oscuro',
-            language: 'Idioma'
+            language: 'Idioma',
+            menu: 'Menú'
         },
         footer: {
             copyright: '© 2026 LANBA - Centro Nacional de Alta Tecnología (CeNAT)',
@@ -196,6 +205,7 @@ const TRANSLATIONS = {
             edit_title: 'Editar',
             delete_title: 'Borrar',
             reply_placeholder_short: 'Escribe tu respuesta...',
+            edit_post_aria: 'Editar mensaje',
             cancel: 'Cancelar',
             save: 'Guardar',
             reply_updated: 'Respuesta actualizada',
@@ -284,6 +294,8 @@ const TRANSLATIONS = {
             folder_progress_plural: '{{completed}}/{{total}} completados',
             enroll_to_view_submit_task: 'Inscríbete en este curso para ver y entregar esta tarea',
             download_instructions: 'Descargar instrucciones',
+            download_file_aria: 'Descargar «{{title}}»',
+            task_file_aria: 'Archivo para entregar la tarea «{{title}}»',
             submission_reviewed: 'Entrega revisada',
             submission_pending_review: 'Entregado — pendiente de revisión',
             submitted_on: 'Entregado el {{date}}',
@@ -605,6 +617,9 @@ const TRANSLATIONS = {
                 remove_question_title: 'Quitar pregunta',
                 add_option: 'Agregar opción',
                 option_placeholder: 'Opción {{n}}',
+                question_aria: 'Pregunta {{n}}',
+                option_aria: 'Opción {{o}} de la pregunta {{q}}',
+                correct_option_aria: 'Marcar la opción {{o}} de la pregunta {{q}} como la correcta',
                 remove_option_title: 'Quitar opción',
                 save_quiz: 'Guardar Cuestionario',
                 save_survey: 'Guardar Encuesta',
@@ -665,7 +680,8 @@ const TRANSLATIONS = {
                 dashboard: 'Dashboard',
                 courses: 'Cursos',
                 users: 'Usuarios',
-                settings: 'Apariencia del sitio'
+                settings: 'Apariencia del sitio',
+                section_select_aria: 'Sección de administración'
             },
             dashboard: {
                 title: 'Panel de Administración',
@@ -752,6 +768,7 @@ const TRANSLATIONS = {
                 import_csv: 'Importar CSV',
                 create_user: 'Crear usuario',
                 search_placeholder: 'Buscar usuario por nombre o email...',
+                role_select_aria: 'Rol de {{name}}',
                 empty: 'No se encontraron usuarios',
                 empty_subtitle: 'Probá con otra búsqueda',
                 col_name: 'Nombre',
@@ -859,7 +876,15 @@ const TRANSLATIONS = {
             show_password: 'Show password',
             hide_password: 'Hide password',
             read_more: 'Read more',
-            read_less: 'Read less'
+            read_less: 'Read less',
+            close: 'Close',
+            pagination_nav: 'Pagination',
+            previous_page: 'Previous page',
+            next_page: 'Next page',
+            go_to_page: 'Go to page {{page}}',
+            results_singular: '{{count}} result',
+            results_plural: '{{count}} results',
+            image_preview_alt: 'Image preview'
         },
         routes: {
             home: 'Available Courses',
@@ -906,7 +931,8 @@ const TRANSLATIONS = {
             toggle_dark_mode: 'Toggle dark/light mode',
             switch_to_light: 'Switch to light mode',
             switch_to_dark: 'Switch to dark mode',
-            language: 'Language'
+            language: 'Language',
+            menu: 'Menu'
         },
         footer: {
             copyright: '© 2026 LANBA - Centro Nacional de Alta Tecnología (CeNAT)',
@@ -1028,6 +1054,7 @@ const TRANSLATIONS = {
             edit_title: 'Edit',
             delete_title: 'Delete',
             reply_placeholder_short: 'Write your reply...',
+            edit_post_aria: 'Edit post',
             cancel: 'Cancel',
             save: 'Save',
             reply_updated: 'Reply updated',
@@ -1116,6 +1143,8 @@ const TRANSLATIONS = {
             folder_progress_plural: '{{completed}}/{{total}} completed',
             enroll_to_view_submit_task: 'Enroll in this course to view and submit this task',
             download_instructions: 'Download instructions',
+            download_file_aria: 'Download "{{title}}"',
+            task_file_aria: 'File to submit for the task "{{title}}"',
             submission_reviewed: 'Submission reviewed',
             submission_pending_review: 'Submitted — pending review',
             submitted_on: 'Submitted on {{date}}',
@@ -1437,6 +1466,9 @@ const TRANSLATIONS = {
                 remove_question_title: 'Remove question',
                 add_option: 'Add option',
                 option_placeholder: 'Option {{n}}',
+                question_aria: 'Question {{n}}',
+                option_aria: 'Option {{o}} of question {{q}}',
+                correct_option_aria: 'Mark option {{o}} of question {{q}} as the correct one',
                 remove_option_title: 'Remove option',
                 save_quiz: 'Save Quiz',
                 save_survey: 'Save Survey',
@@ -1497,7 +1529,8 @@ const TRANSLATIONS = {
                 dashboard: 'Dashboard',
                 courses: 'Courses',
                 users: 'Users',
-                settings: 'Site Appearance'
+                settings: 'Site Appearance',
+                section_select_aria: 'Administration section'
             },
             dashboard: {
                 title: 'Administration Panel',
@@ -1584,6 +1617,7 @@ const TRANSLATIONS = {
                 import_csv: 'Import CSV',
                 create_user: 'Create user',
                 search_placeholder: 'Search user by name or email...',
+                role_select_aria: 'Role of {{name}}',
                 empty: 'No users found',
                 empty_subtitle: 'Try a different search',
                 col_name: 'Name',

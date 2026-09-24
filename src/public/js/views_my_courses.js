@@ -81,9 +81,9 @@ function renderEnrolledCourseCard(course) {
     const progress = course.progress || 0;
 
     const bodyHtml = `
-        <h3 class="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
+        <h2 class="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
             ${escapeHtml(course.title)}
-        </h3>
+        </h2>
         <div class="mb-2">
             <div class="flex justify-between text-xs text-gray-500 mb-1">
                 <span>${t('myCourses.progress_label')}</span>

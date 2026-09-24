@@ -40,7 +40,7 @@ window.renderAdminCreateCourse = async function(params) {
                         <input type="file" id="thumbnail" name="thumbnail" accept="image/*" class="hidden">
                     </div>
                     <div id="thumbnail-preview" class="mt-3 hidden">
-                        <img id="thumbnail-preview-img" class="h-32 rounded-lg object-cover">
+                        <img id="thumbnail-preview-img" alt="${escapeAttr(t('common.image_preview_alt'))}" class="h-32 rounded-lg object-cover">
                     </div>
                 </div>
 

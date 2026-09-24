@@ -41,7 +41,7 @@ window.renderAdminCourses = async function(params) {
 
         <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-3">${t('admin.courses.courses_section_heading')}</h2>
         <div class="relative mb-4">
-            <input type="text" id="search-admin-courses-top" placeholder="${t('home.search_placeholder')}"
+            <input type="text" id="search-admin-courses-top" placeholder="${escapeAttr(t('home.search_placeholder'))}" aria-label="${escapeAttr(t('home.search_placeholder'))}"
                 class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
             <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
         </div>
@@ -53,7 +53,7 @@ window.renderAdminCourses = async function(params) {
         <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-1">${t('admin.courses.modules_section_heading')}</h2>
         <p class="text-sm text-gray-500 dark:text-slate-400 mb-3">${t('admin.courses.modules_section_hint')}</p>
         <div class="relative mb-4">
-            <input type="text" id="search-admin-courses-children" placeholder="${t('home.search_placeholder')}"
+            <input type="text" id="search-admin-courses-children" placeholder="${escapeAttr(t('home.search_placeholder'))}" aria-label="${escapeAttr(t('home.search_placeholder'))}"
                 class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cenat-green">
             <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
         </div>
@@ -63,13 +63,15 @@ window.renderAdminCourses = async function(params) {
         </div>
     `, 'courses');
 
-    document.getElementById('search-admin-courses-top').addEventListener('input', debounce((e) => {
+    // Tras filtrar se anuncia la cantidad de resultados (lector de pantalla:
+    // la tabla cambia en silencio, sin esto no hay forma de enterarse).
+    document.getElementById('search-admin-courses-top').addEventListener('input', debounce(async (e) => {
         coursesSections.top.search = e.target.value.trim();
-        loadAdminCoursesSection('top', 1);
+        announceResultCount(await loadAdminCoursesSection('top', 1));
     }, 300));
-    document.getElementById('search-admin-courses-children').addEventListener('input', debounce((e) => {
+    document.getElementById('search-admin-courses-children').addEventListener('input', debounce(async (e) => {
         coursesSections.children.search = e.target.value.trim();
-        loadAdminCoursesSection('children', 1);
+        announceResultCount(await loadAdminCoursesSection('children', 1));
     }, 300));
 
     await Promise.all([
@@ -93,6 +95,7 @@ async function loadAdminCoursesSection(scope, page) {
         section.courses = response.data || [];
         section.pagination = response.pagination || { total: section.courses.length, totalPages: 1 };
         renderCoursesTable(scope);
+        return section.pagination.total;
     } catch (error) {
         if (isStale()) return;
         console.error('Error loading courses:', error);

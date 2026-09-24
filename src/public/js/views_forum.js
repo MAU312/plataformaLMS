@@ -76,6 +76,7 @@ function renderForumPage(topic) {
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
                 <form id="reply-to-topic-form" class="space-y-2">
                     <textarea id="reply-to-topic-body" rows="3" required
+                        aria-label="${escapeAttr(t('forum.reply_placeholder'))}"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green"
                         placeholder="${escapeAttr(t('forum.reply_placeholder'))}"></textarea>
                     <button type="submit" class="bg-cenat-green text-white px-4 py-2 rounded-lg text-sm font-semibold">
@@ -222,6 +223,7 @@ function toggleReplyForm(postId) {
     container.innerHTML = `
         <form class="reply-form space-y-2" data-parent-id="${postId}">
             <textarea rows="2" required
+                aria-label="${escapeAttr(t('forum.reply_placeholder_short'))}"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green"
                 placeholder="${escapeAttr(t('forum.reply_placeholder_short'))}"></textarea>
             <div class="flex gap-2">
@@ -254,7 +256,7 @@ function toggleEditForm(postId) {
     container.classList.remove('hidden');
     container.innerHTML = `
         <form class="edit-form space-y-2">
-            <textarea rows="2" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green">${escapeHtml(textEl.textContent.trim())}</textarea>
+            <textarea rows="2" required aria-label="${escapeAttr(t('forum.edit_post_aria'))}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green">${escapeHtml(textEl.textContent.trim())}</textarea>
             <div class="flex gap-2">
                 <button type="submit" class="bg-cenat-green text-white px-3 py-1.5 rounded-lg text-xs font-semibold">${t('forum.save')}</button>
                 <button type="button" onclick="toggleEditForm(${postId})" class="text-gray-500 text-xs px-3 py-1.5">${t('forum.cancel')}</button>

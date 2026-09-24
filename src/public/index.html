@@ -96,7 +96,7 @@
 
                     <!-- User Menu -->
                     <div class="relative" id="user-menu-container">
-                        <button id="user-menu-button"
+                        <button id="user-menu-button" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="user-dropdown"
                             class="flex items-center space-x-2 text-gray-700 dark:text-slate-300 hover:text-cenat-green transition">
                             <span id="user-nav-avatar"><i class="fas fa-user-circle text-2xl"></i></span>
                             <span id="user-name" class="max-w-[10rem] truncate">Usuario</span>
@@ -132,8 +132,9 @@
                         class="text-gray-600 dark:text-yellow-400" title="Cambiar modo oscuro/claro" data-i18n-title="nav.toggle_dark_mode" aria-label="Cambiar modo oscuro/claro">
                         <i class="fas fa-moon"></i>
                     </button>
-                    <button id="mobile-menu-btn" class="text-gray-700 dark:text-slate-300 hover:text-cenat-green">
-                        <i class="fas fa-bars text-2xl"></i>
+                    <button id="mobile-menu-btn" type="button" class="text-gray-700 dark:text-slate-300 hover:text-cenat-green"
+                        aria-label="Menú" data-i18n-aria-label="nav.menu" aria-controls="mobile-menu" aria-expanded="false">
+                        <i class="fas fa-bars text-2xl" aria-hidden="true"></i>
                     </button>
                 </div>
             </div>
@@ -199,18 +200,24 @@
     </footer>
 
     <!-- Toast Notification -->
-    <div id="toast" class="hidden fixed top-4 right-4 z-50 max-w-sm">
+    <!-- role/aria-live los define showToast() según el tipo de aviso (un error
+         se anuncia de inmediato, un éxito espera su turno). -->
+    <div id="toast" class="hidden fixed top-4 right-4 z-50 max-w-sm" role="status" aria-live="polite" aria-atomic="true">
         <div class="bg-white dark:bg-slate-800 rounded-lg shadow-lg p-4 flex items-center space-x-3">
-            <i id="toast-icon" class="text-2xl"></i>
+            <i id="toast-icon" class="text-2xl" aria-hidden="true"></i>
             <div class="flex-1">
                 <p id="toast-message" class="text-sm font-medium text-gray-900 dark:text-slate-200"></p>
             </div>
-            <button onclick="hideToast()"
-                class="text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">
-                <i class="fas fa-times"></i>
+            <!-- p-2 -m-2: agranda el área de toque (era 12x24 px) sin mover nada. -->
+            <button type="button" onclick="hideToast()" aria-label="Cerrar" data-i18n-aria-label="common.close"
+                class="p-2 -m-2 rounded text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">
+                <i class="fas fa-times" aria-hidden="true"></i>
             </button>
         </div>
     </div>
+
+    <!-- Región para anuncios a lectores de pantalla (ver announce() en utils.js). -->
+    <div id="a11y-announcer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
 
     <!-- Scripts -->
     <script src="/js/darkmode.js"></script>

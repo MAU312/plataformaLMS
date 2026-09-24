@@ -139,7 +139,7 @@ function renderModuleChildCourseEditForm(course) {
                         <input type="file" id="module-child-thumbnail" accept="image/*" class="hidden">
                     </div>
                     <div id="module-child-thumbnail-preview" class="mt-3 ${course.thumbnail ? '' : 'hidden'}">
-                        <img id="module-child-thumbnail-preview-img" src="${course.thumbnail ? escapeAttr(course.thumbnail) : ''}" class="h-32 rounded-lg object-cover">
+                        <img id="module-child-thumbnail-preview-img" alt="${escapeAttr(t('common.image_preview_alt'))}" src="${course.thumbnail ? escapeAttr(course.thumbnail) : ''}" class="h-32 rounded-lg object-cover">
                     </div>
                 </div>
                 <div>

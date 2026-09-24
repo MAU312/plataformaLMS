@@ -37,6 +37,7 @@ window.renderHome = async function(params) {
                             type="text"
                             id="search-courses"
                             placeholder="${escapeAttr(t('home.search_placeholder'))}"
+                            aria-label="${escapeAttr(t('home.search_placeholder'))}"
                             class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent transition w-full"
                         >
                         <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
@@ -49,9 +50,9 @@ window.renderHome = async function(params) {
         </div>
     `;
 
-    document.getElementById('search-courses').addEventListener('input', debounce((e) => {
+    document.getElementById('search-courses').addEventListener('input', debounce(async (e) => {
         homeSearchTerm = e.target.value.trim();
-        loadHomeCourses(1);
+        announceResultCount(await loadHomeCourses(1));
     }, 300));
 
     await loadHomeCourses(1);
@@ -78,6 +79,7 @@ async function loadHomeCourses(page) {
         const { totalPages, total } = response.pagination || { totalPages: 1, total: courses.length };
         pagination.innerHTML = renderPagination(page, totalPages, total, HOME_COURSES_PER_PAGE, 'goToHomeCoursePage');
         setupExpandableText(grid);
+        return total;
     } catch (error) {
         if (isStale()) return;
         console.error('Error loading courses:', error);
@@ -99,14 +101,18 @@ window.goToHomeCoursePage = function(page) {
     scrollToElement('courses-grid');
 };
 
-function renderCourseCard(course) {
+// `headingTag`: 'h3' por defecto (catálogo: h1 título → h2 "Cursos
+// disponibles" → h3 por tarjeta); dentro del detalle de un curso (h1 →
+// tarjetas de módulo, sin h2 de por medio) se pasa 'h2' para no saltarse un
+// nivel de encabezado, que desorienta a quien navega por encabezados.
+function renderCourseCard(course, headingTag = 'h3') {
     const contentCount = course.content_count || 0;
     const enrolledCount = course.enrolled_count || 0;
 
     const bodyHtml = `
-        <h3 class="text-lg font-bold text-gray-900 mb-1 line-clamp-2">
+        <${headingTag} class="text-lg font-bold text-gray-900 mb-1 line-clamp-2">
             ${escapeHtml(course.title)}
-        </h3>
+        </${headingTag}>
         ${course.teacher_names ? `
             <p class="text-sm text-gray-500 mb-2 truncate">
                 <i class="fas fa-user-tie mr-1"></i>${escapeHtml(course.teacher_names)}

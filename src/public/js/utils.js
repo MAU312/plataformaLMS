@@ -11,6 +11,17 @@
 // el del segundo antes de que cumpliera sus propios 3 segundos.
 let toastHideTimer = null;
 
+// Cuánto se queda visible un aviso. Los de error/advertencia dicen qué salió
+// mal y qué hacer, así que hay que poder LEERLOS con calma (antes todos
+// duraban 3 s fijos, poco para un mensaje de dos líneas); y uno largo
+// necesita más tiempo que uno corto. Pasar el mouse por encima o enfocarlo
+// lo pausa (ver setupToastPause).
+function toastDurationMs(message, type) {
+    const base = (type === 'error' || type === 'warning') ? 7000 : 4000;
+    const extra = Math.min(4000, Math.max(0, String(message).length - 40) * 60);
+    return base + extra;
+}
+
 function showToast(message, type = 'info') {
     const toast = document.getElementById('toast');
     const toastIcon = document.getElementById('toast-icon');
@@ -28,17 +39,69 @@ function showToast(message, type = 'info') {
     toastIcon.className = `fas ${icon} text-2xl`;
     toastMessage.textContent = message;
 
+    // Lectores de pantalla: un error/advertencia se anuncia de inmediato
+    // (role="alert"), un aviso de éxito/info espera su turno (role="status").
+    // Se define ANTES de mostrarlo: el anuncio ocurre cuando el elemento
+    // aparece con su rol ya puesto.
+    const urgent = type === 'error' || type === 'warning';
+    toast.setAttribute('role', urgent ? 'alert' : 'status');
+    toast.setAttribute('aria-live', urgent ? 'assertive' : 'polite');
+
     toast.className = `fixed top-4 right-4 z-50 max-w-sm ${toastClass}`;
     toast.classList.remove('hidden');
     toast.classList.add('fade-in');
 
     if (toastHideTimer) clearTimeout(toastHideTimer);
-    toastHideTimer = setTimeout(() => { hideToast(); }, 3000);
+    toastHideTimer = setTimeout(() => { hideToast(); }, toastDurationMs(message, type));
 }
 
 function hideToast() {
     const toast = document.getElementById('toast');
     toast.classList.add('hidden');
+}
+
+// Mientras el mouse está encima (o el foco está dentro) del aviso no se
+// oculta solo; al salir se le da un margen corto para terminar de leerlo.
+function setupToastPause() {
+    const toast = document.getElementById('toast');
+    if (!toast) return;
+    const pause = () => { if (toastHideTimer) clearTimeout(toastHideTimer); };
+    const resume = () => {
+        if (toast.classList.contains('hidden')) return;
+        if (toastHideTimer) clearTimeout(toastHideTimer);
+        toastHideTimer = setTimeout(() => { hideToast(); }, 2500);
+    };
+    toast.addEventListener('mouseenter', pause);
+    toast.addEventListener('mouseleave', resume);
+    toast.addEventListener('focusin', pause);
+    toast.addEventListener('focusout', resume);
+}
+document.addEventListener('DOMContentLoaded', setupToastPause);
+
+// =================================
+// Accesibilidad: anuncios y movimiento reducido
+// =================================
+
+/**
+ * Anuncia un mensaje a los lectores de pantalla sin mostrarlo (región
+ * aria-live de index.html). Sirve para cambios que un usuario que ve la
+ * pantalla nota solo, pero que en silencio no le llegan al que no: p. ej.
+ * "3 resultados" después de filtrar una lista. El texto se vacía y se vuelve
+ * a escribir en el siguiente ciclo porque, si el mensaje es idéntico al
+ * anterior, el lector no lo repite.
+ */
+function announce(message) {
+    const region = document.getElementById('a11y-announcer');
+    if (!region) return;
+    region.textContent = '';
+    setTimeout(() => { region.textContent = message; }, 60);
+}
+
+// Preferencia del sistema operativo: menos animación/desplazamiento suave
+// (vestibular, epilepsia fotosensible...). El CSS la respeta con la misma
+// media query (ver styles.css); esto es para lo que se anima desde JS.
+function prefersReducedMotion() {
+    return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 // =================================
@@ -209,10 +272,71 @@ function createElementFromHTML(htmlString) {
 
 function scrollToElement(elementId) {
     const element = document.getElementById(elementId);
-    if (element) element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (element) element.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
 }
 
-const EXPANDABLE_TEXT_CLAMP_CLASSES = ['truncate', 'line-clamp-1', 'line-clamp-2', 'line-clamp-3', 'line-clamp-4'];
+// =================================
+// Asociar cada <label> con su control
+// =================================
+
+let autoFieldIdCounter = 0;
+
+/**
+ * Muchos formularios (sobre todo el gestor de contenido: ~40 casos) escriben
+ * `<label>Título</label><input ...>` como HERMANOS, sin `for` ni envolver el
+ * control. Para un lector de pantalla ese campo queda SIN nombre, y hacer
+ * clic en el texto de la etiqueta no lo enfoca. En vez de editar cada
+ * plantilla, esto empareja cada <label> sin `for` con el primer control que
+ * le sigue (entre sus hermanos siguientes o dentro de ellos, hasta llegar a
+ * la próxima <label>); un control sin id recibe uno generado.
+ * No toca: labels que ya tienen `for` o que envuelven su control, controles
+ * que ya tienen aria-label/aria-labelledby (ese nombre explícito manda), ni
+ * inputs `hidden` / file ocultos (ahí el "control" real es la zona de
+ * arrastre, que no es un campo de formulario).
+ * Se aplica solo a lo que se agrega al DOM (MutationObserver, más abajo),
+ * así que cubre también los formularios que se abren bajo demanda.
+ */
+function associateLabels(root = document) {
+    const labels = [];
+    if (root.matches && root.matches('label:not([for])')) labels.push(root);
+    root.querySelectorAll('label:not([for])').forEach((l) => labels.push(l));
+
+    labels.forEach((label) => {
+        if (label.querySelector('input, select, textarea')) return;
+        for (let sib = label.nextElementSibling; sib; sib = sib.nextElementSibling) {
+            if (sib.tagName === 'LABEL') return;
+            const control = sib.matches('input, select, textarea') ? sib : sib.querySelector('input, select, textarea');
+            if (!control) continue;
+            if (control.type === 'hidden' || (control.type === 'file' && control.classList.contains('hidden'))) return;
+            if (control.hasAttribute('aria-label') || control.hasAttribute('aria-labelledby')) return;
+            if (!control.id) control.id = `auto-field-${++autoFieldIdCounter}`;
+            label.setAttribute('for', control.id);
+            return;
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    associateLabels(document);
+    new MutationObserver((mutations) => {
+        mutations.forEach((m) => m.addedNodes.forEach((node) => {
+            if (node.nodeType === 1) associateLabels(node);
+        }));
+    }).observe(document.body, { childList: true, subtree: true });
+});
+
+/**
+ * Anuncia "N resultados" a lectores de pantalla después de filtrar una
+ * lista. `total` viene del loader de cada vista; es undefined si la
+ * petición falló o quedó obsoleta (otra búsqueda más nueva la reemplazó),
+ * y en ese caso no se anuncia nada.
+ */
+function announceResultCount(total) {
+    if (typeof total !== 'number') return;
+    announce(tPlural('common.results', total));
+}
+
+const EXPANDABLE_TEXT_CLAMP_CLASSES =['truncate', 'line-clamp-1', 'line-clamp-2', 'line-clamp-3', 'line-clamp-4'];
 // Margen de tolerancia al comparar scrollHeight/clientHeight (o scrollWidth/
 // clientWidth) — con el tamaño de letra aumentado (ver darkmode.js, clases
 // text-boost-N del botón "A+" del navbar) el redondeo de line-height puede
@@ -310,36 +434,91 @@ function toggleDropdown(dropdownId) {
     if (dropdown) dropdown.classList.toggle('hidden');
 }
 
-document.addEventListener('click', function(event) {
-    const userMenuButton = document.getElementById('user-menu-button');
-    const userDropdown = document.getElementById('user-dropdown');
-    if (userMenuButton && userDropdown) {
-        if (!userMenuButton.contains(event.target) && !userDropdown.contains(event.target)) {
-            userDropdown.classList.add('hidden');
-        }
-    }
-});
+// =================================
+// Menús del navbar (menú móvil y menú de usuario)
+// =================================
 
-// =================================
-// Mobile Menu Toggle
-// =================================
+// Abre/cierra un menú y mantiene aria-expanded del botón que lo controla en
+// sync (sin eso, un lector de pantalla no sabe si el botón "abrió" algo).
+function setNavMenuOpen(menuId, buttonId, open) {
+    const menu = document.getElementById(menuId);
+    const button = document.getElementById(buttonId);
+    if (!menu) return;
+    menu.classList.toggle('hidden', !open);
+    if (button) button.setAttribute('aria-expanded', String(open));
+}
+
+function setMobileMenuOpen(open) { setNavMenuOpen('mobile-menu', 'mobile-menu-btn', open); }
+function setUserDropdownOpen(open) { setNavMenuOpen('user-dropdown', 'user-menu-button', open); }
+
+function isNavMenuOpen(menuId) {
+    const menu = document.getElementById(menuId);
+    return !!menu && !menu.classList.contains('hidden');
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     const mobileMenuBtn = document.getElementById('mobile-menu-btn');
     const mobileMenu = document.getElementById('mobile-menu');
+    const userMenuButton = document.getElementById('user-menu-button');
+    const userDropdown = document.getElementById('user-dropdown');
+
     if (mobileMenuBtn && mobileMenu) {
         mobileMenuBtn.addEventListener('click', function() {
-            mobileMenu.classList.toggle('hidden');
+            setMobileMenuOpen(!isNavMenuOpen('mobile-menu'));
+        });
+        // Antes el menú móvil se quedaba abierto después de tocar un link:
+        // la página nueva cargaba DEBAJO del menú desplegado y había que
+        // volver a tocar la hamburguesa para verla.
+        mobileMenu.addEventListener('click', function(e) {
+            if (e.target.closest('a, button')) setMobileMenuOpen(false);
         });
     }
 
-    const userMenuButton = document.getElementById('user-menu-button');
-    const userDropdown = document.getElementById('user-dropdown');
     if (userMenuButton && userDropdown) {
         userMenuButton.addEventListener('click', function(e) {
             e.stopPropagation();
-            userDropdown.classList.toggle('hidden');
+            setUserDropdownOpen(!isNavMenuOpen('user-dropdown'));
         });
+        // Igual que arriba: ir a "Mi Perfil" o cerrar sesión desde el menú
+        // lo cierra (antes "Mi Perfil" quedaba con el menú abierto encima).
+        userDropdown.addEventListener('click', function(e) {
+            if (e.target.closest('a, button')) setUserDropdownOpen(false);
+        });
+    }
+});
+
+// Clic fuera del navbar: cierra ambos menús. (Se excluye el navbar entero,
+// no solo el menú: cambiar el idioma o el tema desde la barra de arriba con
+// el menú móvil abierto no debería cerrarlo.)
+document.addEventListener('click', function(event) {
+    const navbar = document.getElementById('navbar');
+    const userMenuButton = document.getElementById('user-menu-button');
+    const userDropdown = document.getElementById('user-dropdown');
+    if (userMenuButton && userDropdown && !userMenuButton.contains(event.target) && !userDropdown.contains(event.target)) {
+        setUserDropdownOpen(false);
+    }
+    if (navbar && !navbar.contains(event.target)) setMobileMenuOpen(false);
+});
+
+// Navegar (por cualquier vía: link, botón "atrás", teclado) cierra los menús.
+window.addEventListener('hashchange', function() {
+    setMobileMenuOpen(false);
+    setUserDropdownOpen(false);
+});
+
+// Escape cierra el menú abierto y devuelve el foco a su botón (un usuario de
+// teclado no queda "perdido" en un menú que ya no está).
+document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Escape') return;
+    if (isNavMenuOpen('user-dropdown')) {
+        setUserDropdownOpen(false);
+        const btn = document.getElementById('user-menu-button');
+        if (btn) btn.focus();
+    }
+    if (isNavMenuOpen('mobile-menu')) {
+        setMobileMenuOpen(false);
+        const btn = document.getElementById('mobile-menu-btn');
+        if (btn) btn.focus();
     }
 });
 
@@ -553,30 +732,38 @@ function renderPagination(currentPage, totalPages, totalItems, perPage, callback
         pages = [currentPage - 2, currentPage - 1, currentPage, currentPage + 1, currentPage + 2];
     }
 
+    // <nav> con nombre + aria-current en la página actual + nombres en los
+    // botones de solo ícono (antes un lector de pantalla leía "botón, botón,
+    // 1, 2, 3, botón" sin decir cuál era la página actual ni qué hacían las
+    // flechas).
     return `
-        <div class="flex items-center justify-between text-sm text-gray-600 dark:text-slate-400">
+        <nav aria-label="${escapeAttr(t('common.pagination_nav'))}" class="flex items-center justify-between text-sm text-gray-600 dark:text-slate-400">
             <span>${t('common.showing_range', { start, end, total: totalItems })}</span>
             <div class="flex items-center gap-1">
-                <button onclick="${callbackFn}(${currentPage - 1})"
+                <button type="button" onclick="${callbackFn}(${currentPage - 1})"
                     class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                    aria-label="${escapeAttr(t('common.previous_page'))}"
                     ${currentPage === 1 ? 'disabled' : ''}>
-                    <i class="fas fa-chevron-left"></i>
+                    <i class="fas fa-chevron-left" aria-hidden="true"></i>
                 </button>
                 ${pages.map(p => `
-                    <button onclick="${callbackFn}(${p})"
+                    <button type="button" onclick="${callbackFn}(${p})"
                         class="px-3 py-1 rounded font-medium transition ${p === currentPage
                             ? 'bg-cenat-green text-white'
-                            : 'hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300'}">
+                            : 'hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300'}"
+                        aria-label="${escapeAttr(t('common.go_to_page', { page: p }))}"
+                        ${p === currentPage ? 'aria-current="page"' : ''}>
                         ${p}
                     </button>
                 `).join('')}
-                <button onclick="${callbackFn}(${currentPage + 1})"
+                <button type="button" onclick="${callbackFn}(${currentPage + 1})"
                     class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                    aria-label="${escapeAttr(t('common.next_page'))}"
                     ${currentPage === totalPages ? 'disabled' : ''}>
-                    <i class="fas fa-chevron-right"></i>
+                    <i class="fas fa-chevron-right" aria-hidden="true"></i>
                 </button>
             </div>
-        </div>
+        </nav>
     `;
 }
 
@@ -593,11 +780,22 @@ function renderPagination(currentPage, totalPages, totalItems, perPage, callback
  */
 function renderCourseCardShell({ course, navigateToPath, heightClass = 'h-40', showInactiveBadge = false, bodyHtml }) {
     const thumbnailUrl = course.thumbnail || null;
+    // La tarjeta entera es clickeable, pero antes era un <div onclick>: un
+    // usuario de teclado nunca la alcanzaba con Tab (el foco saltaba de una
+    // tarjeta a su "Leer más" y a la siguiente) y un lector de pantalla no la
+    // anunciaba como enlace. Ahora es un enlace REAL superpuesto a toda la
+    // tarjeta (.course-card-link, ver styles.css): Tab lo enfoca, Enter lo
+    // abre, "abrir en pestaña nueva" funciona, y su nombre es el título del
+    // curso. Lo interactivo que vive dentro de la tarjeta ("Leer más") queda
+    // por encima del enlace (z-index) para seguir siendo clickeable.
+    // La miniatura pasa a alt="": el enlace y el título ya nombran el curso,
+    // y repetirlo en la imagen hacía que se leyera dos veces.
     return `
-        <div class="course-card bg-white rounded-xl shadow-md overflow-hidden border border-gray-100" onclick="navigateTo('${navigateToPath}')">
+        <div class="course-card relative bg-white rounded-xl shadow-md overflow-hidden border border-gray-100">
+            <a href="#${escapeAttr(navigateToPath)}" class="course-card-link" aria-label="${escapeAttr(course.title)}"></a>
             <div class="${heightClass} bg-gradient-to-br from-cenat-green to-cenat-green-light flex items-center justify-center relative overflow-hidden">
                 ${thumbnailUrl
-                    ? `<img src="${escapeAttr(thumbnailUrl)}" alt="${escapeAttr(course.title)}" class="w-full h-full object-cover" loading="lazy" decoding="async">`
+                    ? `<img src="${escapeAttr(thumbnailUrl)}" alt="" class="w-full h-full object-cover" loading="lazy" decoding="async">`
                     : `<i class="fas fa-flask text-5xl text-white opacity-80"></i>`
                 }
                 ${showInactiveBadge && !course.is_active ? '<span class="badge badge-inactive absolute top-3 right-3">Inactivo</span>' : ''}
@@ -686,6 +884,17 @@ function normalizeSearchText(text) {
  * cualquier orden ("rojas ana" encuentra a "Ana Rojas").
  */
 function setupTeacherCheckboxFilter(container) {
+    // El <label> "Profesores asignados" que precede al recuadro no puede
+    // apuntar a un único control (son N checkboxes + el buscador): se lo
+    // toma como nombre del GRUPO, así un lector de pantalla anuncia "grupo
+    // Profesores asignados" al entrar a la lista.
+    const groupLabel = container.previousElementSibling;
+    if (groupLabel && groupLabel.tagName === 'LABEL') {
+        if (!groupLabel.id) groupLabel.id = `${container.id || 'teacher-list'}-label`;
+        container.setAttribute('role', 'group');
+        container.setAttribute('aria-labelledby', groupLabel.id);
+    }
+
     const searchInput = container.querySelector('.teacher-search-input');
     if (!searchInput) return; // lista vacía: no se pintó el buscador
     const rows = Array.from(container.querySelectorAll('.teacher-row'));

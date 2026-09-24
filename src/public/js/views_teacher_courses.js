@@ -85,9 +85,9 @@ window.goToTeacherCoursesPage = function(page) {
 
 function renderTeacherCourseCard(course) {
     const bodyHtml = `
-        <h3 class="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
+        <h2 class="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
             ${escapeHtml(course.title)}
-        </h3>
+        </h2>
         <div class="flex justify-between text-sm text-gray-500">
             <span><i class="fas fa-users mr-1"></i> ${tPlural('home.enrolled_count', course.enrolled_count || 0)}</span>
             <span><i class="fas fa-layer-group mr-1"></i> ${tPlural('home.contents_count', course.content_count || 0)}</span>

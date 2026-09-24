@@ -86,9 +86,9 @@ function renderImageSettingCard({ key, label, hint, currentUrl, isCustom }) {
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-3">
             <h2 class="font-semibold text-gray-900">${escapeHtml(label)}</h2>
             <p class="text-xs text-gray-500">${escapeHtml(hint)}</p>
-            <img id="${key}-preview" src="${escapeAttr(currentUrl)}" class="h-32 rounded-lg object-cover border border-gray-100">
+            <img id="${key}-preview" alt="${escapeAttr(t('common.image_preview_alt'))}" src="${escapeAttr(currentUrl)}" class="h-32 rounded-lg object-cover border border-gray-100">
             <div>
-                <input type="file" id="${key}" accept="image/*" class="w-full text-sm text-gray-600">
+                <input type="file" id="${key}" accept="image/*" aria-label="${escapeAttr(label)}" class="w-full text-sm text-gray-600">
                 <p class="text-xs text-gray-400 mt-1">${t('admin.settings.image_formats_hint')}</p>
             </div>
             ${isCustom ? `

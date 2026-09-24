@@ -89,12 +89,15 @@ window.renderTakeQuiz = async function(params) {
 
 function renderQuestionField(question, index, isQuiz) {
     return `
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <p class="font-medium text-gray-900 mb-3">${index + 1}. ${escapeHtml(question.question_text)} ${isQuiz ? `<span class="text-xs font-normal text-gray-400">(${t(question.points === 1 ? 'quiz.point_singular' : 'quiz.point_plural', { count: question.points })})</span>` : ''}</p>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4" role="group" aria-labelledby="question-label-${question.id}">
+            <p id="question-label-${question.id}" class="font-medium text-gray-900 mb-3">${index + 1}. ${escapeHtml(question.question_text)} ${isQuiz ? `<span class="text-xs font-normal text-gray-400">(${t(question.points === 1 ? 'quiz.point_singular' : 'quiz.point_plural', { count: question.points })})</span>` : ''}</p>
             ${question.question_type === 'short_answer' ? `
-                <textarea class="answer-input w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" data-question-id="${question.id}" rows="3" required placeholder="${escapeAttr(t('quiz.answer_placeholder'))}"></textarea>
+                <textarea class="answer-input w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" data-question-id="${question.id}" rows="3" required aria-labelledby="question-label-${question.id}" placeholder="${escapeAttr(t('quiz.answer_placeholder'))}"></textarea>
             ` : `
-                <div class="space-y-2">
+                <!-- role="radiogroup" + aria-labelledby: sin esto un lector de
+                     pantalla leía las opciones SIN decir de qué pregunta son
+                     (la pregunta era un <p> suelto, no asociado a los radios). -->
+                <div class="space-y-2" role="radiogroup" aria-labelledby="question-label-${question.id}">
                     ${question.options.map(opt => `
                         <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                             <input type="radio" name="question-${question.id}" class="answer-input" value="${opt.id}" required>
