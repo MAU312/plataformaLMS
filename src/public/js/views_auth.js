@@ -328,8 +328,20 @@ window.renderRegister = async function(params) {
         const password = document.getElementById('password').value;
         const passwordConfirm = document.getElementById('password-confirm').value;
 
-        if (password !== passwordConfirm) {
-            showToast(t('errors.passwords_dont_match'), 'error');
+        // Errores de validación junto al campo (antes solo un toast de 3 s
+        // que no decía cuál campo corregir). Se marcan todos a la vez y el
+        // foco va al primero.
+        let firstInvalid = null;
+        const markInvalid = (id, message) => {
+            const field = document.getElementById(id);
+            showFieldError(field, message);
+            if (!firstInvalid) firstInvalid = field;
+        };
+        if (!isValidEmail(email)) markInvalid('email', t('auth.register.invalid_email'));
+        if (password.length < 6) markInvalid('password', t('errors.password_too_short'));
+        if (password !== passwordConfirm) markInvalid('password-confirm', t('errors.passwords_dont_match'));
+        if (firstInvalid) {
+            firstInvalid.focus();
             return;
         }
 
@@ -518,8 +530,17 @@ window.renderResetPassword = async function(params) {
         const password = document.getElementById('password').value;
         const passwordConfirm = document.getElementById('password-confirm').value;
 
-        if (password !== passwordConfirm) {
-            showToast(t('errors.passwords_dont_match'), 'error');
+        // Errores junto al campo (ver el mismo patrón en el registro).
+        let firstInvalid = null;
+        const markInvalid = (id, message) => {
+            const field = document.getElementById(id);
+            showFieldError(field, message);
+            if (!firstInvalid) firstInvalid = field;
+        };
+        if (password.length < 6) markInvalid('password', t('errors.password_too_short'));
+        if (password !== passwordConfirm) markInvalid('password-confirm', t('errors.passwords_dont_match'));
+        if (firstInvalid) {
+            firstInvalid.focus();
             return;
         }
 

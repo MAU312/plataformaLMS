@@ -645,6 +645,90 @@ textarea::placeholder {
 }
 
 /* =================================
+   NAVEGACIÓN Y FOCO
+   ================================= */
+
+/* "Saltar al contenido": fuera de pantalla hasta que recibe el foco con Tab. */
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0.5rem;
+    z-index: 100;
+    padding: 0.75rem 1.25rem;
+    border-radius: 0.5rem;
+    background: #007031;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.skip-link:focus {
+    left: 0.5rem;
+    outline: 3px solid #ffffff;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 6px #0f172a;
+}
+
+/* Título de la página nueva: recibe el foco por código al cambiar de ruta
+   (ver focusMainHeading en router.js); no es un control, no debe dibujar un
+   aro. Igual el contenedor principal tras "Saltar al contenido". */
+#app [tabindex="-1"]:focus,
+#app:focus {
+    outline: none;
+}
+
+/* Sección actual del menú (aria-current="page", ver updateNavCurrent). */
+#navbar a[aria-current="page"] {
+    color: var(--cenat-green);
+    font-weight: 600;
+}
+
+.dark #navbar a[aria-current="page"] {
+    color: #86efac;
+}
+
+/* Zonas de subida de portada: ahora son botones enfocables (ver
+   setupThumbnailDropZone en utils.js). */
+.file-drop-zone:focus-visible {
+    outline: 3px solid var(--cenat-green);
+    outline-offset: 2px;
+}
+
+.dark .file-drop-zone:focus-visible {
+    outline-color: #86efac;
+}
+
+/* Error de validación junto al campo (ver showFieldError en utils.js).
+   #b91c1c: 6,5:1 sobre blanco; #fca5a5 en oscuro: 5,5:1 sobre #334155. */
+.field-error {
+    color: #b91c1c;
+}
+
+.dark .field-error {
+    color: #fca5a5;
+}
+
+input[aria-invalid="true"] {
+    border-color: #dc2626;
+}
+
+.dark input[aria-invalid="true"] {
+    border-color: #fca5a5 !important;
+}
+
+/* Emoji del modal "curso completado": rebota 3 veces y se detiene (antes un
+   animate-bounce infinito: movimiento permanente mientras el modal siga
+   abierto). */
+@keyframes completionBounce {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-25%); }
+}
+
+.completion-emoji {
+    display: inline-block;
+    animation: completionBounce 0.9s ease-in-out 3;
+}
+
+/* =================================
    MOVIMIENTO REDUCIDO
    Preferencia del sistema operativo (vestibular, fotosensibilidad...). Se
    quitan el desplazamiento suave, el rebote/aparición, el confeti (ver
@@ -657,7 +741,8 @@ textarea::placeholder {
     html { scroll-behavior: auto; }
 
     .fade-in,
-    .animate-bounce { animation: none; }
+    .animate-bounce,
+    .completion-emoji { animation: none; }
 
     .course-card,
     .course-card img,

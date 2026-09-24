@@ -42,8 +42,13 @@ async function login(email, password) {
             updateUIForAuthenticatedUser();
             showToast(t('auth.login.success'), 'success');
             
-            // Redirigir según el rol
-            if (currentUser.role === 'admin') {
+            // Si el usuario venía de una página que exigía sesión (tocó un
+            // curso siendo invitado, o su sesión expiró ahí), se lo devuelve
+            // a esa página; si no, según el rol.
+            const returnTo = consumeReturnTo();
+            if (returnTo) {
+                window.location.hash = `#${returnTo}`;
+            } else if (currentUser.role === 'admin') {
                 window.location.hash = '#/admin';
             } else {
                 window.location.hash = '#/';
@@ -102,6 +107,9 @@ async function logout() {
     try {
         const response = await authAPI.logout();
         currentUser = null;
+        // Cerrar sesión a propósito no debe dejar una página pendiente para
+        // el próximo usuario que inicie sesión en este navegador.
+        forgetReturnTo();
         updateUIForUnauthenticatedUser();
         showToast(response.message, 'success');
         window.location.hash = '#/login';

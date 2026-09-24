@@ -32,7 +32,8 @@ const TRANSLATIONS = {
             go_to_page: 'Ir a la página {{page}}',
             results_singular: '{{count}} resultado',
             results_plural: '{{count}} resultados',
-            image_preview_alt: 'Vista previa de la imagen'
+            image_preview_alt: 'Vista previa de la imagen',
+            file_selected: 'Archivo seleccionado: {{name}}'
         },
         // Título de pestaña por ruta (ver router.js) — se llama a t() en
         // cada handleRoute(), no una sola vez al cargar el script, para que
@@ -83,7 +84,8 @@ const TRANSLATIONS = {
             switch_to_light: 'Cambiar a modo claro',
             switch_to_dark: 'Cambiar a modo oscuro',
             language: 'Idioma',
-            menu: 'Menú'
+            menu: 'Menú',
+            skip_to_content: 'Saltar al contenido'
         },
         footer: {
             copyright: '© 2026 LANBA - Centro Nacional de Alta Tecnología (CeNAT)',
@@ -109,6 +111,7 @@ const TRANSLATIONS = {
             page_load_failed: 'Error al cargar la página'
         },
         auth: {
+            login_required: 'Inicia sesión para ver esta página.',
             login: {
                 title: 'Bienvenido a LMS LANBA - CeNAT',
                 subtitle: 'Inicia sesión para acceder a tus cursos',
@@ -884,7 +887,8 @@ const TRANSLATIONS = {
             go_to_page: 'Go to page {{page}}',
             results_singular: '{{count}} result',
             results_plural: '{{count}} results',
-            image_preview_alt: 'Image preview'
+            image_preview_alt: 'Image preview',
+            file_selected: 'File selected: {{name}}'
         },
         routes: {
             home: 'Available Courses',
@@ -932,7 +936,8 @@ const TRANSLATIONS = {
             switch_to_light: 'Switch to light mode',
             switch_to_dark: 'Switch to dark mode',
             language: 'Language',
-            menu: 'Menu'
+            menu: 'Menu',
+            skip_to_content: 'Skip to content'
         },
         footer: {
             copyright: '© 2026 LANBA - Centro Nacional de Alta Tecnología (CeNAT)',
@@ -958,6 +963,7 @@ const TRANSLATIONS = {
             page_load_failed: 'Error loading the page'
         },
         auth: {
+            login_required: 'Log in to view this page.',
             login: {
                 title: 'Welcome to LMS LANBA - CeNAT',
                 subtitle: 'Log in to access your courses',

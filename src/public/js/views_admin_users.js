@@ -8,27 +8,23 @@ let currentUserSearch = '';
 let currentPageUsers = [];
 let currentUsersPagination = { total: 0, totalPages: 1 };
 const adminUsersRequestGuard = createStaleResponseGuard();
-// Listener de Escape del modal actualmente abierto (crear usuario o
-// import CSV, nunca los dos a la vez) — se guarda acá para poder
-// quitarlo desde la función de cierre correspondiente sin duplicar la
-// lógica de foco/Escape en cada modal.
-let activeModalEscapeListener = null;
+// Función que desactiva la accesibilidad del modal actualmente abierto
+// (crear usuario o import CSV, nunca los dos a la vez) — se guarda acá para
+// llamarla desde la función de cierre correspondiente. La lógica de
+// Escape/foco/trampa de Tab vive en activateModalA11y (utils.js), compartida
+// con confirmAction y promptText.
+let deactivateActiveModal = null;
 
 function setupModalA11y(modal, closeFn) {
+    if (deactivateActiveModal) deactivateActiveModal();
     const firstField = modal.querySelector('input, select, textarea');
-    if (firstField) firstField.focus();
-
-    if (activeModalEscapeListener) document.removeEventListener('keydown', activeModalEscapeListener);
-    activeModalEscapeListener = (e) => {
-        if (e.key === 'Escape') closeFn();
-    };
-    document.addEventListener('keydown', activeModalEscapeListener);
+    deactivateActiveModal = activateModalA11y(modal, { onClose: closeFn, initialFocus: firstField });
 }
 
 function teardownModalA11y() {
-    if (activeModalEscapeListener) {
-        document.removeEventListener('keydown', activeModalEscapeListener);
-        activeModalEscapeListener = null;
+    if (deactivateActiveModal) {
+        deactivateActiveModal();
+        deactivateActiveModal = null;
     }
 }
 
@@ -87,8 +83,8 @@ function openCreateUserModal() {
                 <h2 id="create-user-modal-title" class="text-xl font-bold text-gray-900 dark:text-white">
                     <i class="fas fa-user-plus text-cenat-green mr-2"></i> ${t('admin.users.createModal.title')}
                 </h2>
-                <button onclick="closeCreateUserModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-slate-200">
-                    <i class="fas fa-times text-lg"></i>
+                <button type="button" onclick="closeCreateUserModal()" class="p-2 -m-2 rounded text-gray-400 hover:text-gray-600 dark:hover:text-slate-200" aria-label="${escapeAttr(t('common.close'))}">
+                    <i class="fas fa-times text-lg" aria-hidden="true"></i>
                 </button>
             </div>
 
@@ -194,8 +190,8 @@ async function openBulkImportModal() {
                 <h2 id="bulk-import-modal-title" class="text-xl font-bold text-gray-900 dark:text-white">
                     <i class="fas fa-file-csv text-cenat-green mr-2"></i> ${t('admin.users.bulkImport.title')}
                 </h2>
-                <button onclick="closeBulkImportModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-slate-200">
-                    <i class="fas fa-times text-lg"></i>
+                <button type="button" onclick="closeBulkImportModal()" class="p-2 -m-2 rounded text-gray-400 hover:text-gray-600 dark:hover:text-slate-200" aria-label="${escapeAttr(t('common.close'))}">
+                    <i class="fas fa-times text-lg" aria-hidden="true"></i>
                 </button>
             </div>
 

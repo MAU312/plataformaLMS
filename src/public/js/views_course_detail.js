@@ -1168,20 +1168,20 @@ window.getFileIcon = getFileIcon;
 // =================================
 
 function showCourseCompletionModal(courseId) {
-    // Eliminar modal previo si existe
-    const existing = document.getElementById('completion-modal');
-    if (existing) existing.remove();
+    // Cerrar el modal previo si existe (también libera su manejo de foco)
+    closeCompletionModal();
 
     const modal = document.createElement('div');
     modal.id = 'completion-modal';
     modal.className = 'fixed inset-0 z-50 flex items-center justify-center px-4';
     modal.innerHTML = `
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeCompletionModal()"></div>
-        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 max-w-md w-full text-center fade-in">
-            <!-- Confetti animado -->
-            <div class="text-6xl mb-4 animate-bounce">🎉</div>
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 max-w-md w-full text-center fade-in" role="dialog" aria-modal="true" aria-labelledby="completion-modal-title">
+            <!-- Rebota 3 veces y se detiene (antes era infinito: contenido en
+                 movimiento permanente mientras el modal siga abierto). -->
+            <div class="completion-emoji text-6xl mb-4" aria-hidden="true">🎉</div>
 
-            <h2 class="text-2xl font-extrabold text-gray-900 dark:text-white mb-2">
+            <h2 id="completion-modal-title" class="text-2xl font-extrabold text-gray-900 dark:text-white mb-2">
                 ${t('courseDetail.completion_title')}
             </h2>
             <p class="text-gray-600 dark:text-slate-400 mb-6">
@@ -1200,11 +1200,11 @@ function showCourseCompletionModal(courseId) {
             </div>
 
             <div class="flex flex-col gap-3">
-                <button onclick="downloadCertificate(${courseId})" class="btn-cenat">
+                <button type="button" id="completion-download-btn" onclick="downloadCertificate(${courseId})" class="btn-cenat">
                     <i class="fas fa-certificate mr-2"></i> ${t('courseDetail.download_certificate')}
                 </button>
                 <div class="flex gap-3 justify-center">
-                    <button onclick="closeCompletionModal()" class="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 transition">
+                    <button type="button" onclick="closeCompletionModal()" class="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 transition">
                         <i class="fas fa-check mr-2"></i> ${t('courseDetail.completion_understood')}
                     </button>
                     <a href="#/" onclick="closeCompletionModal()" class="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 transition">
@@ -1216,12 +1216,23 @@ function showCourseCompletionModal(courseId) {
     `;
 
     document.body.appendChild(modal);
+    // Foco al botón principal (descargar el certificado), Escape cierra y Tab
+    // no se escapa a la página de atrás.
+    deactivateCompletionModal = activateModalA11y(modal, { onClose: closeCompletionModal, initialFocus: modal.querySelector('#completion-download-btn') });
 
     // Lanzar confetti si la librería está disponible, si no solo el modal
     launchConfetti();
 }
 
+// Desactivador del modal de curso completado abierto (ver activateModalA11y
+// en utils.js).
+let deactivateCompletionModal = null;
+
 function closeCompletionModal() {
+    if (deactivateCompletionModal) {
+        deactivateCompletionModal();
+        deactivateCompletionModal = null;
+    }
     const modal = document.getElementById('completion-modal');
     if (modal) modal.remove();
 }

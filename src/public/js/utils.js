@@ -181,6 +181,19 @@ function setupThumbnailDropZone({ dropZoneId = 'thumbnail-drop-zone', inputId = 
 
     if (!dropZone || !fileInput) return;
 
+    // La zona era un <div> con solo un click: un usuario de teclado no podía
+    // elegir una portada (el <input type=file> real está oculto). Como botón
+    // enfocable, Enter/Espacio abren el selector de archivos igual que el
+    // clic; su nombre accesible es el texto que ya contiene.
+    dropZone.setAttribute('role', 'button');
+    dropZone.setAttribute('tabindex', '0');
+    dropZone.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            fileInput.click();
+        }
+    });
+
     dropZone.addEventListener('click', () => fileInput.click());
 
     dropZone.addEventListener('dragover', (e) => {
@@ -208,6 +221,9 @@ function setupThumbnailDropZone({ dropZoneId = 'thumbnail-drop-zone', inputId = 
     });
 
     function showThumbnailPreview(file) {
+        // La vista previa aparece en silencio: sin esto, quien no ve la
+        // pantalla no se entera de que su selección se registró.
+        announce(t('common.file_selected', { name: file.name }));
         const reader = new FileReader();
         reader.onload = (e) => {
             previewImg.src = e.target.result;
@@ -258,6 +274,51 @@ function validateForm(formId) {
         }
     });
     return isValid;
+}
+
+// =================================
+// Errores de campo (junto al campo, no solo un toast)
+// =================================
+
+/**
+ * Muestra un error de validación DEBAJO del campo que lo causó, en vez de
+ * solo un toast que desaparece: se ve cuál campo hay que corregir, y un
+ * lector de pantalla lo asocia al campo (aria-invalid + aria-describedby)
+ * cuando el foco llega ahí. Se quita solo en cuanto el usuario vuelve a
+ * escribir en ese campo. El llamador debe enfocar el primer campo inválido.
+ */
+function showFieldError(input, message) {
+    if (!input) return;
+    clearFieldError(input);
+
+    const errorId = `${input.id || 'field'}-error`;
+    const error = document.createElement('p');
+    error.id = errorId;
+    error.className = 'field-error mt-1 text-sm font-medium';
+    error.textContent = message;
+
+    // Los campos de las páginas de acceso viven dentro de un div.relative
+    // (ícono a la izquierda / botón de mostrar contraseña): el error va
+    // debajo de ese contenedor, no dentro.
+    const anchor = input.parentElement && input.parentElement.classList.contains('relative') ? input.parentElement : input;
+    anchor.insertAdjacentElement('afterend', error);
+
+    input.dataset.prevDescribedby = input.getAttribute('aria-describedby') || '';
+    input.setAttribute('aria-invalid', 'true');
+    input.setAttribute('aria-describedby', `${input.dataset.prevDescribedby} ${errorId}`.trim());
+    input.addEventListener('input', () => clearFieldError(input), { once: true });
+}
+
+function clearFieldError(input) {
+    if (!input) return;
+    const error = document.getElementById(`${input.id || 'field'}-error`);
+    if (error) error.remove();
+    input.removeAttribute('aria-invalid');
+    if (input.dataset.prevDescribedby !== undefined) {
+        if (input.dataset.prevDescribedby) input.setAttribute('aria-describedby', input.dataset.prevDescribedby);
+        else input.removeAttribute('aria-describedby');
+        delete input.dataset.prevDescribedby;
+    }
 }
 
 // =================================
@@ -582,20 +643,17 @@ function confirmAction(message, { confirmLabel = t('common.confirm'), cancelLabe
                 </div>
                 <div class="flex gap-3 justify-end mt-6">
                     <button type="button" data-confirm-cancel class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition">${escapeHtml(cancelLabel)}</button>
-                    <button type="button" data-confirm-ok class="px-4 py-2 rounded-lg text-sm font-semibold text-white transition ${danger ? 'bg-red-500 hover:bg-red-600' : 'btn-cenat'}">${escapeHtml(confirmLabel)}</button>
+                    <button type="button" data-confirm-ok class="px-4 py-2 rounded-lg text-sm font-semibold text-white transition ${danger ? 'bg-red-600 hover:bg-red-700' : 'btn-cenat'}">${escapeHtml(confirmLabel)}</button>
                 </div>
             </div>
         `;
 
         // Único mecanismo de confirmación de acciones destructivas de toda
-        // la app — sin esto, un usuario de teclado que lo abría quedaba con
-        // el foco en el botón que lo disparó, y Escape no hacía nada.
-        const onKeydown = (e) => {
-            if (e.key === 'Escape') close(false);
-        };
-
+        // la app — Escape, foco atrapado en el modal y foco devuelto al botón
+        // que lo abrió los da activateModalA11y (más abajo).
+        let deactivate = () => {};
         const close = (result) => {
-            document.removeEventListener('keydown', onKeydown);
+            deactivate();
             modal.remove();
             resolve(result);
         };
@@ -603,12 +661,126 @@ function confirmAction(message, { confirmLabel = t('common.confirm'), cancelLabe
         modal.querySelector('[data-confirm-cancel]').addEventListener('click', () => close(false));
         modal.querySelector('[data-confirm-ok]').addEventListener('click', () => close(true));
         modal.querySelector('[data-confirm-backdrop]').addEventListener('click', () => close(false));
-        document.addEventListener('keydown', onKeydown);
 
         document.body.appendChild(modal);
         // Foco inicial en "Cancelar" — el default más seguro para una
         // confirmación (Enter/Space sin querer no dispara la acción).
-        modal.querySelector('[data-confirm-cancel]').focus();
+        deactivate = activateModalA11y(modal, { onClose: () => close(false), initialFocus: modal.querySelector('[data-confirm-cancel]') });
+    });
+}
+
+// =================================
+// Accesibilidad de modales
+// =================================
+
+// Pila de modales abiertos: con uno encima de otro (p. ej. una confirmación
+// dentro de "Crear usuario"), solo el de más arriba reacciona a Escape/Tab.
+const openModalStack = [];
+
+const MODAL_FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * Lo mínimo que un modal necesita para poder usarse sin mouse: al abrirse el
+ * foco entra al modal, Tab/Shift+Tab no se escapan a la página de atrás,
+ * Escape lo cierra (`onClose`), y al cerrarse el foco vuelve a lo que lo
+ * abrió. Devuelve la función que hay que llamar al cerrar (quita el listener
+ * y restaura el foco). Debe llamarse con el modal YA insertado en el DOM.
+ */
+function activateModalA11y(modal, { onClose, initialFocus = null } = {}) {
+    const previouslyFocused = document.activeElement;
+    openModalStack.push(modal);
+
+    const focusables = () => Array.from(modal.querySelectorAll(MODAL_FOCUSABLE_SELECTOR)).filter((el) => el.offsetParent !== null);
+
+    const onKeydown = (e) => {
+        if (openModalStack[openModalStack.length - 1] !== modal) return;
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            if (onClose) onClose();
+            return;
+        }
+        if (e.key !== 'Tab') return;
+        const items = focusables();
+        if (items.length === 0) { e.preventDefault(); return; }
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (!modal.contains(document.activeElement)) {
+            e.preventDefault();
+            first.focus();
+        } else if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+        }
+    };
+    document.addEventListener('keydown', onKeydown, true);
+
+    const target = initialFocus || focusables()[0];
+    if (target) target.focus();
+
+    return function deactivate() {
+        document.removeEventListener('keydown', onKeydown, true);
+        const i = openModalStack.indexOf(modal);
+        if (i >= 0) openModalStack.splice(i, 1);
+        if (previouslyFocused && document.contains(previouslyFocused) && typeof previouslyFocused.focus === 'function') {
+            previouslyFocused.focus();
+        }
+    };
+}
+
+// =================================
+// Diálogo de texto (reemplazo de prompt())
+// =================================
+
+/**
+ * Pide un texto en un modal propio, igual de estilizado y accesible que
+ * confirmAction, en vez del prompt() nativo del navegador ("localhost:3000
+ * dice...", sin estilo, sin modo oscuro, sin poder limitar el largo).
+ * Devuelve el texto (sin recortar) o `null` si se cancela — misma
+ * convención que prompt(), así el llamador casi no cambia.
+ * Enter en el campo confirma; Escape y clic fuera cancelan.
+ */
+function promptText(message, defaultValue = '', { maxLength = 150, confirmLabel = t('common.confirm'), cancelLabel = t('common.cancel') } = {}) {
+    return new Promise((resolve) => {
+        const existing = document.getElementById('prompt-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'prompt-modal';
+        modal.className = 'fixed inset-0 z-50 flex items-center justify-center px-4';
+        modal.innerHTML = `
+            <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" data-prompt-backdrop></div>
+            <form class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-w-sm w-full fade-in" role="dialog" aria-modal="true" aria-labelledby="prompt-modal-message">
+                <label id="prompt-modal-message" for="prompt-modal-input" class="block text-gray-700 dark:text-slate-200 font-medium mb-3">${escapeHtml(message)}</label>
+                <input id="prompt-modal-input" type="text" maxlength="${Number(maxLength)}" value="${escapeAttr(defaultValue)}" autocomplete="off"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green">
+                <div class="flex gap-3 justify-end mt-6">
+                    <button type="button" data-prompt-cancel class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition">${escapeHtml(cancelLabel)}</button>
+                    <button type="submit" class="btn-cenat px-4 py-2 text-sm">${escapeHtml(confirmLabel)}</button>
+                </div>
+            </form>
+        `;
+
+        let deactivate = () => {};
+        const close = (result) => {
+            deactivate();
+            modal.remove();
+            resolve(result);
+        };
+
+        const input = modal.querySelector('#prompt-modal-input');
+        modal.querySelector('form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            close(input.value);
+        });
+        modal.querySelector('[data-prompt-cancel]').addEventListener('click', () => close(null));
+        modal.querySelector('[data-prompt-backdrop]').addEventListener('click', () => close(null));
+
+        document.body.appendChild(modal);
+        deactivate = activateModalA11y(modal, { onClose: () => close(null), initialFocus: input });
+        input.select();
     });
 }
 

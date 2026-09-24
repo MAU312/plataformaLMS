@@ -301,7 +301,7 @@ async function renameModuleHandler(courseId, moduleId) {
     // el markup si el título tiene comillas.
     const titleEl = document.querySelector(`details[data-module-id="${moduleId}"] .font-semibold`);
     const currentTitle = titleEl ? titleEl.textContent : '';
-    const title = prompt(t('contentManager.modules.rename_prompt'), currentTitle);
+    const title = await promptText(t('contentManager.modules.rename_prompt'), currentTitle, { maxLength: 150 });
     if (title === null) return;
     if (!title.trim()) {
         showToast(t('contentManager.modules.name_required'), 'error');

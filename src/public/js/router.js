@@ -177,22 +177,105 @@ function getNavToken() {
     return navToken;
 }
 
+// =================================
+// Volver a donde se quería ir después de iniciar sesión
+// =================================
+
+// Antes, un invitado que tocaba un curso (o cuya sesión expiraba en una
+// página) terminaba en el login SIN ninguna explicación, y tras iniciar sesión
+// caía en Inicio en vez de en la página que quería. Ahora la ruta se recuerda
+// y login() la usa (ver auth.js). sessionStorage (no una variable): la sesión
+// expirada recarga la página, y una variable se perdería.
+const RETURN_TO_KEY = 'lms_return_to';
+
+function rememberReturnTo(route) {
+    if (!route || route === '/login' || route === '/register') return;
+    try { sessionStorage.setItem(RETURN_TO_KEY, route); } catch (e) { /* sin sessionStorage: se cae a Inicio, como antes */ }
+}
+
+function forgetReturnTo() {
+    try { sessionStorage.removeItem(RETURN_TO_KEY); } catch (e) { /* nada que borrar */ }
+}
+
+// Devuelve la ruta recordada (y la olvida) solo si sigue siendo una ruta
+// válida de la app; si no, null.
+function consumeReturnTo() {
+    try {
+        const route = sessionStorage.getItem(RETURN_TO_KEY);
+        sessionStorage.removeItem(RETURN_TO_KEY);
+        return route && route.startsWith('/') && parseRoute(route) ? route : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+// =================================
+// Menú actual y foco al cambiar de página
+// =================================
+
+// Marca en el navbar (escritorio y móvil) el enlace de la sección actual:
+// lectores de pantalla lo anuncian como "página actual" y el CSS lo resalta.
+// Un enlace a una sección (/admin, /teacher/courses) cuenta también para sus
+// subrutas (/admin/users, /teacher/courses/17/edit).
+function updateNavCurrent(route) {
+    document.querySelectorAll('#navbar a[href^="#/"]').forEach((link) => {
+        const target = link.getAttribute('href').slice(1);
+        const isCurrent = target === route || (target !== '/' && route.startsWith(`${target}/`));
+        if (isCurrent) link.setAttribute('aria-current', 'page');
+        else link.removeAttribute('aria-current');
+    });
+}
+
+// Tras cambiar de página el foco se queda donde estaba (un enlace que ya no
+// existe): un lector de pantalla no anuncia nada y un usuario de teclado
+// tendría que volver a recorrer todo el navbar. Se mueve al título de la
+// página nueva (tabindex=-1: enfocable por código, no por Tab).
+function focusMainHeading() {
+    const heading = document.querySelector('#app h1') || document.querySelector('#app h2');
+    if (!heading) return false;
+    heading.setAttribute('tabindex', '-1');
+    heading.focus({ preventScroll: true });
+    return true;
+}
+
+// "Saltar al contenido" (primer elemento enfocable de la página, ver
+// index.html): no puede ser un <a href="#..."> porque el router usa el hash.
+function skipToContent() {
+    if (focusMainHeading()) return;
+    const app = document.getElementById('app');
+    if (app) {
+        app.setAttribute('tabindex', '-1');
+        app.focus();
+    }
+}
+
+// Última ruta pintada (null hasta la primera): el foco solo se mueve cuando la
+// ruta CAMBIA, no en la carga inicial ni al cambiar de idioma (setLocale()
+// vuelve a llamar handleRoute() sobre la misma ruta, y robarle el foco al
+// selector de idioma sería peor que no moverlo).
+let lastRenderedRoute = null;
+
 async function handleRoute() {
     navToken++;
     const currentRoute = getRoute();
     const routeData = parseRoute(currentRoute);
-    
+
     if (!routeData) {
         document.title = `${t('routes.not_found')} - LMS LANBA - CeNAT`;
         render404();
+        updateNavCurrent(currentRoute);
+        if (lastRenderedRoute !== null && currentRoute !== lastRenderedRoute) focusMainHeading();
+        lastRenderedRoute = currentRoute;
         window.scrollTo(0, 0);
         return;
     }
-    
+
     const { route, params } = routeData;
-    
+
     // Check authentication requirements
     if (route.requireAuth && !isAuthenticated()) {
+        rememberReturnTo(currentRoute);
+        showToast(t('auth.login_required'), 'info');
         window.location.hash = '#/login';
         return;
     }
@@ -213,6 +296,10 @@ async function handleRoute() {
         console.error('Error rendering route:', error);
         showToast(t('errors.page_load_failed'), 'error');
     }
+
+    updateNavCurrent(currentRoute);
+    if (lastRenderedRoute !== null && currentRoute !== lastRenderedRoute) focusMainHeading();
+    lastRenderedRoute = currentRoute;
 
     // Cada vista es una página nueva para el usuario — sin esto, navegar
     // desde un punto scrolleado deja la vista siguiente igual de scrolleada,

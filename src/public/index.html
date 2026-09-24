@@ -36,6 +36,10 @@
 
 <body class="bg-gray-100 dark:bg-slate-800 min-h-screen transition-colors duration-300">
 
+    <!-- Primer elemento enfocable: un usuario de teclado se salta el navbar de
+         un Tab. Es un botón y no un <a href="#..."> porque el router usa el hash. -->
+    <button type="button" class="skip-link" onclick="skipToContent()" data-i18n="nav.skip_to_content">Saltar al contenido</button>
+
     <!-- Navbar -->
     <nav id="navbar" class="bg-white dark:bg-slate-800 shadow-md hidden transition-colors duration-300">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

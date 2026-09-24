@@ -27,6 +27,8 @@ function handleSessionExpired() {
     if (currentHash === '#/login' || currentHash === '#/register') return;
     if (sessionExpiredHandled) return;
     sessionExpiredHandled = true;
+    // Al volver a iniciar sesión, se lo devuelve a la página donde estaba.
+    rememberReturnTo(currentHash.slice(1) || '/');
     setTimeout(() => {
         showToast(t('errors.session_expired_toast'), 'warning');
     }, 0);
