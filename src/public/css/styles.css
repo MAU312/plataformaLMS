@@ -25,6 +25,41 @@ html {
 }
 
 /* =================================
+   TEXTO LARGO SIN ESPACIOS
+   Títulos, descripciones, posts de foro y nombres los escribe la gente, y
+   a veces traen una "palabra" larguísima: una URL pegada, un nombre de
+   archivo con guiones bajos. Un contenedor normal no la parte y la página
+   entera se ensancha (medido: un foro con URLs de 300 caracteres quedaba de
+   2.490 px en una ventana de 1.039 px). `overflow-wrap: break-word` la
+   parte SOLO cuando no cabe y no toca el ancho mínimo del elemento, así que
+   no cambia el comportamiento de tablas ni de layouts flex con texto
+   normal. `select` con `max-width` evita lo mismo con una <option> larga
+   (un select mide lo que su opción más ancha).
+   ================================= */
+
+p, h1, h2, h3, h4, h5, h6, li, label, summary, blockquote, dd {
+    overflow-wrap: break-word;
+}
+
+select {
+    max-width: 100%;
+}
+
+/* Celdas de tabla: `break-word` solo no alcanza, porque en una tabla de
+   layout automático el ancho mínimo de la columna sigue siendo el de la
+   palabra más larga — por eso el tope de ancho (una celda normal nunca lo
+   alcanza, así que nada cambia para datos comunes; una con una "palabra"
+   de 150 caracteres se parte a 28rem en vez de estirar la tabla a 2.300 px
+   y mandar la columna de acciones fuera de la pantalla). NO se usa
+   `overflow-wrap: anywhere` acá a propósito: encoge las columnas hasta 1
+   carácter y en una pantalla angosta parte nombres y correos normales
+   letra por letra (probado a 1.024 px: filas de 145 px en vez de 73). */
+td {
+    overflow-wrap: break-word;
+    max-width: 28rem;
+}
+
+/* =================================
    BORDES - MODO CLARO
    Los grises por defecto de Tailwind (gray-100/200 ≈ #f3f4f6/#e5e7eb)
    casi no contrastan contra fondos blancos/gray-50, así que el sidebar,

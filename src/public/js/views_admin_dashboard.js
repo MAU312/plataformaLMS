@@ -167,8 +167,12 @@ function renderAdminLayout(content, activeSection) {
                 </select>
             </div>
 
-            <!-- Main content -->
-            <div class="flex-1 p-6 md:p-8">
+            <!-- Main content. min-w-0 es lo que permite que el overflow-x-auto de
+                 cada tabla haga su trabajo: un hijo flex tiene min-width:auto por
+                 defecto y crece hasta el ancho de su contenido, así que sin esto
+                 una tabla ancha estiraba TODA la página (y sacaba de la pantalla
+                 la columna de acciones) en vez de scrollear dentro de su tarjeta. -->
+            <div class="flex-1 min-w-0 p-6 md:p-8">
                 ${content}
             </div>
         </div>

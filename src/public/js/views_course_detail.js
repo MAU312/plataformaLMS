@@ -1033,7 +1033,7 @@ function renderPublicCourseModulesHTML(modules) {
                     <label for="course-module-select" class="text-sm font-semibold text-gray-700 flex-shrink-0">
                         <i class="fas fa-layer-group text-cenat-green mr-1"></i> ${t('courseDetail.module_label')}
                     </label>
-                    <select id="course-module-select" onchange="switchCourseModule(this.value)" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent w-full sm:w-auto">
+                    <select id="course-module-select" onchange="switchCourseModule(this.value)" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green focus:border-transparent w-full sm:w-auto min-w-0">
                         ${modules.map((m, i) => `<option value="${m.id}" ${i === 0 ? 'selected' : ''}>${escapeHtml(m.title)}</option>`).join('')}
                     </select>
                 </div>
