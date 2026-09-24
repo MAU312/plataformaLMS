@@ -1410,7 +1410,7 @@ function renderQuestionForm(container, {
                 ${isQuiz ? `<input type="radio" name="correct-${qIndex}" class="option-correct-radio" ${opt.is_correct ? 'checked' : ''}>` : ''}
                 ${isTrueFalse
                     ? `<span class="text-sm text-gray-700 flex-1">${escapeHtml(opt.text)}</span>`
-                    : `<input type="text" class="option-text flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="${t('contentManager.quiz.option_placeholder', { n: oIndex + 1 })}" value="${escapeAttr(opt.text)}">`
+                    : `<input type="text" maxlength="500" class="option-text flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-cenat-green" placeholder="${t('contentManager.quiz.option_placeholder', { n: oIndex + 1 })}" value="${escapeAttr(opt.text)}">`
                 }
                 ${!isTrueFalse && options.length > 2 ? `
                     <button type="button" class="remove-option-btn text-gray-400 hover:text-red-500 px-1" title="${t('contentManager.quiz.remove_option_title')}" aria-label="${t('contentManager.quiz.remove_option_title')}">
