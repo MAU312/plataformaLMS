@@ -753,8 +753,8 @@ function renderTaskCard(task, submission, hasAccess) {
                                 ` : ''}
                             </div>
                         ` : `
-                            <form class="task-submit-form flex items-center gap-2" data-task-id="${task.id}">
-                                <input type="file" class="task-submit-file text-sm flex-1" required>
+                            <form class="task-submit-form flex flex-wrap items-center gap-2" data-task-id="${task.id}">
+                                <input type="file" class="task-submit-file text-sm flex-1 min-w-0" required>
                                 <button type="submit" class="bg-cenat-green text-white px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap">
                                     <i class="fas fa-upload mr-1"></i> ${t('courseDetail.submit_button')}
                                 </button>

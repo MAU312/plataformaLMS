@@ -50,7 +50,7 @@ window.renderProfile = async function(params) {
                             </button>
                             <input type="file" id="avatar-file-input" accept="image/*" class="hidden">
                         </div>
-                        <div id="profile-user-info">
+                        <div id="profile-user-info" class="min-w-0">
                             <h1 class="text-2xl font-bold text-gray-900">${escapeHtml(user.name)}</h1>
                             <p class="text-gray-600">${escapeHtml(user.email)}</p>
                             <span class="badge ${user.role === 'admin' ? 'badge-admin' : user.role === 'teacher' ? 'badge-teacher' : 'badge-student'} mt-2 inline-block">
