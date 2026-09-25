@@ -435,6 +435,22 @@ textarea::placeholder {
 }
 
 /* =================================
+   ENCABEZADOS "HÉROE" (portada y detalle de curso)
+   Llevan texto blanco / verde claro encima. El degradado anterior
+   (from-cenat-green to-cenat-green-light, #007031 -> #22c55e) terminaba en un
+   verde tan claro que el texto quedaba entre 2,2 y 3,0:1 en su extremo
+   (descripción, nombre del profesor, progreso; mínimo WCAG AA: 4,5:1). Este
+   termina en #08703a: blanco 6,2:1, verde-100 5,6:1, verde-200 5,1:1 en el
+   peor punto — y el inicio (#005c28, el verde "hover" de la marca) da todavía
+   más contraste. Los demás degradados de la app (miniaturas, avatar) solo
+   llevan un ícono y no cambian.
+   ================================= */
+
+.hero-gradient {
+    background-image: linear-gradient(135deg, #005c28 0%, #08703a 100%);
+}
+
+/* =================================
    BOTONES
    ================================= */
 
@@ -676,14 +692,26 @@ textarea::placeholder {
     outline: none;
 }
 
-/* Sección actual del menú (aria-current="page", ver updateNavCurrent). */
-#navbar a[aria-current="page"] {
+/* Sección actual del menú (aria-current="page", ver updateNavCurrent).
+   NO aplica al botón verde "Regístrate" (.btn-cenat): estando en la página de
+   registro ese enlace es el "actual", y pintarlo de verde lo dejaba verde
+   sobre verde (1,08:1). */
+#navbar a[aria-current="page"]:not(.btn-cenat) {
     color: var(--cenat-green);
     font-weight: 600;
 }
 
-.dark #navbar a[aria-current="page"] {
+.dark #navbar a[aria-current="page"]:not(.btn-cenat) {
     color: #86efac;
+}
+
+/* El botón verde del navbar conserva su texto blanco en modo oscuro: la regla
+   general `.dark #navbar a` (gris claro) lo dejaba en ~3,4:1 sobre el verde, y
+   `.dark #navbar a:hover` (verde claro) casi ilegible al pasar el mouse. */
+.dark #navbar a.btn-cenat,
+.dark #navbar a.btn-cenat:hover,
+.dark #navbar a.btn-cenat span {
+    color: #ffffff;
 }
 
 /* Zonas de subida de portada: ahora son botones enfocables (ver
@@ -741,6 +769,20 @@ input[aria-invalid="true"] {
    modales), los botones de subir/bajar (van apilados; ver .reorder-btn) y el
    enlace superpuesto de las tarjetas de curso.
    ================================= */
+
+/* Base (TODOS los tamaños de pantalla): mínimo WCAG 2.2 AA (2.5.8) de 24 px.
+   En escritorio los botones de solo ícono medían 16-20 px de alto; los ↑↓
+   apilados y el botón de acceso admin pegado al selector de rol de la tabla
+   de usuarios no pasaban ni siquiera la excepción por espaciado. */
+button:has(> i:only-child):not(.reorder-btn):not(.\-m-2),
+a:has(> i:only-child):not(.course-card-link),
+.reorder-btn {
+    min-width: 24px;
+    min-height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
 
 @media (max-width: 640px), (pointer: coarse) {
     button:has(> i:only-child):not(.reorder-btn):not(.\-m-2),

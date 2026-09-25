@@ -14,7 +14,7 @@ window.renderHome = async function(params) {
     homeSearchTerm = '';
 
     app.innerHTML = `
-        <div class="bg-gradient-to-br from-cenat-green to-cenat-green-light py-16 px-4 sm:px-6 lg:px-8">
+        <div class="hero-gradient py-16 px-4 sm:px-6 lg:px-8">
             <div class="max-w-7xl mx-auto text-center">
                 <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-4">
                     ${escapeHtml(getSiteSetting('catalog_title', t('home.title_default')))}

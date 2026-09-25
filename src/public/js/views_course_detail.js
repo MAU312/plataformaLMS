@@ -181,7 +181,7 @@ window.renderCourseDetail = async function(params) {
                 </div>
             </div>
 
-            <div class="bg-gradient-to-r from-cenat-green to-cenat-green-light py-10 px-4 sm:px-6 lg:px-8">
+            <div class="hero-gradient py-10 px-4 sm:px-6 lg:px-8">
                 <div class="max-w-7xl mx-auto">
                     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                         <div>
