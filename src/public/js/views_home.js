@@ -133,7 +133,7 @@ function renderCourseCard(course, headingTag = 'h3') {
 function renderEmptyState(searchTerm) {
     if (searchTerm) {
         return `
-            <div class="col-span-full empty-state">
+            <div class="col-span-full empty-state bg-white rounded-xl border border-gray-100">
                 <i class="fas fa-search"></i>
                 <p class="text-xl text-gray-600 font-medium">${t('home.empty_search_title')}</p>
                 <p class="text-gray-500">${t('home.empty_search_subtitle')}</p>
@@ -141,7 +141,7 @@ function renderEmptyState(searchTerm) {
         `;
     }
     return `
-        <div class="col-span-full empty-state">
+        <div class="col-span-full empty-state bg-white rounded-xl border border-gray-100">
             <i class="fas fa-book-open"></i>
             <p class="text-xl text-gray-600 font-medium">${t('home.empty_title')}</p>
             <p class="text-gray-500">${t('home.empty_subtitle')}</p>

@@ -52,7 +52,7 @@ async function loadMyCourses(page) {
                 ${courses.map(course => renderEnrolledCourseCard(course)).join('')}
             </div>
         ` : `
-            <div class="empty-state">
+            <div class="empty-state bg-white rounded-xl border border-gray-100">
                 <i class="fas fa-book-open"></i>
                 <p class="text-xl text-gray-600 font-medium">${t('myCourses.empty_title')}</p>
                 <p class="text-gray-500 mb-4">${t('myCourses.empty_subtitle')}</p>

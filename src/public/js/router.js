@@ -312,17 +312,21 @@ function render404() {
     app.innerHTML = `
         <div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 px-4">
             <div class="text-center max-w-lg fade-in">
-                <!-- Número 404 grande -->
+                <!-- Número 404 grande: marca de agua decorativa (1,2:1 a propósito,
+                     con el ícono encima). Antes era el <h1> de la página — un
+                     lector de pantalla leía "404" como título y el texto real
+                     ("Página no encontrada") era un h2 —; ahora es decorativo
+                     (aria-hidden) y el mensaje pasa a ser el h1. -->
                 <div class="relative mb-6">
-                    <h1 class="text-9xl font-extrabold text-gray-200 dark:text-slate-700 select-none">404</h1>
+                    <div class="text-9xl font-extrabold text-gray-200 dark:text-slate-700 select-none" aria-hidden="true">404</div>
                     <div class="absolute inset-0 flex items-center justify-center">
                         <i class="fas fa-graduation-cap text-5xl text-cenat-green"></i>
                     </div>
                 </div>
 
-                <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-3">
                     ${t('notFound.heading')}
-                </h2>
+                </h1>
                 <p class="text-gray-500 dark:text-slate-400 mb-8">
                     ${t('notFound.description')}
                 </p>
